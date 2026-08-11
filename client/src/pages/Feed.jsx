@@ -3,9 +3,12 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import Avatar from '../components/Avatar';
+import PostCard from '../components/PostCard';
+import usePostActions from '../lib/usePostActions';
+import usePostLikes from '../lib/usePostLikes';
 import { fetchFeedHn, fetchFeedGitHub } from '../lib/api';
-import { timeAgo, formatEventDate } from '../lib/format';
-import { HeartIcon, ShareIcon, ExternalIcon, StarIcon, GithubIcon, RssIcon, BoxIcon, PencilIcon, TrashIcon, ArchiveIcon } from '../components/icons/Icons';
+import { timeAgo } from '../lib/format';
+import { ExternalIcon, StarIcon, GithubIcon, RssIcon, BoxIcon, ArchiveIcon } from '../components/icons/Icons';
 
 const LIMIT = 2000;
 
@@ -14,7 +17,6 @@ export default function Feed() {
   const toast = useToast();
 
   const [posts, setPosts] = useState([]);
-  const [likes, setLikes] = useState([]);
   const [learn, setLearn] = useState({ hn: [], gh: [] });
   const [draft, setDraft] = useState('');
   const [posting, setPosting] = useState(false);
@@ -22,20 +24,14 @@ export default function Feed() {
   const [feedError, setFeedError] = useState('');
   const [view, setView] = useState('feed');
   const [archivedPosts, setArchivedPosts] = useState([]);
-  const [editingId, setEditingId] = useState(null);
-  const [editDraft, setEditDraft] = useState('');
-  const [saving, setSaving] = useState(false);
   const loadedRef = useRef(false);
 
-  const loadLikes = useCallback(async () => {
-    const { data } = await supabase.from('likes').select('post_id, user_id');
-    if (data) setLikes(data);
-  }, []);
+  const { likeCount, likedByMe, toggleLike, loadLikes } = usePostLikes(user);
 
   const loadPosts = useCallback(async () => {
     const { data, error } = await supabase
       .from('posts')
-      .select('id, content, created_at, archived, profiles!posts_author_id_fkey(full_name, role, year_level, avatar_url)')
+      .select('id, author_id, content, created_at, archived, profiles!posts_author_id_fkey(id, full_name, role, year_level, avatar_url)')
       .eq('archived', false)
       .order('created_at', { ascending: false });
     if (error) {
@@ -49,7 +45,7 @@ export default function Feed() {
     if (!user) return;
     const { data, error } = await supabase
       .from('posts')
-      .select('id, content, created_at, archived, profiles!posts_author_id_fkey(full_name, role, year_level, avatar_url)')
+      .select('id, author_id, content, created_at, archived, profiles!posts_author_id_fkey(id, full_name, role, year_level, avatar_url)')
       .eq('author_id', user.id)
       .eq('archived', true)
       .order('created_at', { ascending: false });
@@ -78,27 +74,6 @@ export default function Feed() {
       .finally(() => setLoading(false));
   }, [loadPosts, loadLikes]);
 
-  const likeCount = useMemo(() => {
-    const m = new Map();
-    for (const l of likes) m.set(l.post_id, (m.get(l.post_id) || 0) + 1);
-    return m;
-  }, [likes]);
-
-  const likedByMe = useMemo(() => {
-    const s = new Set();
-    for (const l of likes) if (l.user_id === user?.id) s.add(l.post_id);
-    return s;
-  }, [likes, user]);
-
-  const toggleLike = async (postId) => {
-    if (!user) return;
-    const mine = likedByMe.has(postId);
-    const { error } = mine
-      ? await supabase.from('likes').delete().eq('post_id', postId).eq('user_id', user.id)
-      : await supabase.from('likes').insert({ post_id: postId, user_id: user.id });
-    if (!error) await loadLikes();
-  };
-
   const sharePost = async (post) => {
     try {
       await navigator.clipboard.writeText(`${post.profiles?.full_name || 'Member'} on CODEX: ${post.content.slice(0, 100)}`);
@@ -120,53 +95,11 @@ export default function Feed() {
     loadPosts();
   };
 
-  const refreshPosts = async () => {
+  const refreshPosts = useCallback(async () => {
     await Promise.all([loadPosts(), loadArchived()]);
-  };
+  }, [loadPosts, loadArchived]);
 
-  const startEdit = (post) => {
-    setEditingId(post.id);
-    setEditDraft(post.content);
-  };
-
-  const cancelEdit = () => {
-    setEditingId(null);
-    setEditDraft('');
-  };
-
-  const saveEdit = async () => {
-    const content = editDraft.trim();
-    if (!content || saving || !editingId) return;
-    setSaving(true);
-    const { error } = await supabase.from('posts').update({ content }).eq('id', editingId).eq('author_id', user.id);
-    setSaving(false);
-    if (error) return toast.error('Could not save', error.message);
-    cancelEdit();
-    toast.ok('Saved', 'Your post was updated.');
-    refreshPosts();
-  };
-
-  const deletePost = async (post) => {
-    if (!window.confirm('Delete this post permanently? Likes on it are removed too.')) return;
-    const { error } = await supabase.from('posts').delete().eq('id', post.id).eq('author_id', user.id);
-    if (error) return toast.error('Could not delete', error.message);
-    toast.ok('Deleted', 'Post removed permanently.');
-    refreshPosts();
-  };
-
-  const archivePost = async (post) => {
-    const { error } = await supabase.from('posts').update({ archived: true }).eq('id', post.id).eq('author_id', user.id);
-    if (error) return toast.error('Could not archive', error.message);
-    toast.ok('Archived', 'Post hidden from the feed — restore it anytime.');
-    refreshPosts();
-  };
-
-  const restorePost = async (post) => {
-    const { error } = await supabase.from('posts').update({ archived: false }).eq('id', post.id).eq('author_id', user.id);
-    if (error) return toast.error('Could not restore', error.message);
-    toast.ok('Restored', 'Post is back on the feed.');
-    refreshPosts();
-  };
+  const actions = usePostActions({ user, toast, refresh: refreshPosts });
 
   const learningItems = useMemo(() => {
     const items = learn.hn.map((h) => ({ kind: 'hn', ts: h.published, data: h }));
@@ -240,15 +173,15 @@ export default function Feed() {
                 likeCount={likeCount.get(post.id) || 0}
                 onLike={() => toggleLike(post.id)}
                 onShare={() => sharePost(post)}
-                onEditStart={() => startEdit(post)}
-                onEditCancel={cancelEdit}
-                onEditChange={setEditDraft}
-                onEditSave={saveEdit}
-                editDraft={editDraft}
-                editing={editingId === post.id}
-                saving={saving}
-                onArchive={() => restorePost(post)}
-                onDelete={() => deletePost(post)}
+                onEditStart={() => actions.startEdit(post)}
+                onEditCancel={actions.cancelEdit}
+                onEditChange={actions.setEditDraft}
+                onEditSave={actions.saveEdit}
+                editDraft={actions.editDraft}
+                editing={actions.editingId === post.id}
+                saving={actions.saving}
+                onArchive={() => actions.restorePost(post)}
+                onDelete={() => actions.deletePost(post)}
               />
             ))
           )
@@ -275,15 +208,15 @@ export default function Feed() {
                 likeCount={likeCount.get(item.data.id) || 0}
                 onLike={() => toggleLike(item.data.id)}
                 onShare={() => sharePost(item.data)}
-                onEditStart={() => startEdit(item.data)}
-                onEditCancel={cancelEdit}
-                onEditChange={setEditDraft}
-                onEditSave={saveEdit}
-                editDraft={editDraft}
-                editing={editingId === item.data.id}
-                saving={saving}
-                onArchive={() => archivePost(item.data)}
-                onDelete={() => deletePost(item.data)}
+                onEditStart={() => actions.startEdit(item.data)}
+                onEditCancel={actions.cancelEdit}
+                onEditChange={actions.setEditDraft}
+                onEditSave={actions.saveEdit}
+                editDraft={actions.editDraft}
+                editing={actions.editingId === item.data.id}
+                saving={actions.saving}
+                onArchive={() => actions.archivePost(item.data)}
+                onDelete={() => actions.deletePost(item.data)}
               />
             ) : item.kind === 'hn' ? (
               <HnCard key={item.data.id} item={item.data} />
@@ -328,79 +261,6 @@ export default function Feed() {
         </div>
       </aside>
     </div>
-  );
-}
-
-function PostCard({ post, liked, likeCount, onLike, onShare, mine, manage, editing, editDraft, onEditStart, onEditCancel, onEditChange, onEditSave, saving, onArchive, onDelete }) {
-  const author = post.profiles;
-  const when = formatEventDate(post.created_at);
-  return (
-    <article className="post-card panel">
-      <div className="post-head">
-        <Avatar name={author?.full_name} seed={author?.id} size={40} url={author?.avatar_url} />
-        <div className="who">
-          <b>{author?.full_name || 'Member'}</b>
-          <span>{when.day} · {when.time}</span>
-        </div>
-        <span className={`role-pill post-role role-pill--${author?.role || 'student'}`}>{author?.role || 'student'}</span>
-      </div>
-      {editing ? (
-        <div className="post-edit">
-          <textarea
-            className="textarea"
-            value={editDraft}
-            maxLength={LIMIT}
-            onChange={(e) => onEditChange(e.target.value)}
-            autoFocus
-          />
-          <div className="foot">
-            <span className="count">{editDraft.length}/{LIMIT}</span>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button className="btn btn-ghost btn-sm" onClick={onEditCancel} disabled={saving}>Cancel</button>
-              <button className="btn btn-accent btn-sm" onClick={onEditSave} disabled={!editDraft.trim() || saving}>
-                {saving ? 'Saving…' : 'Save'}
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : (
-        <>
-          <p className="post-body">{post.content}</p>
-          <div className="post-actions">
-            <button className={liked ? 'button--liked' : ''} onClick={onLike}>
-              <HeartIcon width={17} height={17} fill={liked ? 'currentColor' : 'none'} />
-              {likeCount > 0 ? likeCount : 'Like'}
-            </button>
-            <button onClick={onShare}>
-              <ShareIcon width={17} height={17} />
-              Share
-            </button>
-            {manage && (
-              <button onClick={onArchive}>
-                <ArchiveIcon width={17} height={17} />
-                Restore
-              </button>
-            )}
-            {mine && (
-              <>
-                <button onClick={onEditStart} title="Edit">
-                  <PencilIcon width={17} height={17} />
-                  Edit
-                </button>
-                <button className="post-action--warn" onClick={onArchive} title="Archive">
-                  <ArchiveIcon width={17} height={17} />
-                  Archive
-                </button>
-                <button className="post-action--danger" onClick={onDelete} title="Delete">
-                  <TrashIcon width={17} height={17} />
-                  Delete
-                </button>
-              </>
-            )}
-          </div>
-        </>
-      )}
-    </article>
   );
 }
 

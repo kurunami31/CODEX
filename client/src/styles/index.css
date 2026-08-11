@@ -642,6 +642,71 @@ button { font-family: inherit; cursor: pointer; }
 .learn-foot .stat-l { display: flex; align-items: center; gap: 5px; font-family: var(--f-ocr); font-size: 10px; letter-spacing: 0.08em; color: var(--muted); text-transform: uppercase; }
 .learn-foot .stat-l svg { color: var(--warn); }
 
+/* ── post author + options menu ────────────────────────── */
+.post-author {
+  display: flex; align-items: center; gap: 12px; min-width: 0;
+  flex: 1; text-align: left;
+  border: 0; background: transparent; padding: 0;
+  border-radius: 10px;
+}
+.post-author .who { min-width: 0; }
+.post-author .who b { transition: color 0.14s ease; }
+.post-author:hover .who b { color: var(--accent-ink); }
+
+.post-menu { position: relative; flex-shrink: 0; }
+.post-menu-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 34px; height: 34px;
+  border: 0; background: transparent; border-radius: 10px;
+  color: var(--muted);
+  transition: background 0.14s ease, color 0.14s ease;
+}
+.post-menu-btn:hover,
+.post-menu-btn--open { background: var(--bg-2); color: var(--primary); }
+.post-menu-drop {
+  position: absolute; top: calc(100% + 6px); right: 0; z-index: 60;
+  min-width: 180px; padding: 6px;
+  background: var(--paper); border: 1px solid var(--line);
+  border-radius: var(--r-md); box-shadow: var(--sh-md);
+  display: flex; flex-direction: column; gap: 2px;
+  animation: menu-in 0.16s cubic-bezier(0.2, 0.9, 0.3, 1.12);
+}
+@keyframes menu-in { from { opacity: 0; transform: translateY(-4px) scale(0.98); } }
+.menu-item {
+  display: flex; align-items: center; gap: 10px;
+  width: 100%; border: 0; background: transparent; text-align: left;
+  padding: 9px 12px; border-radius: 10px;
+  font-size: 13.5px; font-weight: 500; color: var(--ink-soft);
+  transition: background 0.12s ease, color 0.12s ease;
+}
+.menu-item:hover { background: var(--bg-2); color: var(--primary); }
+.menu-item--danger { color: var(--danger); }
+.menu-item--danger:hover { background: rgba(229, 72, 77, 0.09); color: var(--danger); }
+
+/* ── profile page ──────────────────────────────────────── */
+.profile-back { margin-bottom: 12px; }
+.profile-head {
+  display: flex; gap: 22px; align-items: flex-start; flex-wrap: wrap;
+  padding: 26px; margin-bottom: 20px;
+}
+.profile-meta { flex: 1; min-width: 240px; }
+.profile-name {
+  margin: 0; font-family: var(--f-id); font-weight: 700;
+  font-size: clamp(22px, 4vw, 28px); color: var(--ink);
+  letter-spacing: 0.01em; line-height: 1.1;
+}
+.profile-sub { margin-top: 8px; }
+.profile-stats { display: flex; gap: 28px; margin-top: 16px; flex-wrap: wrap; }
+.profile-stats .stat b {
+  display: block; font-family: var(--f-id); font-weight: 700;
+  font-size: 19px; color: var(--accent-ink);
+}
+.profile-stats .stat span {
+  font-family: var(--f-ocr); font-size: 9px; letter-spacing: 0.18em;
+  text-transform: uppercase; color: var(--muted);
+}
+.profile-edit { margin-top: 16px; }
+
 /* ── events ─────────────────────────────────────────────── */
 .events-head { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 20px; flex-wrap: wrap; }
 .event-list { display: flex; flex-direction: column; gap: 14px; }

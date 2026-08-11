@@ -12,6 +12,7 @@ import ConfigGate from './components/ConfigGate';
 
 const EventDetail = lazy(() => import('./pages/EventDetail'));
 const MyId = lazy(() => import('./pages/MyId'));
+const Profile = lazy(() => import('./pages/Profile'));
 const ProfileSettings = lazy(() => import('./pages/ProfileSettings'));
 const ScannerPage = lazy(() => import('./pages/ScannerPage'));
 const Admin = lazy(() => import('./pages/Admin'));
@@ -77,6 +78,7 @@ export default function App() {
         >
           <Route index element={<Navigate to="/app/feed" replace />} />
           <Route path="feed" element={<Feed />} />
+          <Route path="profile/:id" element={<Lazy><Profile /></Lazy>} />
           <Route path="events" element={<Events />} />
           <Route path="events/:id" element={<Lazy><EventDetail /></Lazy>} />
           <Route path="idcard" element={<Lazy><MyId /></Lazy>} />
