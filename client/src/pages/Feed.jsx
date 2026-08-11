@@ -30,7 +30,7 @@ export default function Feed() {
   const loadPosts = useCallback(async () => {
     const { data, error } = await supabase
       .from('posts')
-      .select('id, content, created_at, profiles(full_name, role, year_level)')
+      .select('id, content, created_at, profiles!posts_author_id_fkey(full_name, role, year_level)')
       .order('created_at', { ascending: false });
     if (error) {
       toast.error('Feed error', error.message);

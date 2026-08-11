@@ -51,17 +51,28 @@ create table if not exists public.attendance (
 -- ────────────────────────────────────────────────
 create table if not exists public.posts (
   id          uuid primary key default gen_random_uuid(),
-  author_id   uuid not null references auth.users(id) on delete cascade,
+  author_id   uuid not null references public.profiles(id) on delete cascade,
   content     text not null check (char_length(content) <= 2000),
   created_at  timestamptz not null default now()
 );
 
 create table if not exists public.likes (
   post_id    uuid not null references public.posts(id) on delete cascade,
-  user_id    uuid not null references auth.users(id) on delete cascade,
+  user_id    uuid not null references public.profiles(id) on delete cascade,
   created_at timestamptz not null default now(),
   primary key (post_id, user_id)
 );
+
+-- Bring existing databases in line with the create statements above
+-- (postgres default constraint names are "<table>_<column>_fkey").
+alter table public.posts
+  drop constraint if exists posts_author_id_fkey,
+  add constraint posts_author_id_fkey foreign key (author_id)
+    references public.profiles(id) on delete cascade;
+alter table public.likes
+  drop constraint if exists likes_user_id_fkey,
+  add constraint likes_user_id_fkey foreign key (user_id)
+    references public.profiles(id) on delete cascade;
 
 -- ────────────────────────────────────────────────
 --  ROW LEVEL SECURITY
