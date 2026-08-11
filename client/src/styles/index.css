@@ -585,6 +585,25 @@ button { font-family: inherit; cursor: pointer; }
 .post-actions button:hover { background: var(--bg-2); color: var(--primary); }
 .post-actions button--liked { color: var(--accent-ink); font-weight: 600; }
 .post-actions button--liked svg { fill: var(--accent); color: var(--accent); }
+.post-actions button--danger:hover { background: rgba(229, 72, 77, 0.09); color: var(--danger); }
+.post-actions button--warn:hover { background: rgba(245, 166, 35, 0.12); color: var(--warn); }
+.post-edit .textarea { width: 100%; min-height: 90px; margin-top: 14px; }
+.post-edit .foot { margin-top: 10px; }
+
+.feed-tabs { display: flex; gap: 6px; margin: 2px 0 12px; }
+.feed-tab {
+  display: flex; align-items: center; gap: 7px;
+  border: 1px solid var(--line-strong); background: var(--paper);
+  border-radius: 999px; padding: 6px 14px;
+  font-family: var(--f-ocr); font-size: 11.5px; letter-spacing: 0.06em;
+  color: var(--muted); cursor: pointer; transition: all 0.14s ease;
+}
+.feed-tab:hover { border-color: var(--primary-2); color: var(--primary); }
+.feed-tab--active { background: var(--deep); border-color: var(--deep); color: var(--accent); }
+.feed-tab-count {
+  background: var(--accent); color: var(--deep-2);
+  font-size: 10.5px; line-height: 1; padding: 3px 6px; border-radius: 999px; font-weight: 700;
+}
 
 .learn-card { padding: 18px 20px; overflow: hidden; position: relative; }
 .learn-card::before {

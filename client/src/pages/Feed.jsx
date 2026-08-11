@@ -5,7 +5,7 @@ import { useToast } from '../context/ToastContext';
 import Avatar from '../components/Avatar';
 import { fetchFeedHn, fetchFeedGitHub } from '../lib/api';
 import { timeAgo, formatEventDate } from '../lib/format';
-import { HeartIcon, ShareIcon, ExternalIcon, StarIcon, GithubIcon, RssIcon, BoxIcon } from '../components/icons/Icons';
+import { HeartIcon, ShareIcon, ExternalIcon, StarIcon, GithubIcon, RssIcon, BoxIcon, PencilIcon, TrashIcon, ArchiveIcon } from '../components/icons/Icons';
 
 const LIMIT = 2000;
 
@@ -20,6 +20,11 @@ export default function Feed() {
   const [posting, setPosting] = useState(false);
   const [loading, setLoading] = useState(true);
   const [feedError, setFeedError] = useState('');
+  const [view, setView] = useState('feed');
+  const [archivedPosts, setArchivedPosts] = useState([]);
+  const [editingId, setEditingId] = useState(null);
+  const [editDraft, setEditDraft] = useState('');
+  const [saving, setSaving] = useState(false);
   const loadedRef = useRef(false);
 
   const loadLikes = useCallback(async () => {
@@ -30,7 +35,8 @@ export default function Feed() {
   const loadPosts = useCallback(async () => {
     const { data, error } = await supabase
       .from('posts')
-      .select('id, content, created_at, profiles!posts_author_id_fkey(full_name, role, year_level, avatar_url)')
+      .select('id, content, created_at, archived, profiles!posts_author_id_fkey(full_name, role, year_level, avatar_url)')
+      .eq('archived', false)
       .order('created_at', { ascending: false });
     if (error) {
       toast.error('Feed error', error.message);
@@ -38,6 +44,21 @@ export default function Feed() {
     }
     setPosts(data || []);
   }, [toast]);
+
+  const loadArchived = useCallback(async () => {
+    if (!user) return;
+    const { data, error } = await supabase
+      .from('posts')
+      .select('id, content, created_at, archived, profiles!posts_author_id_fkey(full_name, role, year_level, avatar_url)')
+      .eq('author_id', user.id)
+      .eq('archived', true)
+      .order('created_at', { ascending: false });
+    if (error) {
+      toast.error('Archive error', error.message);
+      return;
+    }
+    setArchivedPosts(data || []);
+  }, [user, toast]);
 
   useEffect(() => {
     if (loadedRef.current) return;
@@ -99,6 +120,54 @@ export default function Feed() {
     loadPosts();
   };
 
+  const refreshPosts = async () => {
+    await Promise.all([loadPosts(), loadArchived()]);
+  };
+
+  const startEdit = (post) => {
+    setEditingId(post.id);
+    setEditDraft(post.content);
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditDraft('');
+  };
+
+  const saveEdit = async () => {
+    const content = editDraft.trim();
+    if (!content || saving || !editingId) return;
+    setSaving(true);
+    const { error } = await supabase.from('posts').update({ content }).eq('id', editingId).eq('author_id', user.id);
+    setSaving(false);
+    if (error) return toast.error('Could not save', error.message);
+    cancelEdit();
+    toast.ok('Saved', 'Your post was updated.');
+    refreshPosts();
+  };
+
+  const deletePost = async (post) => {
+    if (!window.confirm('Delete this post permanently? Likes on it are removed too.')) return;
+    const { error } = await supabase.from('posts').delete().eq('id', post.id).eq('author_id', user.id);
+    if (error) return toast.error('Could not delete', error.message);
+    toast.ok('Deleted', 'Post removed permanently.');
+    refreshPosts();
+  };
+
+  const archivePost = async (post) => {
+    const { error } = await supabase.from('posts').update({ archived: true }).eq('id', post.id).eq('author_id', user.id);
+    if (error) return toast.error('Could not archive', error.message);
+    toast.ok('Archived', 'Post hidden from the feed — restore it anytime.');
+    refreshPosts();
+  };
+
+  const restorePost = async (post) => {
+    const { error } = await supabase.from('posts').update({ archived: false }).eq('id', post.id).eq('author_id', user.id);
+    if (error) return toast.error('Could not restore', error.message);
+    toast.ok('Restored', 'Post is back on the feed.');
+    refreshPosts();
+  };
+
   const learningItems = useMemo(() => {
     const items = learn.hn.map((h) => ({ kind: 'hn', ts: h.published, data: h }));
     const ghItems = learn.gh.map((g) => ({ kind: 'gh', ts: g.updated, data: g }));
@@ -139,7 +208,51 @@ export default function Feed() {
           <div className="portal-config" style={{ marginBottom: 0 }}>{feedError}</div>
         )}
 
-        {loading ? (
+        <div className="feed-tabs">
+          <button className={`feed-tab${view === 'feed' ? ' feed-tab--active' : ''}`} onClick={() => setView('feed')}>
+            Feed
+          </button>
+          <button
+            className={`feed-tab${view === 'archived' ? ' feed-tab--active' : ''}`}
+            onClick={() => {
+              setView('archived');
+              loadArchived();
+            }}
+          >
+            My archived{archivedPosts.length > 0 && <span className="feed-tab-count">{archivedPosts.length}</span>}
+          </button>
+        </div>
+
+        {view === 'archived' ? (
+          archivedPosts.length === 0 ? (
+            <div className="empty-state panel">
+              <span className="ico"><ArchiveIcon width={26} height={26} /></span>
+              <b>Nothing archived</b>
+              <p>Posts you archive are parked here — restore or delete them anytime.</p>
+            </div>
+          ) : (
+            archivedPosts.map((post) => (
+              <PostCard
+                key={`p-${post.id}`}
+                post={post}
+                manage
+                liked={false}
+                likeCount={likeCount.get(post.id) || 0}
+                onLike={() => toggleLike(post.id)}
+                onShare={() => sharePost(post)}
+                onEditStart={() => startEdit(post)}
+                onEditCancel={cancelEdit}
+                onEditChange={setEditDraft}
+                onEditSave={saveEdit}
+                editDraft={editDraft}
+                editing={editingId === post.id}
+                saving={saving}
+                onArchive={() => restorePost(post)}
+                onDelete={() => deletePost(post)}
+              />
+            ))
+          )
+        ) : loading ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             <div className="panel" style={{ padding: 20 }}><div className="skeleton" style={{ height: 90 }} /></div>
             <div className="panel" style={{ padding: 20 }}><div className="skeleton" style={{ height: 70 }} /></div>
@@ -154,7 +267,24 @@ export default function Feed() {
         ) : (
           feedItems.map((item) =>
             item.kind === 'post' ? (
-              <PostCard key={`p-${item.data.id}`} post={item.data} liked={likedByMe.has(item.data.id)} likeCount={likeCount.get(item.data.id) || 0} onLike={() => toggleLike(item.data.id)} onShare={() => sharePost(item.data)} />
+              <PostCard
+                key={`p-${item.data.id}`}
+                post={item.data}
+                mine={item.data.author_id === user?.id}
+                liked={likedByMe.has(item.data.id)}
+                likeCount={likeCount.get(item.data.id) || 0}
+                onLike={() => toggleLike(item.data.id)}
+                onShare={() => sharePost(item.data)}
+                onEditStart={() => startEdit(item.data)}
+                onEditCancel={cancelEdit}
+                onEditChange={setEditDraft}
+                onEditSave={saveEdit}
+                editDraft={editDraft}
+                editing={editingId === item.data.id}
+                saving={saving}
+                onArchive={() => archivePost(item.data)}
+                onDelete={() => deletePost(item.data)}
+              />
             ) : item.kind === 'hn' ? (
               <HnCard key={item.data.id} item={item.data} />
             ) : (
@@ -201,7 +331,7 @@ export default function Feed() {
   );
 }
 
-function PostCard({ post, liked, likeCount, onLike, onShare }) {
+function PostCard({ post, liked, likeCount, onLike, onShare, mine, manage, editing, editDraft, onEditStart, onEditCancel, onEditChange, onEditSave, saving, onArchive, onDelete }) {
   const author = post.profiles;
   const when = formatEventDate(post.created_at);
   return (
@@ -214,17 +344,62 @@ function PostCard({ post, liked, likeCount, onLike, onShare }) {
         </div>
         <span className={`role-pill post-role role-pill--${author?.role || 'student'}`}>{author?.role || 'student'}</span>
       </div>
-      <p className="post-body">{post.content}</p>
-      <div className="post-actions">
-        <button className={liked ? 'button--liked' : ''} onClick={onLike}>
-          <HeartIcon width={17} height={17} fill={liked ? 'currentColor' : 'none'} />
-          {likeCount > 0 ? likeCount : 'Like'}
-        </button>
-        <button onClick={onShare}>
-          <ShareIcon width={17} height={17} />
-          Share
-        </button>
-      </div>
+      {editing ? (
+        <div className="post-edit">
+          <textarea
+            className="textarea"
+            value={editDraft}
+            maxLength={LIMIT}
+            onChange={(e) => onEditChange(e.target.value)}
+            autoFocus
+          />
+          <div className="foot">
+            <span className="count">{editDraft.length}/{LIMIT}</span>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button className="btn btn-ghost btn-sm" onClick={onEditCancel} disabled={saving}>Cancel</button>
+              <button className="btn btn-accent btn-sm" onClick={onEditSave} disabled={!editDraft.trim() || saving}>
+                {saving ? 'Saving…' : 'Save'}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <>
+          <p className="post-body">{post.content}</p>
+          <div className="post-actions">
+            <button className={liked ? 'button--liked' : ''} onClick={onLike}>
+              <HeartIcon width={17} height={17} fill={liked ? 'currentColor' : 'none'} />
+              {likeCount > 0 ? likeCount : 'Like'}
+            </button>
+            <button onClick={onShare}>
+              <ShareIcon width={17} height={17} />
+              Share
+            </button>
+            {manage && (
+              <button onClick={onArchive}>
+                <ArchiveIcon width={17} height={17} />
+                Restore
+              </button>
+            )}
+            {mine && (
+              <>
+                <button onClick={onEditStart} title="Edit">
+                  <PencilIcon width={17} height={17} />
+                  Edit
+                </button>
+                <button className="post-action--warn" onClick={onArchive} title="Archive">
+                  <ArchiveIcon width={17} height={17} />
+                  Archive
+                </button>
+                <button className="post-action--danger" onClick={onDelete} title="Delete">
+                  <TrashIcon width={17} height={17} />
+                  Delete
+                </button>
+              </>
+            )}
+          </div>
+        </>
+      )}
     </article>
   );
 }

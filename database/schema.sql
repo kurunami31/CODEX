@@ -60,6 +60,9 @@ create table if not exists public.posts (
   created_at  timestamptz not null default now()
 );
 
+-- archived posts: hidden from the feed but kept for the author to restore
+alter table public.posts add column if not exists archived boolean not null default false;
+
 create table if not exists public.likes (
   post_id    uuid not null references public.posts(id) on delete cascade,
   user_id    uuid not null references public.profiles(id) on delete cascade,
@@ -127,14 +130,19 @@ create policy "attendance_select_own" on public.attendance
   for select to authenticated
   using (student_id = (select p.student_id from public.profiles p where p.id = auth.uid()));
 
--- posts: everyone signed in reads and posts; authors delete their own
+-- posts: everyone signed in reads and posts; authors edit, archive and
+-- delete their own posts
 drop policy if exists "posts_select_all" on public.posts;
 drop policy if exists "posts_insert_all" on public.posts;
+drop policy if exists "posts_update_own" on public.posts;
 drop policy if exists "posts_delete_own" on public.posts;
 create policy "posts_select_all" on public.posts
   for select to authenticated using (true);
 create policy "posts_insert_all" on public.posts
   for insert to authenticated with check (author_id = auth.uid());
+create policy "posts_update_own" on public.posts
+  for update to authenticated using (author_id = auth.uid())
+  with check (author_id = auth.uid());
 create policy "posts_delete_own" on public.posts
   for delete to authenticated using (author_id = auth.uid());
 

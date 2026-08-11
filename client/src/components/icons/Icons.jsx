@@ -214,6 +214,36 @@ export function CheckIcon(props) {
   );
 }
 
+export function PencilIcon(props) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M4 20h16" />
+      <path d="m13.5 4.5 5.5 5.5L10.5 18.5H5v-5.5L13.5 4.5Z" />
+    </svg>
+  );
+}
+
+export function TrashIcon(props) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M4.5 7h15" />
+      <path d="M9.5 7V4.5h5V7" />
+      <path d="M6.5 7 7.5 20.5h9L18.5 7" />
+      <path d="M10 11v6M14 11v6" />
+    </svg>
+  );
+}
+
+export function ArchiveIcon(props) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M3.5 7.5 6 4h12l2.5 3.5" />
+      <path d="M4 7.5v12.5h16V7.5" />
+      <path d="M10 12h4" />
+    </svg>
+  );
+}
+
 export function AlertIcon(props) {
   return (
     <svg {...base} {...props}>
