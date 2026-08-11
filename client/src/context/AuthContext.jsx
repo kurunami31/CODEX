@@ -124,7 +124,7 @@ export function AuthProvider({ children }) {
   const login = async (email, password) => {
     const { error } = await signIn(email, password);
     if (isRateLimited(error)) {
-      return { error: { message: 'Too many login attempts from this network — wait a bit and try again.' } };
+      return { error: { message: 'Too many login attempts from this network — the limit resets every hour. Try again later, or use mobile data / a different network.', status: 429 } };
     }
     return { error };
   };
@@ -132,7 +132,7 @@ export function AuthProvider({ children }) {
   const register = async ({ email, password, studentId, fullName, yearLevel, section }) => {
     const { data, error } = await signUp(email, password);
     if (isRateLimited(error)) {
-      return { error: { message: 'Too many sign-up attempts from this network — the limit resets every hour. Try again later, or use mobile data / a different network.' } };
+      return { error: { message: 'Too many sign-up attempts from this network — the limit resets every hour. Try again later, or use mobile data / a different network.', status: 429 } };
     }
     if (error) return { error };
     if (!data.user) return { error: { message: 'Sign-up failed — please try again.' } };

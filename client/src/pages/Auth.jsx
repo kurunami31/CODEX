@@ -1,10 +1,17 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { CheckIcon, RssIcon, CalendarIcon, IdIcon, BotIcon, EyeIcon, EyeOffIcon } from '../components/icons/Icons';
 
 const YEARS = ['1st Year', '2nd Year', '3rd Year', '4th Year'];
+
+// Supabase rate-limits auth endpoints per IP (default 30/hour). Since the
+// window is opaque from the client, back off 10 minutes per 429 and cap at
+// one hour so students stop hammering the endpoint while it's exhausted.
+const COOLDOWN_MS = 10 * 60 * 1000;
+const COOLDOWN_CAP_MS = 60 * 60 * 1000;
+const fmtCountdown = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 
 export default function Auth() {
   const { login, register } = useAuth();
@@ -17,6 +24,24 @@ export default function Auth() {
   const [error, setError] = useState('');
   const [needsVerify, setNeedsVerify] = useState(false);
   const [showPwd, setShowPwd] = useState(false);
+  const [cooldownUntil, setCooldownUntil] = useState(0);
+  const [now, setNow] = useState(() => Date.now());
+
+  const cooldownLeft = Math.max(0, Math.ceil((cooldownUntil - now) / 1000));
+
+  const extendCooldown = () => {
+    setNow(Date.now());
+    setCooldownUntil((c) => Math.min(Math.max(c || 0, Date.now()) + COOLDOWN_MS, Date.now() + COOLDOWN_CAP_MS));
+  };
+
+  useEffect(() => {
+    if (cooldownUntil <= 0) return;
+    const t = setInterval(() => {
+      if (Date.now() >= cooldownUntil) clearInterval(t);
+      setNow(Date.now());
+    }, 1000);
+    return () => clearInterval(t);
+  }, [cooldownUntil]);
 
   const [form, setForm] = useState({
     email: '',
@@ -64,8 +89,13 @@ export default function Auth() {
         }
       }
     } catch (err) {
-      setError(err.message || 'Something went wrong.');
-      if (err.code === 'invalid_credentials') setError('Wrong email or password.');
+      if (err.status === 429) {
+        extendCooldown();
+        setError('');
+      } else {
+        setError(err.message || 'Something went wrong.');
+        if (err.code === 'invalid_credentials') setError('Wrong email or password.');
+      }
     } finally {
       setBusy(false);
     }
@@ -192,6 +222,16 @@ export default function Auth() {
                 </div>
               </div>
 
+              {cooldownLeft > 0 && (
+                <div className="rate-note">
+                  <span style={{ flexShrink: 0 }}>!</span>
+                  <span>
+                    Supabase is rate-limiting this network — {tab === 'login' ? 'logins' : 'sign-ups'} are paused.
+                    Try again in <b>{fmtCountdown(cooldownLeft)}</b>, or use mobile data / a different network.
+                  </span>
+                </div>
+              )}
+
               {error && (
                 <div className="err-box">
                   <span style={{ flexShrink: 0 }}>!</span>
@@ -199,8 +239,12 @@ export default function Auth() {
                 </div>
               )}
 
-              <button type="submit" className="btn btn-accent btn-lg auth-submit" disabled={busy}>
-                {busy ? (tab === 'login' ? 'Authenticating…' : 'Creating account…') : tab === 'login' ? 'Log in' : 'Join CODEBYTERS'}
+              <button type="submit" className="btn btn-accent btn-lg auth-submit" disabled={busy || cooldownLeft > 0}>
+                {busy
+                  ? (tab === 'login' ? 'Authenticating…' : 'Creating account…')
+                  : cooldownLeft > 0
+                    ? `Try again in ${fmtCountdown(cooldownLeft)}`
+                    : tab === 'login' ? 'Log in' : 'Join CODEBYTERS'}
               </button>
             </div>
           </form>

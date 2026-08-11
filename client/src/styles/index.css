@@ -480,6 +480,13 @@ button { font-family: inherit; cursor: pointer; }
   background: rgba(229, 72, 77, 0.08); border: 1px solid rgba(229, 72, 77, 0.3);
   color: #b3261e; border-radius: var(--r-md); padding: 10px 13px; font-size: 13px; line-height: 1.45;
 }
+.rate-note {
+  display: flex; gap: 8px; align-items: flex-start;
+  background: rgba(245, 166, 35, 0.1); border: 1px solid rgba(245, 166, 35, 0.45);
+  color: #9a6106; border-radius: var(--r-md); padding: 10px 13px;
+  font-size: 13px; line-height: 1.45;
+}
+html[data-theme='dark'] .rate-note { color: #ffc46b; }
 /* ── app shell ──────────────────────────────────────────── */
 .app { display: flex; min-height: 100vh; }
 .sidebar {
