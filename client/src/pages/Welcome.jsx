@@ -16,8 +16,8 @@ export default function Welcome() {
           <span className="brand-name">CODEBYTERS</span>
         </div>
         <div className="brand-sub ocr-label ocr-label--light" style={{ textAlign: 'right', lineHeight: 1.8 }}>
-          <div>dorsu · college of</div>
-          <div>computing · b.s.i.t.</div>
+          <div>dorsu · faculty of computing,</div>
+          <div>engineering, &amp; technology · b.s.i.t.</div>
         </div>
       </nav>
 
