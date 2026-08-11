@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
-import { CheckIcon, RssIcon, CalendarIcon, IdIcon, BotIcon } from '../components/icons/Icons';
+import { CheckIcon, RssIcon, CalendarIcon, IdIcon, BotIcon, EyeIcon, EyeOffIcon } from '../components/icons/Icons';
 
 const YEARS = ['1st Year', '2nd Year', '3rd Year', '4th Year'];
 
@@ -16,6 +16,7 @@ export default function Auth() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [needsVerify, setNeedsVerify] = useState(false);
+  const [showPwd, setShowPwd] = useState(false);
 
   const [form, setForm] = useState({
     email: '',
@@ -177,7 +178,18 @@ export default function Auth() {
               </div>
               <div className="field">
                 <label htmlFor="password">Password</label>
-                <input id="password" className="input" type="password" placeholder="••••••••••" value={form.password} onChange={set('password')} autoComplete={tab === 'login' ? 'current-password' : 'new-password'} required minLength={6} />
+                <div className="pwd-wrap">
+                  <input id="password" className="input pwd-input" type={showPwd ? 'text' : 'password'} placeholder="••••••••••" value={form.password} onChange={set('password')} autoComplete={tab === 'login' ? 'current-password' : 'new-password'} required minLength={6} />
+                  <button
+                    type="button"
+                    className="pwd-toggle"
+                    onClick={() => setShowPwd((s) => !s)}
+                    aria-label={showPwd ? 'Hide password' : 'Show password'}
+                    title={showPwd ? 'Hide password' : 'Show password'}
+                  >
+                    {showPwd ? <EyeOffIcon width={18} height={18} /> : <EyeIcon width={18} height={18} />}
+                  </button>
+                </div>
               </div>
 
               {error && (
