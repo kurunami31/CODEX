@@ -1,0 +1,33 @@
+{
+  "name": "codex",
+  "private": true,
+  "version": "1.0.0",
+  "description": "CODEX - Community platform for CODEBYTERS (DOrSU BSIT)",
+  "type": "module",
+  "workspaces": [
+    "client"
+  ],
+  "engines": {
+    "node": ">=18.17"
+  },
+  "scripts": {
+    "dev": "concurrently -n api,web -c cyan,magenta \"npm:dev:server\" \"npm:dev:client\"",
+    "dev:server": "node server/index.js",
+    "dev:client": "npm run dev --workspace client",
+    "build": "npm run build --workspace client",
+    "start": "node server/index.js",
+    "preview": "npm run preview --workspace client"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "express-rate-limit": "^7.4.0",
+    "groq-sdk": "^1.5.0",
+    "helmet": "^7.1.0",
+    "rss-parser": "^3.13.0",
+    "@supabase/supabase-js": "^2.45.0"
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.1"
+  }
+}

@@ -1,0 +1,85 @@
+import { Router } from 'express';
+import { supabase, supabaseFor } from '../lib/supabase.js';
+import { signIdentity, verifyIdentity } from '../lib/identity.js';
+
+const router = Router();
+
+function bearer(req) {
+  const h = req.headers.authorization || '';
+  return h.startsWith('Bearer ') ? h.slice(7).trim() : '';
+}
+
+// POST /api/id/sign — issues a short-lived signed QR payload for the
+// authenticated student. Requires a valid Supabase session token.
+router.post('/id/sign', async (req, res) => {
+  const token = bearer(req);
+  if (!token) return res.status(401).json({ error: 'Missing session token.' });
+
+  const sb = supabaseFor(token);
+  const { data: { user }, error: authError } = await sb.auth.getUser();
+  if (authError || !user) return res.status(401).json({ error: 'Invalid session.' });
+
+  const { data: profile, error } = await sb
+    .from('profiles')
+    .select('student_id, full_name, course')
+    .eq('id', user.id)
+    .maybeSingle();
+
+  if (error) return res.status(500).json({ error: 'Could not load your profile.' });
+  if (!profile) return res.status(404).json({ error: 'Profile not found. Did you complete sign-up?' });
+
+  const { payload, sig } = signIdentity({
+    sid: profile.student_id,
+    n: profile.full_name,
+    iat: Date.now(),
+  });
+
+  res.set('Cache-Control', 'no-store');
+  res.json({ payload, sig, ttlMs: 5 * 60 * 1000 });
+});
+
+// POST /api/attendance/scan — moderator/admin only. Verifies the QR
+// signature + expiry, then records attendance through the RLS-protected
+// RPC using the SCANNER's own token (audited as scanned_by).
+router.post('/attendance/scan', async (req, res) => {
+  const token = bearer(req);
+  if (!token) return res.status(401).json({ error: 'Missing session token.' });
+
+  const { eventId, qr } = req.body || {};
+  if (typeof eventId !== 'string' || !eventId) return res.status(400).json({ error: 'eventId is required.' });
+  if (!qr || typeof qr.payload !== 'string' || typeof qr.sig !== 'string') {
+    return res.status(400).json({ error: 'QR payload and signature are required.' });
+  }
+  if (typeof eventId !== 'string' || eventId.length > 64) return res.status(400).json({ error: 'Invalid eventId.' });
+
+  const sb = supabaseFor(token);
+  const { data: { user }, error: authError } = await sb.auth.getUser();
+  if (authError || !user) return res.status(401).json({ error: 'Invalid session.' });
+
+  // The attendance RPC itself enforces moderator/admin; check here too so
+  // we fail fast and keep invalid scans out of the RPC layer.
+  const { data: profile } = await sb.from('profiles').select('role, student_id').eq('id', user.id).maybeSingle();
+  if (!profile || !['admin', 'moderator'].includes(profile.role)) {
+    return res.status(403).json({ error: 'Only moderators and admins can record attendance.' });
+  }
+
+  const verified = verifyIdentity(qr.payload, qr.sig);
+  if (verified.error) return res.status(400).json({ error: verified.error });
+  const { sid, n } = verified.payload;
+
+  const { data, error } = await sb.rpc('mark_attendance', {
+    p_event_id: eventId,
+    p_student_id: sid,
+  });
+
+  if (error) {
+    const msg = error.message || 'Attendance could not be recorded.';
+    const status = /insufficient/i.test(msg) ? 403 : /not found/i.test(msg) ? 404 : 400;
+    return res.status(status).json({ error: msg, studentName: n });
+  }
+
+  res.set('Cache-Control', 'no-store');
+  res.json({ ...data, qrHolder: n });
+});
+
+export default router;
