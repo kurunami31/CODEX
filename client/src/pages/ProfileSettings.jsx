@@ -28,26 +28,36 @@ export default function ProfileSettings() {
     const file = e.target.files?.[0];
     e.target.value = '';
     if (!file) return;
-    if (!file.type.startsWith('image/')) return toast.error('Not an image', 'Choose a PNG, JPG, WEBP or GIF file.');
+    const okTypes = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'];
+    if (!okTypes.includes(file.type)) {
+      return toast.error('Unsupported format', 'Use PNG, JPG, WEBP or GIF. (HEIC and other phone formats aren\u2019t accepted yet.)');
+    }
     if (file.size > MAX_AVATAR_BYTES) return toast.error('File too large', 'Keep it under 3 MB.');
-    setPreview(URL.createObjectURL(file));
-    uploadAvatar(file);
+    const url = URL.createObjectURL(file);
+    setPreview(url);
+    uploadAvatar(file, url);
   };
 
-  const uploadAvatar = async (file) => {
+  const uploadAvatar = async (file, previewUrl) => {
     setUploading(true);
     setError('');
     try {
-      const path = `${user.id}/avatar${file.name.includes('.') ? file.name.slice(file.name.lastIndexOf('.')) : '.png'}`;
+      const ext = file.name.includes('.') ? file.name.slice(file.name.lastIndexOf('.')).toLowerCase() : '.png';
+      const path = `${user.id}/avatar${ext}`;
       const { error: upErr } = await supabase.storage.from('avatars').upload(path, file, { upsert: true, cacheControl: '31536000' });
       if (upErr) throw upErr;
       const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(path);
       const { error: dbErr } = await supabase.from('profiles').update({ avatar_url: publicUrl }).eq('id', user.id);
       if (dbErr) throw dbErr;
+      URL.revokeObjectURL(previewUrl);
+      setPreview('');
       refreshProfile();
       toast.ok('Photo updated', 'Your new profile picture is live.');
     } catch (err) {
+      URL.revokeObjectURL(previewUrl);
+      setPreview('');
       setError(err.message);
+      toast.error('Photo not saved', err.message);
     } finally {
       setUploading(false);
     }
