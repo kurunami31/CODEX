@@ -176,6 +176,17 @@ export default function Auth() {
             <button className={`auth-tab${tab === 'signup' ? ' auth-tab--on' : ''}`} onClick={() => { setTab('signup'); setError(''); }}>Create account</button>
           </div>
 
+          {tab === 'signup' && (
+            <div className="auth-tips">
+              <b>Sign-up tips</b>
+              <ul>
+                <li>Use a real student ID — each ID can only register once.</li>
+                <li>If asked to confirm your email, click the link we send (check spam).</li>
+                <li>Campus Wi-Fi shares one sign-up limit — wait if the form asks you to.</li>
+              </ul>
+            </div>
+          )}
+
           <form className="panel" style={{ padding: 26 }} onSubmit={handleSubmit}>
             <div className="auth-form">
               {tab === 'signup' && (

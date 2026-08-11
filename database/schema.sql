@@ -2,7 +2,7 @@
 --  CODEX — Supabase schema
 --  Run this whole file in: Supabase Dashboard → SQL Editor
 --  It creates tables, row-level security, attendance RPCs and
---  demo accounts (admin / moderator / students).
+--  the identity lock trigger. No demo accounts are seeded.
 -- ============================================================
 
 create extension if not exists pgcrypto;
@@ -356,86 +356,22 @@ create policy "avatars_own_delete" on storage.objects
   using (bucket_id = 'avatars' and (storage.foldername(name))[1] = auth.uid()::text);
 
 -- ============================================================
---  SEED — DEMO ACCOUNTS
---  Remove this section before going live, or keep for testing.
---  Passwords below are for LOCAL/DEMO use only.
--- ============================================================
-
-insert into auth.users (
-  instance_id, id, aud, role, email, encrypted_password,
-  email_confirmed_at, raw_app_meta_data, raw_user_meta_data,
-  created_at, updated_at, confirmation_token, recovery_token,
-  email_change_token_new, email_change
-) values
-(
-  '00000000-0000-0000-0000-000000000000',
-  'aaaaaaaa-0000-4000-8000-000000000001',
-  'authenticated', 'authenticated',
-  'admin@codex.org',
-  crypt('CodexAdmin2026!', gen_salt('bf')),
-  now(),
-  '{"provider":"email","providers":["email"]}',
-  '{}', now(), now(), '', '', '', ''
-),
-(
-  '00000000-0000-0000-0000-000000000000',
-  'aaaaaaaa-0000-4000-8000-000000000002',
-  'authenticated', 'authenticated',
-  'moderator@codex.org',
-  crypt('CodexMod2026!', gen_salt('bf')),
-  now(),
-  '{"provider":"email","providers":["email"]}',
-  '{}', now(), now(), '', '', '', ''
-),
-(
-  '00000000-0000-0000-0000-000000000000',
-  'aaaaaaaa-0000-4000-8000-000000000003',
-  'authenticated', 'authenticated',
-  'juan.delos@student.codex.org',
-  crypt('Student2026!', gen_salt('bf')),
-  now(),
-  '{"provider":"email","providers":["email"]}',
-  '{}', now(), now(), '', '', '', ''
-),
-(
-  '00000000-0000-0000-0000-000000000000',
-  'aaaaaaaa-0000-4000-8000-000000000004',
-  'authenticated', 'authenticated',
-  'maria.santos@student.codex.org',
-  crypt('Student2026!', gen_salt('bf')),
-  now(),
-  '{"provider":"email","providers":["email"]}',
-  '{}', now(), now(), '', '', '', ''
-)
-on conflict (id) do nothing;
-
-insert into public.profiles (id, student_id, full_name, year_level, section, course, role) values
-('aaaaaaaa-0000-4000-8000-000000000001', 'ADM-0001', 'Admin One',    '4th Year', 'A', 'BSIT', 'admin'),
-('aaaaaaaa-0000-4000-8000-000000000002', 'MOD-0001', 'Moderator One', '3rd Year', 'B', 'BSIT', 'moderator'),
-('aaaaaaaa-0000-4000-8000-000000000003', '2024-1001', 'Juan Dela Cruz',  '2nd Year', 'B', 'BSIT', 'student'),
-('aaaaaaaa-0000-4000-8000-000000000004', '2024-1002', 'Maria Santos',    '2nd Year', 'B', 'BSIT', 'student')
-on conflict (id) do nothing;
-
-insert into public.events (id, title, description, location, event_date, created_by) values
-(
-  'bbbbbbbb-0000-4000-8000-000000000001',
-  'CODEBYTERS General Assembly',
-  'Kick-off assembly for the semester. Meet the officers, see the roadmap, and learn how to join committees. Attendance is counted via QR.',
-  'DOrSU ICT Building — Audio Visual Room',
-  now() + interval '3 days',
-  'aaaaaaaa-0000-4000-8000-000000000001'
-),
-(
-  'bbbbbbbb-0000-4000-8000-000000000002',
-  'Intro to Web Development Workshop',
-  'Hands-on workshop: HTML, CSS and your first deploy. Bring your laptop!',
-  'DOrSU ICT Building — Computer Lab 2',
-  now() + interval '10 days',
-  'aaaaaaaa-0000-4000-8000-000000000001'
-)
-on conflict (id) do nothing;
-
--- ============================================================
---  DONE. Now head to Authentication → Providers → Email and
---  DISABLE "Confirm email" so demo sign-ups work instantly.
+--  GOING LIVE — no demo accounts are seeded.
+--  New sign-ups create their own auth user + profile, so the
+--  old demo rows are intentionally omitted (they used to reserve
+--  student IDs like 2024-1001 / 2024-1002 and blocked real users).
+--
+--  If a database was already created WITH the old demo seed, run
+--  this once in the SQL Editor to free those IDs:
+--
+--  delete from public.profiles
+--   where student_id in ('ADM-0001','MOD-0001','2024-1001','2024-1002');
+--  delete from auth.users
+--   where id in ('aaaaaaaa-0000-4000-8000-000000000001',
+--                'aaaaaaaa-0000-4000-8000-000000000002',
+--                'aaaaaaaa-0000-4000-8000-000000000003',
+--                'aaaaaaaa-0000-4000-8000-000000000004');
+--
+--  Then decide on email confirmation (Authentication → Providers
+--  → Email): OFF for instant sign-ups, ON for verified sign-ups.
 -- ============================================================

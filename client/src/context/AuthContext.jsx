@@ -134,7 +134,16 @@ export function AuthProvider({ children }) {
     if (isRateLimited(error)) {
       return { error: { message: 'Too many sign-up attempts from this network — the limit resets every hour. Try again later, or use mobile data / a different network.', status: 429 } };
     }
-    if (error) return { error };
+    if (error) {
+      const msg = error.message || '';
+      if (/user already registered|already been registered/i.test(msg)) {
+        return { error: { message: 'This email already has an account. Try logging in — or check your inbox for a confirmation link if you never confirmed it.' } };
+      }
+      if (/email rate limit|too many emails/i.test(msg)) {
+        return { error: { message: 'Supabase is limiting emails to this address right now — wait about an hour and try again.' } };
+      }
+      return { error };
+    }
     if (!data.user) return { error: { message: 'Sign-up failed — please try again.' } };
 
     const profileData = {

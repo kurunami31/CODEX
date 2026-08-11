@@ -28,19 +28,51 @@ npm run dev        # API on :3001, web on :5173
 
 1. Create a project at https://supabase.com
 2. Open **SQL Editor** → paste the contents of `database/schema.sql` → **Run**.
-   This creates tables, RLS policies, attendance RPCs, the identity lock
-   trigger, and demo accounts.
+   This creates tables, RLS policies, attendance RPCs and the identity lock
+   trigger. **No demo accounts are seeded anymore** (they used to reserve
+   student IDs like `2024-1001` and block real sign-ups). Fresh databases
+   also start with **zero events** — an admin creates those from the app.
+   Note: `client/check-avatar.mjs` / `client/check-posts.mjs` still expect
+   the old demo credentials; against a fresh DB they need a real account.
 3. **Authentication → Providers → Email**: decide on "Confirm email".
-   - For a fast demo: turn it OFF.
-   - For real use: keep it ON (recommended) and update the Site URL.
-4. Demo accounts (from the seed):
+   - **OFF** → instant sign-ups (student fills the form and is in).
+   - **ON** (recommended for real use) → verified sign-ups. The app shows a
+     "check your inbox" screen and completes the student's profile
+     automatically after they confirm. Update the Site URL to your domain.
+4. If your database was created with the **old** schema (demo accounts
+   seeded), remove them once in the SQL Editor so real students can use
+   those IDs:
 
-   | Role | Email | Password |
-   |---|---|---|
-   | Admin | `admin@codex.org` | `CodexAdmin2026!` |
-   | Moderator | `moderator@codex.org` | `CodexMod2026!` |
-   | Student | `juan.delos@student.codex.org` | `Student2026!` |
-   | Student | `maria.santos@student.codex.org` | `Student2026!` |
+   ```sql
+   delete from public.profiles
+    where student_id in ('ADM-0001','MOD-0001','2024-1001','2024-1002');
+   delete from auth.users
+    where id in ('aaaaaaaa-0000-4000-8000-000000000001',
+                 'aaaaaaaa-0000-4000-8000-000000000002',
+                 'aaaaaaaa-0000-4000-8000-000000000003',
+                 'aaaaaaaa-0000-4000-8000-000000000004');
+   ```
+
+## 2.5. Going live — account creation checklist
+
+If new sign-ups fail, check in this order:
+
+1. **Supabase rate limits (the #1 cause).** Supabase caps `/auth/v1/signup`
+   at **30 requests per hour per IP**. Students on campus Wi-Fi share one
+   public IP, so a batch of sign-ups can collectively trip it — the form
+   shows "Too many sign-up attempts…" with a countdown (HTTP 429).
+   → Project Settings → **Authentication → Rate Limits** → raise **Signup**
+   (and **Login**) to e.g. 300/hour. Higher caps may require a paid plan.
+   The Management API cannot change this; it's dashboard-only.
+2. **Email confirmation** — see step 3 above. If "One last step — check your
+   inbox" appears, the student must click the link (check spam). Re-entering
+   the same email later says "User already registered".
+3. **Duplicate student ID** — student IDs are unique per account. If the
+   error says "already registered to another account", the ID is taken
+   (possibly by an old demo row — see step 4 above).
+4. **Email rate limit** — Supabase also limits confirmation emails to a
+   single address (~4/hour). Retrying the same address repeatedly shows
+   "Email rate limit exceeded"; wait about an hour.
 
 ## 3. Deploy to Vercel
 

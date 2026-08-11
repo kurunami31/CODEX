@@ -487,6 +487,22 @@ button { font-family: inherit; cursor: pointer; }
   font-size: 13px; line-height: 1.45;
 }
 html[data-theme='dark'] .rate-note { color: #ffc46b; }
+
+.auth-tips {
+  margin-bottom: 16px;
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--r-md);
+  background: var(--bg-2);
+  padding: 12px 14px;
+  font-size: 12px; color: var(--ink-soft); line-height: 1.6;
+}
+.auth-tips b {
+  display: block;
+  font-family: var(--f-ocr); font-size: 10px; letter-spacing: 0.16em;
+  text-transform: uppercase; color: var(--primary); margin-bottom: 4px;
+}
+.auth-tips ul { margin: 0; padding-left: 16px; }
+.auth-tips li { margin-top: 2px; }
 /* ── app shell ──────────────────────────────────────────── */
 .app { display: flex; min-height: 100vh; }
 .sidebar {
