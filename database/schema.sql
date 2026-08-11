@@ -291,7 +291,11 @@ grant execute on function public.delete_event(uuid) to authenticated;
 
 -- Defense in depth: lock the RPCs down to authenticated users only.
 revoke all on function public.get_my_role, public.mark_attendance,
-        public.event_attendance, public.delete_event from anon;
+        public.event_attendance, public.delete_event from anon, public;
+
+-- Tell PostgREST to reload its schema cache so the RPCs (and any new
+-- tables/policies) become visible through the REST API immediately.
+notify pgrst, 'reload schema';
 
 -- ============================================================
 --  SEED — DEMO ACCOUNTS
