@@ -115,13 +115,25 @@ export function AuthProvider({ children }) {
     return () => sub.subscription.unsubscribe();
   }, [fetchProfile]);
 
+  // Supabase rate-limits auth endpoints per IP (signups default to 30/hour/IP).
+  // Schools often share one public IP, so several students can collectively
+  // trip it — surface a clear, actionable message instead of a raw 429.
+  const isRateLimited = (err) =>
+    Boolean(err && (err.status === 429 || /rate limit|too many requests/i.test(err.message || '')));
+
   const login = async (email, password) => {
     const { error } = await signIn(email, password);
+    if (isRateLimited(error)) {
+      return { error: { message: 'Too many login attempts from this network — wait a bit and try again.' } };
+    }
     return { error };
   };
 
   const register = async ({ email, password, studentId, fullName, yearLevel, section }) => {
     const { data, error } = await signUp(email, password);
+    if (isRateLimited(error)) {
+      return { error: { message: 'Too many sign-up attempts from this network — the limit resets every hour. Try again later, or use mobile data / a different network.' } };
+    }
     if (error) return { error };
     if (!data.user) return { error: { message: 'Sign-up failed — please try again.' } };
 
