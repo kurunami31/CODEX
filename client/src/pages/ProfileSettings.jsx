@@ -6,7 +6,6 @@ import Avatar from '../components/Avatar';
 import { CameraIcon, IdIcon, ShieldIcon, MailIcon, LockIcon, CheckIcon } from '../components/icons/Icons';
 
 const YEAR_LEVELS = ['1st Year', '2nd Year', '3rd Year', '4th Year'];
-const COURSES = ['BSIT', 'BSEM', 'BSAB', 'other'];
 const MAX_AVATAR_BYTES = 3 * 1024 * 1024;
 
 export default function ProfileSettings() {
@@ -21,7 +20,6 @@ export default function ProfileSettings() {
     fullName: profile?.full_name || '',
     yearLevel: profile?.year_level || YEAR_LEVELS[0],
     section: profile?.section || '',
-    course: profile?.course || 'BSIT',
   }));
 
   if (!profile) return null;
@@ -84,7 +82,6 @@ export default function ProfileSettings() {
         full_name: form.fullName.trim().slice(0, 120),
         year_level: form.yearLevel,
         section: form.section.trim().slice(0, 20),
-        course: form.course,
       })
       .eq('id', user.id);
     setBusy(false);
@@ -178,16 +175,11 @@ export default function ProfileSettings() {
 
           <div className="field">
             <label htmlFor="ps-course">Course</label>
-            <select
-              id="ps-course"
-              className="select"
-              value={form.course}
-              onChange={(e) => setForm({ ...form, course: e.target.value })}
-            >
-              {COURSES.map((c) => (
-                <option key={c} value={c}>{c}</option>
-              ))}
-            </select>
+            <div className="input" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              BSIT
+              <span className="chip chip--ok" style={{ pointerEvents: 'none' }}>fixed</span>
+            </div>
+            <span className="ocr-label">CODEBYTERS is a BSIT organization — course is always BSIT.</span>
           </div>
 
           {error && <div className="err-box"><span>!</span><span>{error}</span></div>}
