@@ -209,13 +209,6 @@ export default function Auth() {
             <img src="/assets/dorsu-logo.png" alt="DOrSU" />
             Reserved for the students of <b>Davao Oriental State University</b> · BSIT program
           </div>
-
-          <div className="demo-box">
-            <b>Demo accounts</b> (from database/schema.sql) —<br />
-            Admin: <code>admin@codex.org</code> / <code>CodexAdmin2026!</code><br />
-            Moderator: <code>moderator@codex.org</code> / <code>CodexMod2026!</code><br />
-            Student: <code>juan.delos@student.codex.org</code> / <code>Student2026!</code>
-          </div>
         </div>
       </main>
     </div>

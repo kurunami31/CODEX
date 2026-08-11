@@ -480,13 +480,6 @@ button { font-family: inherit; cursor: pointer; }
   background: rgba(229, 72, 77, 0.08); border: 1px solid rgba(229, 72, 77, 0.3);
   color: #b3261e; border-radius: var(--r-md); padding: 10px 13px; font-size: 13px; line-height: 1.45;
 }
-.demo-box {
-  margin-top: 22px; border: 1px dashed var(--line-strong); border-radius: var(--r-md);
-  padding: 12px 14px; background: var(--bg-2); font-size: 12px; color: var(--ink-soft); line-height: 1.7;
-}
-.demo-box b { color: var(--primary); }
-.demo-box code { font-family: var(--f-ocr); font-size: 11px; background: var(--paper); border: 1px solid var(--line); padding: 1px 6px; border-radius: 5px; }
-
 /* ── app shell ──────────────────────────────────────────── */
 .app { display: flex; min-height: 100vh; }
 .sidebar {
