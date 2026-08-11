@@ -47,7 +47,8 @@ export default function ProfileSettings() {
       const { error: upErr } = await supabase.storage.from('avatars').upload(path, file, { upsert: true, cacheControl: '31536000' });
       if (upErr) throw upErr;
       const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(path);
-      const { error: dbErr } = await supabase.from('profiles').update({ avatar_url: publicUrl }).eq('id', user.id);
+      const freshUrl = `${publicUrl}?v=${Date.now()}`;
+      const { error: dbErr } = await supabase.from('profiles').update({ avatar_url: freshUrl }).eq('id', user.id);
       if (dbErr) throw dbErr;
       URL.revokeObjectURL(previewUrl);
       setPreview('');
@@ -67,8 +68,8 @@ export default function ProfileSettings() {
     if (!profile.avatar_url) return;
     setUploading(true);
     try {
-      const old = profile.avatar_url.split('/').slice(-2).join('/');
-      await supabase.storage.from('avatars').remove([old]);
+      const filePath = new URL(profile.avatar_url).pathname.replace(/^\/storage\/v1\/object\/public\/avatars\//, '');
+      await supabase.storage.from('avatars').remove([filePath]);
       const { error: dbErr } = await supabase.from('profiles').update({ avatar_url: null }).eq('id', user.id);
       if (dbErr) throw dbErr;
       refreshProfile();

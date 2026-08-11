@@ -3,6 +3,7 @@ import QRCode from 'qrcode';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
+import Avatar from '../components/Avatar';
 import { IdIcon, QrIcon, CheckIcon, AlertIcon, ClockIcon, CalendarIcon } from '../components/icons/Icons';
 
 export default function MyId() {
@@ -86,6 +87,13 @@ export default function MyId() {
           </div>
           <div className="idcard-strip">official student identity · bsit</div>
           <div className="idcard-main">
+            <div className="idcard-photo">
+              {profile.avatar_url ? (
+                <img src={profile.avatar_url} alt={`ID photo of ${profile.full_name}`} />
+              ) : (
+                <Avatar name={profile.full_name} seed={user.id} size={56} />
+              )}
+            </div>
             <div className="idcard-info">
               <div className="lbl">name</div>
               <div className="idcard-name">{profile.full_name}</div>
