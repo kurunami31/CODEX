@@ -100,7 +100,8 @@ create policy "profiles_select_members" on public.profiles
 create policy "profiles_insert_own" on public.profiles
   for insert to authenticated with check (id = auth.uid() and role = 'student');
 create policy "profiles_update_own" on public.profiles
-  for update to authenticated using (id = auth.uid()) with check (id = auth.uid() and role = 'student');
+  for update to authenticated using (id = auth.uid())
+  with check (id = auth.uid() and role = (select role from public.profiles where id = auth.uid()));
 
 -- events: everyone signed in can read; only admins write
 drop policy if exists "events_select_all"  on public.events;

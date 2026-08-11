@@ -897,3 +897,61 @@ table.codex-table { width: 100%; border-collapse: collapse; font-size: 13.5px; m
   .auth-grid2 { grid-template-columns: 1fr; }
   .welcome-cta .btn { width: 100%; }
 }
+
+/* ── profile settings ──────────────────────────────────── */
+.settings-row {
+  display: flex; align-items: center; gap: 12px;
+  padding-bottom: 12px; border-bottom: 1px dashed var(--line);
+}
+.settings-row:last-of-type { border-bottom: 0; padding-bottom: 0; }
+.settings-key {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-family: var(--f-ocr); font-size: 10.5px; letter-spacing: 0.14em;
+  text-transform: uppercase; color: var(--muted); flex-shrink: 0;
+  width: 130px;
+}
+.settings-val { font-size: 14px; font-weight: 600; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.settings-row .chip { margin-left: auto; }
+
+/* ── theme toggle ──────────────────────────────────────── */
+.theme-toggle { flex-shrink: 0; }
+
+/* ── dark mode ─────────────────────────────────────────── */
+html[data-theme='dark'] {
+  --ink: #d9f3ef;
+  --ink-soft: #9cc7cf;
+  --deep: #071d28;
+  --deep-2: #0c2a38;
+  --primary: #54c2e8;
+  --primary-2: #6fd2f2;
+  --accent: #0ed0b6;
+  --accent-2: #0ab09b;
+  --accent-ink: #4be8d2;
+  --accent-glow: rgba(14, 208, 182, 0.28);
+  --accent-glow-soft: rgba(14, 208, 182, 0.1);
+  --paper: #0b2431;
+  --bg: #061a24;
+  --bg-2: #0e2c3b;
+  --line: #14384a;
+  --line-strong: #1e4a60;
+  --muted: #7fa6b3;
+  --danger: #ff6b70;
+  --warn: #ffb84d;
+  --ok: #3ecf8f;
+  --hn: #ff8a4d;
+  --sh-sm: 0 1px 2px rgba(0, 0, 0, 0.35), 0 1px 3px rgba(0, 0, 0, 0.3);
+  --sh-md: 0 2px 6px rgba(0, 0, 0, 0.4), 0 8px 24px -12px rgba(0, 0, 0, 0.6);
+  --sh-lg: 0 12px 40px -12px rgba(0, 0, 0, 0.7);
+  --sh-glow: 0 6px 24px -8px var(--accent-glow);
+}
+html[data-theme='dark'] .topbar { background: rgba(6, 26, 36, 0.86); }
+html[data-theme='dark'] .icon-btn:hover { background: rgba(14, 208, 182, 0.12); }
+html[data-theme='dark'] .search-box input::placeholder { color: var(--muted); }
+html[data-theme='dark'] .chip--hn { color: #ff9a5f; border-color: rgba(255, 138, 77, 0.4); }
+html[data-theme='dark'] .chip--ok { color: #57e0a3; border-color: rgba(62, 207, 143, 0.4); }
+html[data-theme='dark'] .chip--warn { color: #ffc46b; border-color: rgba(255, 184, 77, 0.4); }
+html[data-theme='dark'] .role-pill--admin { color: #ffc46b; border-color: rgba(255, 184, 77, 0.4); }
+html[data-theme='dark'] .role-pill--moderator { color: #57e0a3; border-color: rgba(62, 207, 143, 0.4); }
+html[data-theme='dark'] .err-box { background: rgba(229, 72, 77, 0.14); color: #ff9b9e; }
+html[data-theme='dark'] .portal-config { color: #ffc46b; }
+html[data-theme='dark'] .portal-config code { background: rgba(255, 255, 255, 0.1); }

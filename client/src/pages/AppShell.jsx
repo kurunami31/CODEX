@@ -1,17 +1,20 @@
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import Avatar from '../components/Avatar';
-import { HomeIcon, RssIcon, CalendarIcon, IdIcon, ShieldIcon, LogOutIcon, SearchIcon, CameraIcon } from '../components/icons/Icons';
+import { HomeIcon, RssIcon, CalendarIcon, IdIcon, ShieldIcon, LogOutIcon, SearchIcon, CameraIcon, GearIcon, SunIcon, MoonIcon } from '../components/icons/Icons';
 
 const TITLES = {
   '/app/feed': 'feed',
   '/app/events': 'events',
   '/app/idcard': 'my id',
   '/app/admin': 'control',
+  '/app/settings': 'settings',
 };
 
 export default function AppShell() {
   const { profile, user, logout } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -23,6 +26,7 @@ export default function AppShell() {
     { to: '/app/feed', label: 'Feed', icon: <RssIcon width={20} height={20} /> },
     { to: '/app/events', label: 'Events', icon: <CalendarIcon width={20} height={20} /> },
     { to: '/app/idcard', label: 'My ID', icon: <IdIcon width={20} height={20} /> },
+    { to: '/app/settings', label: 'Settings', icon: <GearIcon width={20} height={20} /> },
     ...(profile?.role === 'admin' ? [{ to: '/app/admin', label: 'Control', icon: <ShieldIcon width={20} height={20} /> }] : []),
   ];
 
@@ -95,6 +99,14 @@ export default function AppShell() {
             <SearchIcon width={16} height={16} />
             <input placeholder="Search the community… (coming soon)" readOnly />
           </div>
+          <button
+            className="icon-btn theme-toggle"
+            onClick={toggleTheme}
+            title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+            aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+          >
+            {theme === 'dark' ? <SunIcon width={16} height={16} /> : <MoonIcon width={16} height={16} />}
+          </button>
         </header>
 
         <main className="page">
