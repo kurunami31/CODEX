@@ -30,7 +30,7 @@ export default function Feed() {
   const loadPosts = useCallback(async () => {
     const { data, error } = await supabase
       .from('posts')
-      .select('id, content, created_at, profiles!posts_author_id_fkey(full_name, role, year_level)')
+      .select('id, content, created_at, profiles!posts_author_id_fkey(full_name, role, year_level, avatar_url)')
       .order('created_at', { ascending: false });
     if (error) {
       toast.error('Feed error', error.message);
@@ -115,7 +115,7 @@ export default function Feed() {
       <div className="feed-main">
         <div className="composer panel">
           <div className="row">
-            <Avatar name={profile?.full_name} seed={user?.id} size={42} ring />
+            <Avatar name={profile?.full_name} seed={user?.id} size={42} ring url={profile?.avatar_url} />
             <textarea
               className="textarea"
               placeholder="Drop some knowledge for the squad… what did you build or learn today?"
@@ -207,7 +207,7 @@ function PostCard({ post, liked, likeCount, onLike, onShare }) {
   return (
     <article className="post-card panel">
       <div className="post-head">
-        <Avatar name={author?.full_name} seed={author?.id} size={40} />
+        <Avatar name={author?.full_name} seed={author?.id} size={40} url={author?.avatar_url} />
         <div className="who">
           <b>{author?.full_name || 'Member'}</b>
           <span>{when.day} · {when.time}</span>

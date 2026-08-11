@@ -1,16 +1,21 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
-import { IdIcon, ShieldIcon, MailIcon, LockIcon, CheckIcon } from '../components/icons/Icons';
+import Avatar from '../components/Avatar';
+import { CameraIcon, IdIcon, ShieldIcon, MailIcon, LockIcon, CheckIcon } from '../components/icons/Icons';
 
 const YEAR_LEVELS = ['1st Year', '2nd Year', '3rd Year', '4th Year'];
 const COURSES = ['BSIT', 'BSEM', 'BSAB', 'other'];
+const MAX_AVATAR_BYTES = 3 * 1024 * 1024;
 
 export default function ProfileSettings() {
   const { profile, user, refreshProfile } = useAuth();
   const toast = useToast();
+  const fileRef = useRef(null);
   const [busy, setBusy] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [preview, setPreview] = useState('');
   const [error, setError] = useState('');
   const [form, setForm] = useState(() => ({
     fullName: profile?.full_name || '',
@@ -20,6 +25,52 @@ export default function ProfileSettings() {
   }));
 
   if (!profile) return null;
+
+  const pickAvatar = (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    if (!file.type.startsWith('image/')) return toast.error('Not an image', 'Choose a PNG, JPG, WEBP or GIF file.');
+    if (file.size > MAX_AVATAR_BYTES) return toast.error('File too large', 'Keep it under 3 MB.');
+    setPreview(URL.createObjectURL(file));
+    uploadAvatar(file);
+  };
+
+  const uploadAvatar = async (file) => {
+    setUploading(true);
+    setError('');
+    try {
+      const path = `${user.id}/avatar${file.name.includes('.') ? file.name.slice(file.name.lastIndexOf('.')) : '.png'}`;
+      const { error: upErr } = await supabase.storage.from('avatars').upload(path, file, { upsert: true, cacheControl: '31536000' });
+      if (upErr) throw upErr;
+      const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(path);
+      const { error: dbErr } = await supabase.from('profiles').update({ avatar_url: publicUrl }).eq('id', user.id);
+      if (dbErr) throw dbErr;
+      refreshProfile();
+      toast.ok('Photo updated', 'Your new profile picture is live.');
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const removeAvatar = async () => {
+    if (!profile.avatar_url) return;
+    setUploading(true);
+    try {
+      const old = profile.avatar_url.split('/').slice(-2).join('/');
+      await supabase.storage.from('avatars').remove([old]);
+      const { error: dbErr } = await supabase.from('profiles').update({ avatar_url: null }).eq('id', user.id);
+      if (dbErr) throw dbErr;
+      refreshProfile();
+      toast.ok('Photo removed', 'Back to the classic initials look.');
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const submit = async (e) => {
     e.preventDefault();
@@ -50,6 +101,41 @@ export default function ProfileSettings() {
       </div>
 
       <div className="panel" style={{ padding: 22 }}>
+        <div className="avatar-edit">
+          <Avatar
+            name={profile.full_name}
+            seed={user.id}
+            size={72}
+            ring
+            url={preview || profile.avatar_url}
+          />
+          <div className="avatar-edit-actions">
+            <button
+              type="button"
+              className="btn btn-outline btn-sm"
+              onClick={() => fileRef.current?.click()}
+              disabled={uploading}
+            >
+              <CameraIcon width={14} height={14} /> {uploading ? 'Uploading…' : (profile.avatar_url ? 'Change photo' : 'Add photo')}
+            </button>
+            {profile.avatar_url && (
+              <button type="button" className="btn btn-ghost btn-sm" onClick={removeAvatar} disabled={uploading}>
+                Remove
+              </button>
+            )}
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/png,image/jpeg,image/webp,image/gif"
+              style={{ display: 'none' }}
+              onChange={pickAvatar}
+            />
+            <span className="ocr-label" style={{ marginTop: 6, display: 'block' }}>
+              png, jpg, webp or gif · max 3 mb
+            </span>
+          </div>
+        </div>
+
         <form className="auth-form" onSubmit={submit}>
           <div className="field">
             <label htmlFor="ps-name">Full name</label>

@@ -76,7 +76,7 @@ export default function AppShell() {
 
         <div className="side-foot">
           <div className="user-card">
-            <Avatar name={profile?.full_name} seed={user?.id} size={36} ring />
+            <Avatar name={profile?.full_name} seed={user?.id} size={36} ring url={profile?.avatar_url} />
             <div style={{ minWidth: 0 }}>
               <div className="u-name" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{profile?.full_name || '…'}</div>
               <div className="u-role">{profile?.role || '…'}</div>

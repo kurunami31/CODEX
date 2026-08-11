@@ -184,7 +184,7 @@ export default function Admin() {
                     <tr key={a.student_id}>
                       <td style={{ fontFamily: 'var(--f-ocr)', fontSize: 11, color: 'var(--muted)' }}>{String(i + 1).padStart(2, '0')}</td>
                       <td style={{ display: 'flex', alignItems: 'center', gap: 10, whiteSpace: 'nowrap' }}>
-                        <Avatar name={a.full_name} seed={a.student_id} size={28} />
+                        <Avatar name={a.full_name} seed={a.student_id} size={28} url={a.avatar_url} />
                         {a.full_name}
                       </td>
                       <td style={{ fontFamily: 'var(--f-ocr)', fontSize: 12 }}>{a.student_id}</td>

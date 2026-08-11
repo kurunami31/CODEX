@@ -18,8 +18,12 @@ create table if not exists public.profiles (
   section     text not null,
   course      text not null default 'BSIT' check (course in ('BSIT','BSEM','BSAB','other')),
   role        text not null default 'student' check (role in ('student','moderator','admin')),
+  avatar_url  text,
   created_at  timestamptz not null default now()
 );
+
+-- idempotent upgrade for databases created before avatars existed
+alter table public.profiles add column if not exists avatar_url text;
 
 -- ────────────────────────────────────────────────
 --  EVENTS (posted by admins)
@@ -268,7 +272,7 @@ begin
   select coalesce(jsonb_agg(row_to_jsonb(t) order by t.full_name), '[]'::jsonb)
   into v_rows
   from (
-    select p.student_id, p.full_name, p.year_level, p.section, p.course,
+    select p.student_id, p.full_name, p.year_level, p.section, p.course, p.avatar_url,
            a.scanned_at, a.scanned_by,
            (select full_name from public.profiles sp where sp.id = a.scanned_by) as scanned_by_name
     from public.attendance a
@@ -308,6 +312,40 @@ revoke all on function public.get_my_role, public.mark_attendance,
 -- Tell PostgREST to reload its schema cache so the RPCs (and any new
 -- tables/policies) become visible through the REST API immediately.
 notify pgrst, 'reload schema';
+
+-- ============================================================
+--  PROFILE PICTURES — public storage bucket
+--  Path layout: avatars/<auth.uid()>/avatar.<ext> — each user
+--  owns exactly one object under their own folder. 3 MB cap,
+--  common image formats only. Read is public (shared avatars).
+-- ============================================================
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('avatars', 'avatars', true, 3145728,
+        array['image/png', 'image/jpeg', 'image/webp', 'image/gif'])
+on conflict (id) do nothing;
+
+drop policy if exists "avatars_public_read" on storage.objects;
+drop policy if exists "avatars_own_insert"  on storage.objects;
+drop policy if exists "avatars_own_update"  on storage.objects;
+drop policy if exists "avatars_own_delete"  on storage.objects;
+
+create policy "avatars_public_read" on storage.objects
+  for select using (bucket_id = 'avatars');
+
+create policy "avatars_own_insert" on storage.objects
+  for insert to authenticated
+  with check (bucket_id = 'avatars'
+    and (storage.foldername(name))[1] = auth.uid()::text
+    and coalesce((metadata ->> 'contentLength')::bigint, 0) <= 3145728);
+
+create policy "avatars_own_update" on storage.objects
+  for update to authenticated
+  using (bucket_id = 'avatars' and (storage.foldername(name))[1] = auth.uid()::text)
+  with check (bucket_id = 'avatars' and (storage.foldername(name))[1] = auth.uid()::text);
+
+create policy "avatars_own_delete" on storage.objects
+  for delete to authenticated
+  using (bucket_id = 'avatars' and (storage.foldername(name))[1] = auth.uid()::text);
 
 -- ============================================================
 --  SEED — DEMO ACCOUNTS

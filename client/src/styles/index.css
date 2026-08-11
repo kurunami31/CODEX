@@ -899,6 +899,14 @@ table.codex-table { width: 100%; border-collapse: collapse; font-size: 13.5px; m
 }
 
 /* ── profile settings ──────────────────────────────────── */
+.avatar-edit {
+  display: flex; align-items: center; gap: 16px;
+  padding-bottom: 20px; margin-bottom: 20px;
+  border-bottom: 1px dashed var(--line);
+  flex-wrap: wrap;
+}
+.avatar-edit-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.avatar--img { overflow: hidden; }
 .settings-row {
   display: flex; align-items: center; gap: 12px;
   padding-bottom: 12px; border-bottom: 1px dashed var(--line);
