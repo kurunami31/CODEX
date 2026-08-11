@@ -173,15 +173,6 @@ export default function ProfileSettings() {
             </div>
           </div>
 
-          <div className="field">
-            <label htmlFor="ps-course">Course</label>
-            <div className="input" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              BSIT
-              <span className="chip chip--ok" style={{ pointerEvents: 'none' }}>fixed</span>
-            </div>
-            <span className="ocr-label">CODEBYTERS is a BSIT organization — course is always BSIT.</span>
-          </div>
-
           {error && <div className="err-box"><span>!</span><span>{error}</span></div>}
           <button className="btn btn-accent btn-lg" disabled={busy}>
             {busy ? 'Saving…' : 'Save changes'}
