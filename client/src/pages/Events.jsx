@@ -7,16 +7,18 @@ import { formatEventDate, isUpcoming } from '../lib/format';
 import { isStaff as checkStaff, isAdmin as checkAdmin } from '../lib/roles';
 import {
   CalendarIcon, MapPinIcon, ClockIcon, PlusIcon, XIcon, ChevronRightIcon,
-  CameraIcon, QrIcon, CheckIcon, TerminalIcon, AlertIcon,
+  CameraIcon, QrIcon, CheckIcon, TerminalIcon, AlertIcon, UsersIcon,
 } from '../components/icons/Icons';
 
 export default function Events() {
-  const { profile } = useAuth();
+  const { profile, user } = useAuth();
   const toast = useToast();
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
   const [myAttendance, setMyAttendance] = useState(new Map());
+  const [rsvps, setRsvps] = useState([]); // [{ event_id, user_id }]
+  const [rsvpBusy, setRsvpBusy] = useState(false);
 
   const isAdmin = checkAdmin(profile?.role);
   const isStaff = checkStaff(profile?.role);
@@ -39,8 +41,27 @@ export default function Events() {
     }
   };
 
+  const loadRsvps = async () => {
+    const { data, error } = await supabase.from('rsvps').select('event_id, user_id');
+    if (!error && data) setRsvps(data);
+  };
+
+  const toggleRsvp = async (eventId) => {
+    if (!user || rsvpBusy) return;
+    const mine = rsvps.some((r) => r.event_id === eventId && r.user_id === user.id);
+    setRsvpBusy(true);
+    const { error } = mine
+      ? await supabase.from('rsvps').delete().eq('event_id', eventId).eq('user_id', user.id)
+      : await supabase.from('rsvps').insert({ event_id: eventId, user_id: user.id });
+    setRsvpBusy(false);
+    if (error) return toast.error('RSVP failed', error.message);
+    await loadRsvps();
+    toast.ok(mine ? 'RSVP cancelled' : 'You\'re going!', mine ? 'See you next time.' : 'We\'ll see you at the event.');
+  };
+
   useEffect(() => {
     loadEvents();
+    loadRsvps();
     if (!isStaff) loadMyAttendance();
   }, [isStaff]);
 
@@ -80,6 +101,8 @@ export default function Events() {
             const d = formatEventDate(ev.event_date);
             const upcoming = isUpcoming(ev.event_date);
             const attended = myAttendance.get(ev.id);
+            const rsvpCount = rsvps.filter((r) => r.event_id === ev.id).length;
+            const rsvped = rsvps.some((r) => r.event_id === ev.id && r.user_id === user?.id);
             return (
               <article className="event-card panel" key={ev.id}>
                 <div className="date-block">
@@ -97,11 +120,26 @@ export default function Events() {
                     <span><ClockIcon width={14} height={14} />{d.day} · {d.time}</span>
                     <span><MapPinIcon width={14} height={14} />{ev.location || 'TBA'}</span>
                   </div>
+                  {rsvpCount > 0 && (
+                    <div className="rsvp-count">
+                      <UsersIcon width={13} height={13} /> {rsvpCount} going
+                    </div>
+                  )}
                 </div>
                 <div className="event-actions">
                   <Link to={`/app/events/${ev.id}`} className="btn btn-outline btn-sm">
                     Details <ChevronRightIcon width={14} height={14} />
                   </Link>
+                  {!isStaff && (
+                    <button
+                      className={`btn btn-sm ${rsvped ? 'btn-accent' : 'btn-ghost'}`}
+                      onClick={() => toggleRsvp(ev.id)}
+                      disabled={rsvpBusy || !upcoming}
+                      title={upcoming ? (rsvped ? 'Cancel RSVP' : 'Mark as going') : 'RSVP closed for past events'}
+                    >
+                      <CheckIcon width={14} height={14} /> {rsvped ? 'Going' : 'RSVP'}
+                    </button>
+                  )}
                   {isStaff && (
                     <Link to={`/app/scanner/${ev.id}`} className="btn btn-primary btn-sm">
                       <CameraIcon width={14} height={14} /> Scan
@@ -133,7 +171,7 @@ export default function Events() {
         ))}
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', width: '100%', marginTop: 4 }}>
           <AlertIcon width={14} height={14} style={{ color: 'var(--warn)' }} />
-          <span className="ocr-label" style={{ fontSize: 9.5 }}>QR codes are HMAC-signed &amp; expire after 5 minutes</span>
+          <span className="ocr-label" style={{ fontSize: 9.5 }}>QR codes are HMAC-signed &amp; valid for the academic year</span>
         </div>
       </div>
 

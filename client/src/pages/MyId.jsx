@@ -45,6 +45,35 @@ export default function MyId() {
     }
   };
 
+  // The year-long signed QR is cached in localStorage (keyed per student) so
+  // the ID still renders offline / at the venue with weak signal — the payload
+  // stays valid for the whole academic year, exactly like the on-screen card.
+  const qrCacheKey = profile ? `codex_id_qr_${profile.student_id}` : null;
+
+  const cachedQr = useCallback(() => {
+    if (!qrCacheKey) return null;
+    try {
+      const raw = localStorage.getItem(qrCacheKey);
+      if (!raw) return null;
+      const { payload, sig, cachedAt } = JSON.parse(raw);
+      // 366-day validity, matching ID_SIGN_TTL_MS on the server.
+      if (!payload || !sig || Date.now() - cachedAt > 366 * 24 * 60 * 60 * 1000) return null;
+      return { payload, sig };
+    } catch {
+      return null;
+    }
+  }, [qrCacheKey]);
+
+  const renderQr = useCallback(async (payload, sig) => {
+    const url = await QRCode.toDataURL(JSON.stringify({ payload, sig }), {
+      width: 480,
+      margin: 1,
+      color: { dark: '#0b2b3a', light: '#ffffff' },
+      errorCorrectionLevel: 'H',
+    });
+    return url;
+  }, []);
+
   const signQr = useCallback(async () => {
     if (!profile) return;
     setRefreshing(true);
@@ -60,20 +89,27 @@ export default function MyId() {
         throw new Error(j.error || 'Could not sign your ID.');
       }
       const { payload, sig } = await res.json();
-      const url = await QRCode.toDataURL(JSON.stringify({ payload, sig }), {
-        width: 480,
-        margin: 1,
-        color: { dark: '#0b2b3a', light: '#ffffff' },
-        errorCorrectionLevel: 'H',
-      });
-      setQr(url);
+      try {
+        localStorage.setItem(qrCacheKey, JSON.stringify({ payload, sig, cachedAt: Date.now() }));
+      } catch {
+        /* storage full / unavailable — the QR still shows on screen */
+      }
+      setQr(await renderQr(payload, sig));
       setQrError('');
     } catch (err) {
-      setQrError(err.message);
+      // Offline? Fall back to the cached year-long QR instead of failing.
+      const cached = cachedQr();
+      if (cached) {
+        setQr(await renderQr(cached.payload, cached.sig));
+        setQrError('');
+        toast.info('Offline mode', 'Showing your saved ID QR — it is valid all year.');
+      } else {
+        setQrError(err.message);
+      }
     } finally {
       setRefreshing(false);
     }
-  }, [profile]);
+  }, [profile, qrCacheKey, cachedQr, renderQr, toast]);
 
   // Sign once — the QR stays valid for the whole academic year, so there's
   // no periodic refresh. (Refresh is still available manually if ever needed.)

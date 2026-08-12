@@ -6,11 +6,14 @@ import Avatar from '../components/Avatar';
 import PostCard from '../components/PostCard';
 import usePostActions from '../lib/usePostActions';
 import usePostLikes from '../lib/usePostLikes';
+import usePostComments from '../lib/usePostComments';
 import { fetchFeedHn, fetchFeedGitHub } from '../lib/api';
 import { timeAgo } from '../lib/format';
-import { ExternalIcon, StarIcon, GithubIcon, RssIcon, BoxIcon, ArchiveIcon } from '../components/icons/Icons';
+import { ExternalIcon, StarIcon, GithubIcon, RssIcon, BoxIcon, ArchiveIcon, ImageIcon, XIcon } from '../components/icons/Icons';
 
 const LIMIT = 2000;
+const POST_IMAGE_MAX = 5 * 1024 * 1024;
+const POST_IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'];
 
 export default function Feed() {
   const { user, profile } = useAuth();
@@ -19,19 +22,25 @@ export default function Feed() {
   const [posts, setPosts] = useState([]);
   const [learn, setLearn] = useState({ hn: [], gh: [] });
   const [draft, setDraft] = useState('');
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState('');
   const [posting, setPosting] = useState(false);
   const [loading, setLoading] = useState(true);
   const [feedError, setFeedError] = useState('');
   const [view, setView] = useState('feed');
   const [archivedPosts, setArchivedPosts] = useState([]);
   const loadedRef = useRef(false);
+  const fileRef = useRef(null);
 
   const { likeCount, likedByMe, toggleLike, loadLikes } = usePostLikes(user);
+  const comments = usePostComments(user);
+
+  const postSelect = 'id, author_id, content, created_at, archived, image_url, profiles!posts_author_id_fkey(id, full_name, role, year_level, avatar_url)';
 
   const loadPosts = useCallback(async () => {
     const { data, error } = await supabase
       .from('posts')
-      .select('id, author_id, content, created_at, archived, profiles!posts_author_id_fkey(id, full_name, role, year_level, avatar_url)')
+      .select(postSelect)
       .eq('archived', false)
       .order('created_at', { ascending: false });
     if (error) {
@@ -45,7 +54,7 @@ export default function Feed() {
     if (!user) return;
     const { data, error } = await supabase
       .from('posts')
-      .select('id, author_id, content, created_at, archived, profiles!posts_author_id_fkey(id, full_name, role, year_level, avatar_url)')
+      .select(postSelect)
       .eq('author_id', user.id)
       .eq('archived', true)
       .order('created_at', { ascending: false });
@@ -61,6 +70,7 @@ export default function Feed() {
     loadedRef.current = true;
     loadPosts();
     loadLikes();
+    comments.loadCounts();
     Promise.allSettled([fetchFeedHn(), fetchFeedGitHub()])
       .then(([hn, gh]) => {
         setLearn({
@@ -72,7 +82,7 @@ export default function Feed() {
         }
       })
       .finally(() => setLoading(false));
-  }, [loadPosts, loadLikes]);
+  }, [loadPosts, loadLikes, comments.loadCounts]);
 
   const sharePost = async (post) => {
     try {
@@ -83,21 +93,66 @@ export default function Feed() {
     }
   };
 
+  const pickImage = (file) => {
+    if (!file) return;
+    if (!POST_IMAGE_TYPES.includes(file.type)) {
+      toast.error('Unsupported file', 'Use PNG, JPEG, WebP or GIF.');
+      return;
+    }
+    if (file.size > POST_IMAGE_MAX) {
+      toast.error('Image too large', 'Keep it under 5 MB.');
+      return;
+    }
+    setImageFile(file);
+    setImagePreview(URL.createObjectURL(file));
+  };
+
+  const uploadImage = async () => {
+    if (!imageFile) return null;
+    const ext = imageFile.name.includes('.') ? imageFile.name.slice(imageFile.name.lastIndexOf('.')).toLowerCase() : '.png';
+    const path = `${user.id}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}${ext}`;
+    const { error: upErr } = await supabase.storage
+      .from('post-images')
+      .upload(path, imageFile, { cacheControl: '31536000' });
+    if (upErr) throw upErr;
+    const { data: { publicUrl } } = supabase.storage.from('post-images').getPublicUrl(path);
+    return { publicUrl, path };
+  };
+
   const submitPost = async () => {
     const content = draft.trim();
-    if (!content || posting) return;
+    if ((!content && !imageFile) || posting) return;
     setPosting(true);
-    const { error } = await supabase.from('posts').insert({ author_id: user.id, content });
-    setPosting(false);
-    if (error) return toast.error('Could not post', error.message);
-    setDraft('');
-    toast.ok('Posted', 'Your message is live on the feed.');
-    loadPosts();
+    let imageUrl = null;
+    let uploadedPath = null;
+    try {
+      if (imageFile) {
+        const up = await uploadImage();
+        imageUrl = up.publicUrl;
+        uploadedPath = up.path;
+        if (imagePreview) URL.revokeObjectURL(imagePreview);
+        setImageFile(null);
+        setImagePreview('');
+      }
+      const { error } = await supabase.from('posts').insert({ author_id: user.id, content, image_url: imageUrl });
+      if (error) throw error;
+      setDraft('');
+      toast.ok('Posted', 'Your message is live on the feed.');
+      loadPosts();
+      comments.loadCounts();
+    } catch (err) {
+      // If the insert failed after the upload, remove the orphaned file.
+      if (uploadedPath) await supabase.storage.from('post-images').remove([uploadedPath]);
+      toast.error('Could not post', err.message);
+    } finally {
+      setPosting(false);
+    }
   };
 
   const refreshPosts = useCallback(async () => {
     await Promise.all([loadPosts(), loadArchived()]);
-  }, [loadPosts, loadArchived]);
+    comments.loadCounts();
+  }, [loadPosts, loadArchived, comments]);
 
   const actions = usePostActions({ user, toast, refresh: refreshPosts });
 
@@ -111,6 +166,33 @@ export default function Feed() {
     const ps = posts.map((p) => ({ kind: 'post', ts: p.created_at, data: p }));
     return [...ps, ...learningItems].sort((a, b) => new Date(b.ts || 0) - new Date(a.ts || 0));
   }, [posts, learningItems]);
+
+  const cardProps = (post, extra = {}) => ({
+    key: `p-${post.id}`,
+    post,
+    mine: post.author_id === user?.id,
+    liked: likedByMe.has(post.id),
+    likeCount: likeCount.get(post.id) || 0,
+    commentCount: comments.commentCount.get(post.id) || 0,
+    commentsOpen: comments.isOpen(post.id),
+    comments: comments.comments(post.id),
+    commentsBusy: comments.loading,
+    currentUserId: user?.id,
+    canModerate: profile?.role === 'superadmin',
+    onLike: () => toggleLike(post.id),
+    onShare: () => sharePost(post),
+    onCommentsToggle: () => comments.toggle(post.id),
+    onAddComment: (pid, text) => comments.addComment(pid, text),
+    onDeleteComment: (pid, cid) => comments.deleteComment(pid, cid),
+    onEditStart: () => actions.startEdit(post),
+    onEditCancel: actions.cancelEdit,
+    onEditChange: actions.setEditDraft,
+    onEditSave: actions.saveEdit,
+    editDraft: actions.editDraft,
+    editing: actions.editingId === post.id,
+    saving: actions.saving,
+    ...extra,
+  });
 
   return (
     <div className="feed-cols">
@@ -129,9 +211,50 @@ export default function Feed() {
               }}
             />
           </div>
+          {imagePreview && (
+            <div className="composer-image">
+              <img src={imagePreview} alt="Preview" />
+              <button
+                type="button"
+                className="icon-btn composer-image-x"
+                onClick={() => {
+                  URL.revokeObjectURL(imagePreview);
+                  setImagePreview('');
+                  setImageFile(null);
+                }}
+                aria-label="Remove image"
+              >
+                <XIcon width={14} height={14} />
+              </button>
+            </div>
+          )}
           <div className="foot">
-            <span className="count">{draft.length}/{LIMIT}</span>
-            <button className="btn btn-accent btn-sm" onClick={submitPost} disabled={!draft.trim() || posting}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm"
+                onClick={() => fileRef.current?.click()}
+                title="Attach an image"
+              >
+                <ImageIcon width={15} height={15} /> Photo
+              </button>
+              <input
+                ref={fileRef}
+                type="file"
+                accept={POST_IMAGE_TYPES.join(',')}
+                style={{ display: 'none' }}
+                onChange={(e) => {
+                  pickImage(e.target.files?.[0]);
+                  e.target.value = '';
+                }}
+              />
+              <span className="count">{draft.length}/{LIMIT}</span>
+            </div>
+            <button
+              className="btn btn-accent btn-sm"
+              onClick={submitPost}
+              disabled={(!draft.trim() && !imageFile) || posting}
+            >
               {posting ? 'Posting…' : 'Post'}
             </button>
           </div>
@@ -166,22 +289,12 @@ export default function Feed() {
           ) : (
             archivedPosts.map((post) => (
               <PostCard
-                key={`p-${post.id}`}
-                post={post}
-                manage
-                liked={false}
-                likeCount={likeCount.get(post.id) || 0}
-                onLike={() => toggleLike(post.id)}
-                onShare={() => sharePost(post)}
-                onEditStart={() => actions.startEdit(post)}
-                onEditCancel={actions.cancelEdit}
-                onEditChange={actions.setEditDraft}
-                onEditSave={actions.saveEdit}
-                editDraft={actions.editDraft}
-                editing={actions.editingId === post.id}
-                saving={actions.saving}
-                onArchive={() => actions.restorePost(post)}
-                onDelete={() => actions.deletePost(post)}
+                {...cardProps(post, {
+                  manage: true,
+                  liked: false,
+                  onArchive: () => actions.restorePost(post),
+                  onDelete: () => actions.deletePost(post),
+                })}
               />
             ))
           )
@@ -201,22 +314,10 @@ export default function Feed() {
           feedItems.map((item) =>
             item.kind === 'post' ? (
               <PostCard
-                key={`p-${item.data.id}`}
-                post={item.data}
-                mine={item.data.author_id === user?.id}
-                liked={likedByMe.has(item.data.id)}
-                likeCount={likeCount.get(item.data.id) || 0}
-                onLike={() => toggleLike(item.data.id)}
-                onShare={() => sharePost(item.data)}
-                onEditStart={() => actions.startEdit(item.data)}
-                onEditCancel={actions.cancelEdit}
-                onEditChange={actions.setEditDraft}
-                onEditSave={actions.saveEdit}
-                editDraft={actions.editDraft}
-                editing={actions.editingId === item.data.id}
-                saving={actions.saving}
-                onArchive={() => actions.archivePost(item.data)}
-                onDelete={() => actions.deletePost(item.data)}
+                {...cardProps(item.data, {
+                  onArchive: () => actions.archivePost(item.data),
+                  onDelete: () => actions.deletePost(item.data),
+                })}
               />
             ) : item.kind === 'hn' ? (
               <HnCard key={item.data.id} item={item.data} />

@@ -8,7 +8,7 @@ import { roleLabel } from '../lib/roles';
 import Avatar from '../components/Avatar';
 import {
   ShieldIcon, CalendarIcon, UsersIcon, CameraIcon, PlusIcon, XIcon,
-  AlertIcon, CheckIcon, QrIcon,
+  AlertIcon, CheckIcon, QrIcon, DownloadIcon,
 } from '../components/icons/Icons';
 
 export default function Admin() {
@@ -17,9 +17,11 @@ export default function Admin() {
   const [events, setEvents] = useState([]);
   const [selected, setSelected] = useState(null);
   const [attendees, setAttendees] = useState([]);
+  const [stats, setStats] = useState([]); // [{ event_id, title, event_date, present }]
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   const loadEvents = useCallback(async () => {
     const { data, error } = await supabase
@@ -31,9 +33,15 @@ export default function Admin() {
     setLoading(false);
   }, [toast]);
 
+  const loadStats = useCallback(async () => {
+    const { data, error } = await supabase.rpc('attendance_counts');
+    if (!error && data) setStats(data);
+  }, []);
+
   useEffect(() => {
     loadEvents();
-  }, [loadEvents]);
+    loadStats();
+  }, [loadEvents, loadStats]);
 
   const selectEvent = async (ev) => {
     setSelected(ev);
@@ -41,6 +49,53 @@ export default function Admin() {
     const { data, error } = await supabase.rpc('event_attendance', { p_event_id: ev.id });
     if (error) toast.error('Could not load attendance', error.message);
     else setAttendees(data || []);
+  };
+
+  const breakdown = useCallback((rows) => {
+    const byYear = new Map();
+    const bySection = new Map();
+    for (const a of rows) {
+      const y = a.year_level || '—';
+      byYear.set(y, (byYear.get(y) || 0) + 1);
+      const s = `${a.year_level || '—'} · ${a.section || '—'}`;
+      bySection.set(s, (bySection.get(s) || 0) + 1);
+    }
+    const sort = (m) => [...m.entries()].sort((x, y) => y[1] - x[1]);
+    return { byYear: sort(byYear), bySection: sort(bySection) };
+  }, []);
+
+  const exportCsv = async () => {
+    if (!selected || attendees.length === 0) return;
+    setExporting(true);
+    try {
+      // RFC 4180: quote every field, escape embedded quotes by doubling them.
+      const cell = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+      const header = ['#', 'Student ID', 'Full Name', 'Year Level', 'Section', 'Scanned At', 'Scanned By'];
+      const rows = attendees.map((a, i) => [
+        i + 1,
+        a.student_id,
+        a.full_name,
+        a.year_level || '',
+        a.section || '',
+        new Date(a.scanned_at).toLocaleString(),
+        a.scanned_by_name || '',
+      ]);
+      const csv = [header, ...rows].map((r) => r.map(cell).join(',')).join('\r\n');
+      const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `attendance-${selected.title.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      toast.ok('CSV exported', `${attendees.length} records downloaded.`);
+    } catch (err) {
+      toast.error('Export failed', err.message);
+    } finally {
+      setExporting(false);
+    }
   };
 
   const removeEvent = async (ev) => {
@@ -86,6 +141,34 @@ export default function Admin() {
             </div>
           </div>
         ))}
+      </div>
+
+      <div className="section-title">attendance analytics</div>
+      <div className="panel" style={{ padding: '20px 22px' }}>
+        {stats.length === 0 ? (
+          <div className="empty-state">
+            <span className="ico"><UsersIcon width={24} height={24} /></span>
+            <b>No attendance data yet</b>
+            <p>Once students start scanning in, per-event charts appear here.</p>
+          </div>
+        ) : (
+          <div className="chart">
+            {stats.map((s) => (
+              <div className="chart-bar-row" key={s.event_id} title={`${s.title}: ${s.present} present`}>
+                <span className="chart-bar-label">{s.title}</span>
+                <div className="chart-bar-track">
+                  <div
+                    className="chart-bar"
+                    style={{ width: `${Math.max(4, (s.present / Math.max(...stats.map((x) => x.present), 1)) * 100)}%` }}
+                  >
+                    <b>{s.present}</b>
+                  </div>
+                </div>
+                <span className="ocr-label" style={{ fontSize: 9, width: 92, textAlign: 'right' }}>{formatEventDate(s.event_date).day}</span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="section-title">manage events &amp; attendance</div>
@@ -166,19 +249,44 @@ export default function Admin() {
               <p>Open the scanner and start admitting students.</p>
             </div>
           ) : (
-            <div className="table-wrap">
-              <table className="codex-table">
-                <thead>
-                  <tr>
-                    <th>#</th>
-                    <th>student</th>
-                    <th>id no.</th>
-                    <th>year / section</th>
-                    <th>scanned at</th>
-                    <th>scanned by</th>
-                    <th>verify</th>
-                  </tr>
-                </thead>
+            <>
+              <div className="breakdown">
+                {breakdown(attendees).byYear.length > 0 && (
+                  <div className="breakdown-col">
+                    <div className="ocr-label" style={{ marginBottom: 8 }}>by year level</div>
+                    {breakdown(attendees).byYear.map(([k, v]) => (
+                      <div className="breakdown-row" key={k}>
+                        <span>{k}</span>
+                        <b>{v}</b>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {breakdown(attendees).bySection.length > 0 && (
+                  <div className="breakdown-col">
+                    <div className="ocr-label" style={{ marginBottom: 8 }}>by section</div>
+                    {breakdown(attendees).bySection.map(([k, v]) => (
+                      <div className="breakdown-row" key={k}>
+                        <span>{k}</span>
+                        <b>{v}</b>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div className="table-wrap">
+                <table className="codex-table">
+                  <thead>
+                    <tr>
+                      <th>#</th>
+                      <th>student</th>
+                      <th>id no.</th>
+                      <th>year / section</th>
+                      <th>scanned at</th>
+                      <th>scanned by</th>
+                      <th>verify</th>
+                    </tr>
+                  </thead>
                 <tbody>
                   {attendees.map((a, i) => (
                     <tr key={a.student_id}>
@@ -198,7 +306,11 @@ export default function Admin() {
                   ))}
                 </tbody>
               </table>
-            </div>
+              </div>
+              <button className="btn btn-outline btn-sm" onClick={exportCsv} disabled={exporting} style={{ marginTop: 14 }}>
+                <DownloadIcon width={14} height={14} /> {exporting ? 'Exporting…' : 'Download CSV'}
+              </button>
+            </>
           )}
         </div>
       )}

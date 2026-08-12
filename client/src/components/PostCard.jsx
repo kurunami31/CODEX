@@ -1,19 +1,28 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Avatar from './Avatar';
-import { formatEventDate } from '../lib/format';
+import { formatEventDate, timeAgo } from '../lib/format';
 import { roleLabel } from '../lib/roles';
-import { HeartIcon, ShareIcon, PencilIcon, TrashIcon, ArchiveIcon, MenuDotsIcon } from './icons/Icons';
+import { HeartIcon, ShareIcon, PencilIcon, TrashIcon, ArchiveIcon, MenuDotsIcon, CommentIcon, XIcon } from './icons/Icons';
 
 const LIMIT = 2000;
+const COMMENT_LIMIT = 500;
 
-export default function PostCard({ post, liked, likeCount, onLike, onShare, mine, manage, editing, editDraft, onEditStart, onEditCancel, onEditChange, onEditSave, saving, onArchive, onDelete }) {
+export default function PostCard({
+  post, liked, likeCount, onLike, onShare, mine, manage,
+  editing, editDraft, onEditStart, onEditCancel, onEditChange, onEditSave, saving, onArchive, onDelete,
+  commentCount = 0, commentsOpen = false, onCommentsToggle, comments = null, onAddComment, onDeleteComment,
+  commentsBusy = false, currentUserId, canModerate = false,
+}) {
   const author = post.profiles;
   const when = formatEventDate(post.created_at);
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [commentDraft, setCommentDraft] = useState('');
+  const [lightbox, setLightbox] = useState(false);
   const menuRef = useRef(null);
   const menuBtnRef = useRef(null);
+  const commentInputRef = useRef(null);
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -35,6 +44,15 @@ export default function PostCard({ post, liked, likeCount, onLike, onShare, mine
     };
   }, [menuOpen]);
 
+  useEffect(() => {
+    if (!lightbox) return;
+    const onKey = (e) => {
+      if (e.key === 'Escape') setLightbox(false);
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [lightbox]);
+
   const goProfile = () => {
     const id = author?.id || post.author_id;
     if (id) navigate(`/app/profile/${id}`);
@@ -44,6 +62,13 @@ export default function PostCard({ post, liked, likeCount, onLike, onShare, mine
     setMenuOpen(false);
     menuBtnRef.current?.focus();
     fn();
+  };
+
+  const submitComment = async () => {
+    if (!commentDraft.trim() || commentsBusy || !onAddComment) return;
+    const { error } = await onAddComment(post.id, commentDraft);
+    if (!error) setCommentDraft('');
+    else commentInputRef.current?.focus();
   };
 
   return (
@@ -113,10 +138,24 @@ export default function PostCard({ post, liked, likeCount, onLike, onShare, mine
       ) : (
         <>
           <p className="post-body">{post.content}</p>
+          {post.image_url && (
+            <button
+              type="button"
+              className="post-image-btn"
+              onClick={() => setLightbox(true)}
+              aria-label="View post image"
+            >
+              <img src={post.image_url} alt="" className="post-image" loading="lazy" />
+            </button>
+          )}
           <div className="post-actions">
             <button className={liked ? 'button--liked' : ''} onClick={onLike}>
               <HeartIcon width={17} height={17} fill={liked ? 'currentColor' : 'none'} />
               {likeCount > 0 ? likeCount : 'Like'}
+            </button>
+            <button onClick={onCommentsToggle} className={commentsOpen ? 'button--active' : ''}>
+              <CommentIcon width={17} height={17} />
+              {commentCount > 0 ? commentCount : 'Comment'}
             </button>
             <button onClick={onShare}>
               <ShareIcon width={17} height={17} />
@@ -124,6 +163,73 @@ export default function PostCard({ post, liked, likeCount, onLike, onShare, mine
             </button>
           </div>
         </>
+      )}
+
+      {commentsOpen && !editing && (
+        <div className="post-comments">
+          {comments === null ? (
+            <div className="skeleton" style={{ height: 44 }} />
+          ) : comments.length === 0 ? (
+            <div className="post-comments-empty">No comments yet — start the convo.</div>
+          ) : (
+            comments.map((c) => (
+              <div className="comment" key={c.id}>
+                <Avatar name={c.profiles?.full_name} seed={c.author_id} size={30} url={c.profiles?.avatar_url} />
+                <div className="comment-body">
+                  <div className="comment-meta">
+                    <b>{c.profiles?.full_name || 'Member'}</b>
+                    <span>{timeAgo(c.created_at)}</span>
+                    {(c.author_id === currentUserId || canModerate) && (
+                      <button
+                        type="button"
+                        className="comment-del"
+                        onClick={() => onDeleteComment?.(post.id, c.id)}
+                        aria-label="Delete comment"
+                        title="Delete comment"
+                      >
+                        <XIcon width={12} height={12} />
+                      </button>
+                    )}
+                  </div>
+                  <p>{c.content}</p>
+                </div>
+              </div>
+            ))
+          )}
+          {onAddComment && (
+            <div className="comment-form">
+              <input
+                ref={commentInputRef}
+                className="input"
+                placeholder="Write a comment…"
+                value={commentDraft}
+                maxLength={COMMENT_LIMIT}
+                onChange={(e) => setCommentDraft(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') submitComment();
+                }}
+              />
+              <button
+                className="btn btn-accent btn-sm"
+                onClick={submitComment}
+                disabled={!commentDraft.trim() || commentsBusy}
+              >
+                {commentsBusy ? '…' : 'Post'}
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {lightbox && post.image_url && (
+        <div className="modal-back" onMouseDown={(e) => e.target === e.currentTarget && setLightbox(false)}>
+          <div className="lightbox">
+            <button className="icon-btn lightbox-close" onClick={() => setLightbox(false)} aria-label="Close">
+              <XIcon width={18} height={18} />
+            </button>
+            <img src={post.image_url} alt="Post" />
+          </div>
+        </div>
       )}
     </article>
   );

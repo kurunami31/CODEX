@@ -409,3 +409,22 @@ export function EyeOffIcon(props) {
     </svg>
   );
 }
+
+export function ImageIcon(props) {
+  return (
+    <svg {...base} {...props}>
+      <rect x="3.5" y="4.5" width="17" height="15" rx="2.5" />
+      <circle cx="9" cy="10" r="1.8" />
+      <path d="m4.5 17.5 4.5-4.5 3 3 3.5-3.5 4 4" />
+    </svg>
+  );
+}
+
+export function CommentIcon(props) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M21 12a8.5 8.5 0 0 1-8.5 8.5c-1.3 0-2.6-.3-3.7-.8L3.5 21l1.3-5.3a8.5 8.5 0 1 1 16.2-3.7Z" />
+      <path d="M8 10.5h8M8 13.5h5" />
+    </svg>
+  );
+}

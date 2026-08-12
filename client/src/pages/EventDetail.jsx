@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import QRCode from 'qrcode';
 import { supabase } from '../lib/supabase';
@@ -21,8 +21,28 @@ export default function EventDetail() {
   const [myAttendance, setMyAttendance] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showQr, setShowQr] = useState(false);
+  const [rsvps, setRsvps] = useState([]);
+  const [rsvpBusy, setRsvpBusy] = useState(false);
 
   const isStaff = checkStaff(profile?.role);
+
+  const loadRsvps = async () => {
+    const { data, error } = await supabase.from('rsvps').select('event_id, user_id');
+    if (!error && data) setRsvps(data);
+  };
+
+  const toggleRsvp = async () => {
+    if (!user || rsvpBusy || !event) return;
+    const mine = rsvps.some((r) => r.event_id === event.id && r.user_id === user.id);
+    setRsvpBusy(true);
+    const { error } = mine
+      ? await supabase.from('rsvps').delete().eq('event_id', event.id).eq('user_id', user.id)
+      : await supabase.from('rsvps').insert({ event_id: event.id, user_id: user.id });
+    setRsvpBusy(false);
+    if (error) return toast.error('RSVP failed', error.message);
+    await loadRsvps();
+    toast.ok(mine ? 'RSVP cancelled' : 'You\'re going!', mine ? 'See you next time.' : 'We\'ll see you at the event.');
+  };
 
   useEffect(() => {
     (async () => {
@@ -41,6 +61,7 @@ export default function EventDetail() {
         const { data: mine } = await supabase.from('attendance').select('scanned_at').eq('event_id', id);
         setMyAttendance(mine?.length ? mine[0] : null);
       }
+      loadRsvps();
       setLoading(false);
     })();
   }, [id, isStaff]);
@@ -58,6 +79,8 @@ export default function EventDetail() {
 
   const d = formatEventDate(event.event_date);
   const upcoming = isUpcoming(event.event_date);
+  const rsvpCount = rsvps.filter((r) => r.event_id === event.id).length;
+  const rsvped = rsvps.some((r) => r.event_id === event.id && r.user_id === user?.id);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -95,12 +118,26 @@ export default function EventDetail() {
                   <UsersIcon width={17} height={17} /> {attendees.length} attended
                 </button>
               )}
+              {rsvpCount > 0 && (
+                <span className="chip chip--teal" style={{ alignSelf: 'center' }}>
+                  <UsersIcon width={12} height={12} /> {rsvpCount} going
+                </span>
+              )}
             </>
           ) : (
             <>
               <button className="btn btn-accent btn-lg" onClick={() => setShowQr(true)}>
                 <QrIcon width={17} height={17} /> Show my QR
               </button>
+              {upcoming && (
+                <button
+                  className={`btn btn-lg ${rsvped ? 'btn-accent' : 'btn-outline'}`}
+                  onClick={toggleRsvp}
+                  disabled={rsvpBusy}
+                >
+                  <CheckIcon width={17} height={17} /> {rsvped ? 'Going ✓' : 'RSVP'} {rsvpCount > 0 && `· ${rsvpCount}`}
+                </button>
+              )}
               {myAttendance ? (
                 <span className="chip chip--ok" style={{ alignSelf: 'center' }}>
                   <CheckIcon width={12} height={12} /> present · {timeAgo(myAttendance.scanned_at)}
@@ -168,14 +205,14 @@ export default function EventDetail() {
             </div>
             <div className="modal-body" style={{ textAlign: 'center' }}>
               <p style={{ marginTop: 0, fontSize: 13.5, color: 'var(--ink-soft)' }}>
-                Show this to the <b>moderator</b> for <b>{event.title}</b>. It expires after 5 minutes.
+                Show this to the <b>moderator</b> for <b>{event.title}</b>. It stays valid for the academic year.
               </p>
               <div style={{ display: 'inline-block', border: '2px solid var(--deep)', borderRadius: 16, padding: 10, background: '#fff' }}>
                 <LiveQr />
               </div>
               <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginTop: 16, color: 'var(--muted)' }}>
                 <AlertIcon width={14} height={14} style={{ color: 'var(--warn)' }} />
-                <span className="ocr-label" style={{ fontSize: 9.5 }}>signed &amp; time-limited · refreshing automatically</span>
+                <span className="ocr-label" style={{ fontSize: 9.5 }}>signed &amp; valid for the academic year</span>
               </div>
             </div>
           </div>
@@ -188,7 +225,6 @@ export default function EventDetail() {
 function LiveQr() {
   const [dataUrl, setDataUrl] = useState('');
   const [error, setError] = useState('');
-  const timerRef = useRef(null);
 
   const sign = async () => {
     try {
@@ -217,8 +253,6 @@ function LiveQr() {
 
   useEffect(() => {
     sign();
-    timerRef.current = setInterval(sign, 240000);
-    return () => clearInterval(timerRef.current);
   }, []);
 
   if (error) {

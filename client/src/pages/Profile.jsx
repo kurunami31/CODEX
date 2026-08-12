@@ -7,13 +7,14 @@ import Avatar from '../components/Avatar';
 import PostCard from '../components/PostCard';
 import usePostActions from '../lib/usePostActions';
 import usePostLikes from '../lib/usePostLikes';
+import usePostComments from '../lib/usePostComments';
 import { formatEventDate } from '../lib/format';
 import { roleLabel } from '../lib/roles';
 import { ChevronLeftIcon, RssIcon, ArchiveIcon, GearIcon, UsersIcon } from '../components/icons/Icons';
 
 export default function Profile() {
   const { id } = useParams();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const toast = useToast();
   const navigate = useNavigate();
   const isMe = user?.id === id;
@@ -26,6 +27,9 @@ export default function Profile() {
   const [notFound, setNotFound] = useState(false);
 
   const { likeCount, likedByMe, toggleLike, loadLikes } = usePostLikes(user);
+  const comments = usePostComments(user);
+
+  const postSelect = 'id, author_id, content, created_at, archived, image_url, profiles!posts_author_id_fkey(id, full_name, role, year_level, avatar_url)';
 
   const loadAuthor = useCallback(async () => {
     const { data, error } = await supabase.from('profiles').select('*').eq('id', id).maybeSingle();
@@ -36,7 +40,7 @@ export default function Profile() {
   const loadPosts = useCallback(async () => {
     const { data } = await supabase
       .from('posts')
-      .select('id, author_id, content, created_at, archived, profiles!posts_author_id_fkey(id, full_name, role, year_level, avatar_url)')
+      .select(postSelect)
       .eq('author_id', id)
       .eq('archived', false)
       .order('created_at', { ascending: false });
@@ -47,7 +51,7 @@ export default function Profile() {
     if (!isMe) return;
     const { data } = await supabase
       .from('posts')
-      .select('id, author_id, content, created_at, archived, profiles!posts_author_id_fkey(id, full_name, role, year_level, avatar_url)')
+      .select(postSelect)
       .eq('author_id', id)
       .eq('archived', true)
       .order('created_at', { ascending: false });
@@ -64,8 +68,8 @@ export default function Profile() {
     setLoading(true);
     setNotFound(false);
     setView('posts');
-    Promise.all([loadAuthor(), loadPosts(), loadArchived(), loadLikes()]).finally(() => setLoading(false));
-  }, [id, loadAuthor, loadPosts, loadArchived, loadLikes]);
+    Promise.all([loadAuthor(), loadPosts(), loadArchived(), loadLikes(), comments.loadCounts()]).finally(() => setLoading(false));
+  }, [id, loadAuthor, loadPosts, loadArchived, loadLikes, comments.loadCounts]);
 
   const sharePost = async (post) => {
     try {
@@ -90,8 +94,17 @@ export default function Profile() {
         manage={manage}
         liked={likedByMe.has(post.id)}
         likeCount={likeCount.get(post.id) || 0}
+        commentCount={comments.commentCount.get(post.id) || 0}
+        commentsOpen={comments.isOpen(post.id)}
+        comments={comments.comments(post.id)}
+        commentsBusy={comments.loading}
+        currentUserId={user?.id}
+        canModerate={profile?.role === 'superadmin'}
         onLike={() => toggleLike(post.id)}
         onShare={() => sharePost(post)}
+        onCommentsToggle={() => comments.toggle(post.id)}
+        onAddComment={(pid, text) => comments.addComment(pid, text)}
+        onDeleteComment={(pid, cid) => comments.deleteComment(pid, cid)}
         onEditStart={() => actions.startEdit(post)}
         onEditCancel={actions.cancelEdit}
         onEditChange={actions.setEditDraft}

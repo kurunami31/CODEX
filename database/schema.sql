@@ -398,6 +398,115 @@ revoke all on function public.get_my_role, public.mark_attendance,
 -- tables/policies) become visible through the REST API immediately.
 notify pgrst, 'reload schema';
 
+-- ────────────────────────────────────────────────
+--  POST IMAGES — posts may carry one optional image
+-- ────────────────────────────────────────────────
+alter table public.posts add column if not exists image_url text;
+
+-- ────────────────────────────────────────────────
+--  POST COMMENTS (community feed threads)
+-- ────────────────────────────────────────────────
+create table if not exists public.post_comments (
+  id          uuid primary key default gen_random_uuid(),
+  post_id     uuid not null references public.posts(id) on delete cascade,
+  author_id   uuid not null references public.profiles(id) on delete cascade,
+  content     text not null check (char_length(content) between 1 and 500),
+  created_at  timestamptz not null default now()
+);
+
+-- posts: comments disappear with the post; commenters with the account
+alter table public.post_comments
+  drop constraint if exists post_comments_post_id_fkey,
+  add constraint post_comments_post_id_fkey foreign key (post_id)
+    references public.posts(id) on delete cascade;
+alter table public.post_comments
+  drop constraint if exists post_comments_author_id_fkey,
+  add constraint post_comments_author_id_fkey foreign key (author_id)
+    references public.profiles(id) on delete cascade;
+
+alter table public.post_comments enable row level security;
+revoke all on table public.post_comments from anon;
+
+drop policy if exists "post_comments_select_all" on public.post_comments;
+drop policy if exists "post_comments_insert_own" on public.post_comments;
+drop policy if exists "post_comments_delete_own" on public.post_comments;
+drop policy if exists "post_comments_superadmin_delete" on public.post_comments;
+create policy "post_comments_select_all" on public.post_comments
+  for select to authenticated using (true);
+create policy "post_comments_insert_own" on public.post_comments
+  for insert to authenticated with check (author_id = auth.uid());
+create policy "post_comments_delete_own" on public.post_comments
+  for delete to authenticated using (author_id = auth.uid());
+create policy "post_comments_superadmin_delete" on public.post_comments
+  for delete to authenticated
+  using ((select role from public.profiles where id = auth.uid()) = 'superadmin');
+
+-- ────────────────────────────────────────────────
+--  RSVPS (event headcount — "I'm going")
+-- ────────────────────────────────────────────────
+create table if not exists public.rsvps (
+  event_id    uuid not null references public.events(id) on delete cascade,
+  user_id     uuid not null references public.profiles(id) on delete cascade,
+  created_at  timestamptz not null default now(),
+  primary key (event_id, user_id)
+);
+
+alter table public.rsvps
+  drop constraint if exists rsvps_event_id_fkey,
+  add constraint rsvps_event_id_fkey foreign key (event_id)
+    references public.events(id) on delete cascade;
+alter table public.rsvps
+  drop constraint if exists rsvps_user_id_fkey,
+  add constraint rsvps_user_id_fkey foreign key (user_id)
+    references public.profiles(id) on delete cascade;
+
+alter table public.rsvps enable row level security;
+revoke all on table public.rsvps from anon;
+
+drop policy if exists "rsvps_select_all" on public.rsvps;
+drop policy if exists "rsvps_insert_own" on public.rsvps;
+drop policy if exists "rsvps_delete_own" on public.rsvps;
+create policy "rsvps_select_all" on public.rsvps
+  for select to authenticated using (true);
+create policy "rsvps_insert_own" on public.rsvps
+  for insert to authenticated with check (user_id = auth.uid());
+create policy "rsvps_delete_own" on public.rsvps
+  for delete to authenticated using (user_id = auth.uid());
+
+-- ────────────────────────────────────────────────
+--  RPC: attendance counts per event (admins / moderators)
+--  Powers the analytics chart on the Control panel.
+-- ────────────────────────────────────────────────
+create or replace function public.attendance_counts()
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_role text := public.get_my_role();
+  v_rows jsonb;
+begin
+  if v_role not in ('admin','moderator','superadmin') then
+    raise exception 'Insufficient permissions';
+  end if;
+
+  select coalesce(jsonb_agg(row_to_jsonb(t) order by t.event_date), '[]'::jsonb)
+  into v_rows
+  from (
+    select e.id as event_id, e.title, e.event_date,
+           count(a.id)::int as present
+    from public.events e
+    left join public.attendance a on a.event_id = e.id
+    group by e.id, e.title, e.event_date
+  ) t;
+
+  return v_rows;
+end;
+$$;
+
+grant execute on function public.attendance_counts() to authenticated;
+
 -- ============================================================
 --  PROFILE PICTURES — public storage bucket
 --  Path layout: avatars/<auth.uid()>/avatar.<ext> — each user
@@ -431,6 +540,33 @@ create policy "avatars_own_update" on storage.objects
 create policy "avatars_own_delete" on storage.objects
   for delete to authenticated
   using (bucket_id = 'avatars' and (storage.foldername(name))[1] = auth.uid()::text);
+
+-- ============================================================
+--  POST IMAGES — public storage bucket
+--  Path layout: post-images/<auth.uid()>/<uuid>.<ext> — each user
+--  owns the images they upload. 5 MB cap, common image formats.
+-- ============================================================
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('post-images', 'post-images', true, 5242880,
+        array['image/png', 'image/jpeg', 'image/webp', 'image/gif'])
+on conflict (id) do nothing;
+
+drop policy if exists "postimages_public_read" on storage.objects;
+drop policy if exists "postimages_own_insert"  on storage.objects;
+drop policy if exists "postimages_own_delete"  on storage.objects;
+
+create policy "postimages_public_read" on storage.objects
+  for select using (bucket_id = 'post-images');
+
+create policy "postimages_own_insert" on storage.objects
+  for insert to authenticated
+  with check (bucket_id = 'post-images'
+    and (storage.foldername(name))[1] = auth.uid()::text
+    and coalesce((metadata ->> 'contentLength')::bigint, 0) <= 5242880);
+
+create policy "postimages_own_delete" on storage.objects
+  for delete to authenticated
+  using (bucket_id = 'post-images' and (storage.foldername(name))[1] = auth.uid()::text);
 
 -- ============================================================
 --  GOING LIVE — no demo accounts are seeded.

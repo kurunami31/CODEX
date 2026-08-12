@@ -24,10 +24,16 @@ assistant — built to be fully usable from a smartphone browser.
   (Hacker News front page, GitHub trending repos).
 - **Events** — admin-published org events with schedules and locations.
 - **QR attendance** — each student gets a digital ID card (Nulshock name,
-  OCR A Extended details) with a **cryptographically signed, 5-minute QR**.
-  Moderators scan it with their smartphone camera (rear-camera default,
-  torch toggle, haptic feedback, manual fallback). Admins see the full
-  BSIT-only attendance log.
+  OCR A Extended details) with a **cryptographically signed, year-long QR**
+  (valid for the academic year) plus a **90-second live presence QR** that
+  auto-refreshes and proves physical attendance. Moderators scan with their
+  smartphone camera (rear-camera default, torch toggle, haptic feedback,
+  manual fallback). Admins see the full BSIT-only attendance log.
+- **Community features** — posts with **images**, **likes + comment
+  threads**, event **RSVPs** with headcounts, and admin **attendance
+  analytics** with CSV export.
+- **Installable PWA** — add CODEX to your home screen; the app shell and
+  your digital ID work **offline** after first visit.
 - **CODEX AI** — GROQ-powered floating assistant tuned for BSIT students.
 - **Mobile-first** — bottom navigation, full-screen scanner, safe-area aware.
 
