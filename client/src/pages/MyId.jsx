@@ -1,20 +1,26 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import QRCode from 'qrcode';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import Avatar from '../components/Avatar';
 import { drawIdCard } from '../lib/drawIdCard';
-import { IdIcon, QrIcon, DownloadIcon, CheckIcon, AlertIcon, CalendarIcon } from '../components/icons/Icons';
+import { IdIcon, QrIcon, DownloadIcon, CheckIcon, AlertIcon, ClockIcon, CalendarIcon } from '../components/icons/Icons';
 
 export default function MyId() {
   const { profile, user } = useAuth();
   const toast = useToast();
-  const [qr, setQr] = useState('');
+  const [qr, setQr] = useState(''); // yearly ID QR
+  const [presenceQr, setPresenceQr] = useState(''); // 90s live presence QR
+  const [presenceMode, setPresenceMode] = useState(false);
+  const [presenceLeft, setPresenceLeft] = useState(90);
   const [qrError, setQrError] = useState('');
   const [refreshing, setRefreshing] = useState(false);
+  const [presenceBusy, setPresenceBusy] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [myEvents, setMyEvents] = useState([]);
+  const presenceBusyRef = useRef(false);
+  const presenceLeftRef = useRef(90);
 
   const downloadId = async () => {
     if (downloading || !qr) return;
@@ -75,6 +81,62 @@ export default function MyId() {
     signQr();
   }, [signQr]);
 
+  // ── live presence QR (90s) ──────────────────────────────────────
+  const signPresence = useCallback(async () => {
+    if (!profile || presenceBusyRef.current) return;
+    presenceBusyRef.current = true;
+    setPresenceBusy(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('Session expired — log in again.');
+      const res = await fetch('/api/id/presence', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+      });
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        throw new Error(j.error || 'Could not start presence verification.');
+      }
+      const { payload, sig } = await res.json();
+      const url = await QRCode.toDataURL(JSON.stringify({ payload, sig }), {
+        width: 480,
+        margin: 1,
+        color: { dark: '#0b2b3a', light: '#ffffff' },
+        errorCorrectionLevel: 'H',
+      });
+      setPresenceQr(url);
+      presenceLeftRef.current = 90;
+      setPresenceLeft(90);
+    } catch (err) {
+      toast.error('Presence failed', err.message);
+      setPresenceMode(false);
+      setPresenceQr('');
+    } finally {
+      presenceBusyRef.current = false;
+      setPresenceBusy(false);
+    }
+  }, [profile, toast]);
+
+  // While presence mode is active: sign immediately, then one 1s tick that
+  // counts down and re-signs just before the QR would expire (at 0), so the
+  // live QR is never shown dead at the refresh boundary.
+  useEffect(() => {
+    if (!presenceMode) return undefined;
+    signPresence();
+    const tick = setInterval(() => {
+      presenceLeftRef.current -= 1;
+      setPresenceLeft(presenceLeftRef.current);
+      if (presenceLeftRef.current <= 0) {
+        presenceLeftRef.current = 90;
+        signPresence(); // re-sign before the previous QR expires
+      }
+    }, 1000);
+    return () => {
+      clearInterval(tick);
+      presenceLeftRef.current = 90;
+    };
+  }, [presenceMode, signPresence]);
+
   useEffect(() => {
     (async () => {
       const { data } = await supabase
@@ -123,14 +185,20 @@ export default function MyId() {
               </div>
             </div>
             <div className="idcard-qr">
-              {qr ? (
+              {presenceMode ? (
+                presenceQr ? (
+                  <img src={presenceQr} alt="Live presence QR code" />
+                ) : (
+                  <div className="skeleton" style={{ width: 96, height: 96 }} />
+                )
+              ) : qr ? (
                 <img src={qr} alt="Student QR code" />
               ) : qrError ? (
                 <div style={{ width: 96, fontSize: 9, color: 'var(--danger)', textAlign: 'center', lineHeight: 1.4 }}>{qrError}</div>
               ) : (
                 <div className="skeleton" style={{ width: 96, height: 96 }} />
               )}
-              <span>scan me</span>
+              <span>{presenceMode ? 'live presence' : 'scan me'}</span>
             </div>
           </div>
           <div className="idcard-foot">
@@ -140,18 +208,36 @@ export default function MyId() {
         </div>
 
         <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'center' }}>
-          <button className="btn btn-primary btn-sm" onClick={downloadId} disabled={downloading || !qr}>
-            <DownloadIcon width={15} height={15} /> {downloading ? 'Rendering…' : 'Download ID'}
-          </button>
-          <button className="btn btn-accent btn-sm" onClick={signQr} disabled={refreshing}>
-            <QrIcon width={15} height={15} /> {refreshing ? 'Refreshing…' : 'Refresh QR'}
-          </button>
-          {qr && (
+          {!presenceMode ? (
+            <button className="btn btn-accent btn-sm" onClick={() => setPresenceMode(true)} disabled={!qr}>
+              <ClockIcon width={15} height={15} /> Verify presence
+            </button>
+          ) : (
+            <button className="btn btn-outline btn-sm" onClick={() => { setPresenceMode(false); setPresenceQr(''); }}>
+              <CheckIcon width={15} height={15} /> Back to my ID
+            </button>
+          )}
+          {!presenceMode && (
+            <button className="btn btn-primary btn-sm" onClick={downloadId} disabled={downloading || !qr}>
+              <DownloadIcon width={15} height={15} /> {downloading ? 'Rendering…' : 'Download ID'}
+            </button>
+          )}
+          {!presenceMode && (
+            <button className="btn btn-dark btn-sm" onClick={signQr} disabled={refreshing}>
+              <QrIcon width={15} height={15} /> {refreshing ? 'Refreshing…' : 'Refresh QR'}
+            </button>
+          )}
+          {presenceMode && presenceQr && (
+            <span className="chip chip--warn">
+              <ClockIcon width={12} height={12} /> live · refresh in 0:{String(presenceLeft).padStart(2, '0')}
+            </span>
+          )}
+          {!presenceMode && qr && (
             <span className="chip chip--teal">
               <CheckIcon width={12} height={12} /> valid for the academic year
             </span>
           )}
-          {qr && (
+          {!presenceMode && qr && (
             <span className="chip">
               <DownloadIcon width={12} height={12} /> same QR on screen and in your saved copy
             </span>
@@ -160,6 +246,11 @@ export default function MyId() {
             <AlertIcon width={12} height={12} style={{ color: 'var(--warn)' }} /> raise brightness for faster scans
           </span>
         </div>
+        {presenceMode && (
+          <p className="ocr-label" style={{ margin: 0, textAlign: 'center' }}>
+            a 90-second live QR that proves you're here — auto-refreshes, can't be reused from a photo
+          </p>
+        )}
       </div>
 
       <div className="section-title">

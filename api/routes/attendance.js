@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { supabase, supabaseFor } from '../lib/supabase.js';
-import { signIdentity, verifyIdentity } from '../lib/identity.js';
+import { signIdentity, verifyIdentity, PRESENCE_TTL_MS } from '../lib/identity.js';
 import { ID_SIGN_TTL_MS } from '../lib/env.js';
 
 const router = Router();
@@ -39,6 +39,37 @@ router.post('/id/sign', async (req, res) => {
   res.json({ payload, sig, ttlMs: ID_SIGN_TTL_MS });
 });
 
+// POST /api/id/presence — issues a SHORT-LIVED signed 'presence' QR
+// (90 seconds). It proves the student is physically present: unlike the
+// yearly ID QR, this one cannot be reused from a photo or screenshot.
+router.post('/id/presence', async (req, res) => {
+  const token = bearer(req);
+  if (!token) return res.status(401).json({ error: 'Missing session token.' });
+
+  const sb = supabaseFor(token);
+  const { data: { user }, error: authError } = await sb.auth.getUser();
+  if (authError || !user) return res.status(401).json({ error: 'Invalid session.' });
+
+  const { data: profile, error } = await sb
+    .from('profiles')
+    .select('student_id, full_name, course')
+    .eq('id', user.id)
+    .maybeSingle();
+
+  if (error) return res.status(500).json({ error: 'Could not load your profile.' });
+  if (!profile) return res.status(404).json({ error: 'Profile not found. Did you complete sign-up?' });
+
+  const { payload, sig } = signIdentity({
+    sid: profile.student_id,
+    n: profile.full_name,
+    iat: Date.now(),
+    t: 'presence',
+  });
+
+  res.set('Cache-Control', 'no-store');
+  res.json({ payload, sig, ttlMs: PRESENCE_TTL_MS });
+});
+
 // POST /api/attendance/scan — moderator/admin only. Verifies the QR
 // signature + expiry, then records attendance through the RLS-protected
 // RPC using the SCANNER's own token (audited as scanned_by).
@@ -71,7 +102,7 @@ router.post('/attendance/scan', async (req, res) => {
 
   const verified = verifyIdentity(payloadB64, sigB64);
   if (verified.error) return res.status(400).json({ error: verified.error });
-  const { sid, n } = verified.payload;
+  const { sid, n, t } = verified.payload;
 
   const { data, error } = await sb.rpc('mark_attendance', {
     p_event_id: eventId,
@@ -85,7 +116,7 @@ router.post('/attendance/scan', async (req, res) => {
   }
 
   res.set('Cache-Control', 'no-store');
-  res.json({ ...data, qrHolder: n });
+  res.json({ ...data, qrHolder: n, qrType: t === 'presence' ? 'presence' : 'id' });
 });
 
 export default router;

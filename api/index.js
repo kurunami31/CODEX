@@ -54,10 +54,12 @@ const chatLimiter = rateLimit({
   message: { error: 'Chat quota reached for this minute. Try again shortly.' },
 });
 
-// Attendance/ID endpoints: sensitive, so per-IP limits are low.
+// Attendance/scan endpoints: sensitive, so per-IP limits are low.
+// (The presence-QR signer is student-facing and rotates every 90s, so it
+// gets headroom: ~40/min worst case, plus the yearly ID signer.)
 const staffLimiter = rateLimit({
   windowMs: 60 * 1000,
-  limit: 30,
+  limit: 120,
   standardHeaders: 'draft-7',
   legacyHeaders: false,
   message: { error: 'Too many requests — slow down a bit.' },

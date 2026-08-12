@@ -301,7 +301,7 @@ export default function ScannerPage() {
                 <div><div className="k">id no.</div><div className="v" style={{ fontFamily: 'var(--f-ocr)' }}>{result.student?.student_id}</div></div>
                 <div><div className="k">year / section</div><div className="v">{result.student?.year_level} · {result.student?.section}</div></div>
                 <div><div className="k">verified</div><div className="v">HMAC signature ✓</div></div>
-                <div><div className="k">card holder</div><div className="v">{result.qrHolder || result.student?.full_name}</div></div>
+                <div><div className="k">qr type</div><div className="v">{result.qrType === 'presence' ? 'live presence ✓' : 'year ID'}</div></div>
               </div>
               <div style={{ display: 'flex', gap: 10 }}>
                 <button className="btn btn-accent" style={{ flex: 1 }} onClick={() => { setResult(null); setScanError(''); }} disabled={busy}>
