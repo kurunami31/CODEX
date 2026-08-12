@@ -1,16 +1,15 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import html2canvas from 'html2canvas';
+import { useCallback, useEffect, useState } from 'react';
 import QRCode from 'qrcode';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import Avatar from '../components/Avatar';
+import { drawIdCard } from '../lib/drawIdCard';
 import { IdIcon, QrIcon, DownloadIcon, CheckIcon, AlertIcon, ClockIcon, CalendarIcon } from '../components/icons/Icons';
 
 export default function MyId() {
   const { profile, user } = useAuth();
   const toast = useToast();
-  const cardRef = useRef(null);
   const [qr, setQr] = useState('');
   const [qrError, setQrError] = useState('');
   const [refreshing, setRefreshing] = useState(false);
@@ -19,29 +18,23 @@ export default function MyId() {
   const [myEvents, setMyEvents] = useState([]);
 
   const downloadId = async () => {
-    const card = cardRef.current;
-    if (!card || downloading) return;
+    if (downloading || !qr) return;
     setDownloading(true);
     try {
-      const canvas = await html2canvas(card, {
-        scale: 2,
-        useCORS: true,
-        backgroundColor: '#ffffff',
-        logging: false,
-        onclone: (doc) => {
-          // make cross-origin images (avatars on supabase CDN) fetchable
-          doc.querySelectorAll('img').forEach((img) => {
-            if (img.src && !img.src.startsWith('data:')) img.crossOrigin = 'anonymous';
-          });
-        },
-      });
+      // make sure display fonts (Nulshock / OCR A) are loaded before drawing
+      await document.fonts.ready;
+      const canvas = document.createElement('canvas');
+      canvas.width = 856;
+      canvas.height = 540;
+      const ctx = canvas.getContext('2d');
+      await drawIdCard(ctx, { profile, avatarUrl: profile?.avatar_url, qr });
       const a = document.createElement('a');
       a.download = `codex-id-${String(profile?.student_id || 'student').replace(/[^a-z0-9-]/gi, '')}.png`;
       a.href = canvas.toDataURL('image/png');
       a.click();
       toast.ok('ID downloaded', 'The QR is scannable for a few minutes — re-download before each event.');
     } catch (err) {
-      toast.error('Download failed', err?.message || 'Could not capture your ID.');
+      toast.error('Download failed', err?.message || 'Could not render your ID.');
     } finally {
       setDownloading(false);
     }
@@ -109,7 +102,7 @@ export default function MyId() {
       </div>
 
       <div className="idcard-stage">
-        <div className="idcard" ref={cardRef}>
+        <div className="idcard">
           <div className="idcard-head">
             <img src="/assets/dorsu-logo.png" alt="DOrSU" />
             <div className="idcard-org">
