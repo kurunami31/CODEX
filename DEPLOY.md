@@ -124,16 +124,28 @@ change roles**, and student IDs can never be rewritten — even by one.
 1. **Admin** creates an event (Control panel or Events → New event).
 2. **Student** opens **My ID** → the app asks the API for a **signed** QR
    (`POST /api/id/sign`). The payload `{sid, name, iat}` is HMAC-SHA256 signed
-   with `SECRET_KEY` and **expires in 5 minutes**.
+   with `SECRET_KEY`. There are two QR kinds:
+   - **Yearly ID QR** — valid for the whole academic year (~366 days).
+     Signed once, shown on the card and in the downloadable PNG. No refresh
+     needed until the next school year.
+   - **Live presence QR** (`POST /api/id/presence`) — valid for **90 seconds**
+     and auto-refreshing. Accessed from the **Verify presence** button on My
+     ID; it proves the student is physically in front of the scanner, since
+     a photo/screenshot of it can't be reused.
+   Both encode `{payload, sig}`; the server accepts the older compact
+   `{p, s}` shape too.
 3. **Moderator/Admin** opens the event → **Open scanner** → the phone camera
    scans the student's QR.
 4. The scanner sends the QR to `POST /api/attendance/scan` with the
    moderator's session token. The server:
    - verifies the session (Supabase JWT),
    - checks the caller's role is moderator/admin,
-   - **verifies the QR signature and expiry**,
+   - **verifies the QR signature and type-appropriate expiry** (90 s for
+     presence, 1 academic year for the yearly ID QR),
    - records attendance via the RLS-protected `mark_attendance` RPC
      (duplicates rejected, BSIT-only enforced).
+   The result includes `qrType` (`presence` | `id`) so moderators can see
+   whether the student proved live presence.
 5. **Admin/Moderator** sees the full attendance log on the event page;
    **student** sees their own history on My ID.
 
@@ -145,12 +157,14 @@ manual student ID — still role-checked server-side.
 - [x] Row Level Security on every table; attendance only via SECURITY DEFINER RPCs
 - [x] Student ID immutable after sign-up (trigger + RLS `with check`); roles
       changeable only by a superadmin (trigger-enforced)
-- [x] QR codes HMAC-signed + 5-minute expiry (anti-forgery, anti-replay)
+- [x] QR codes HMAC-signed (anti-forgery); the **live presence QR** adds
+      anti-replay (90 s TTL) for physical-attendance proof. The yearly ID QR
+      is intentionally long-lived by design — treat ID photos as a credential
 - [x] GROQ key + `SECRET_KEY` never leave the server
 - [x] Helmet security headers, HSTS, `X-Frame-Options: DENY`
 - [x] Production Content-Security-Policy via Vercel headers
 - [x] `Permissions-Policy: camera=(self)` — camera only for our own page
-- [x] Rate limiting (120/min API, 12/min chat, 30/min staff endpoints)
+- [x] Rate limiting (120/min API, 12/min chat, 120/min attendance+ID endpoints)
 - [x] Request body cap (16 KB), no CORS (strictly same-origin)
 - [x] `X-Powered-By` removed, no stack traces leaked
 - [x] Server-side input validation + prompt injection guards on chat
