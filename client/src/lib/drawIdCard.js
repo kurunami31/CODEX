@@ -158,7 +158,7 @@ export async function drawIdCard(ctx, { profile, avatarUrl, qr }) {
 
   // info column
   const infoX = photoX + photoW + 30;
-  const infoW = x1 - 30 - 168 - infoX; // room for QR on the right
+  const infoW = x1 - 30 - 186 - infoX; // room for QR on the right
 
   ctx.fillStyle = MUTED;
   ctx.font = `11px ${OCR}`;
@@ -191,8 +191,8 @@ export async function drawIdCard(ctx, { profile, avatarUrl, qr }) {
     ctx.fillText(ln, infoX, mainTop + 100 + i * 24);
   });
 
-  // QR block
-  const qrBox = 150;
+  // QR block — rendered large so phone cameras scan the saved PNG reliably
+  const qrBox = 170;
   const qrX = x1 - qrBox;
   const qrY = mainTop + 6;
   if (qr) {

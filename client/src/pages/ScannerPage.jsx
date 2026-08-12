@@ -92,15 +92,21 @@ export default function ScannerPage() {
     if (busyRef.current) return;
     busyRef.current = true;
 
-    let qr;
+    let parsed;
     try {
-      qr = JSON.parse(decoded);
+      parsed = JSON.parse(decoded);
     } catch {
       toast.error('Invalid QR', 'That code is not a CODEX identity QR.');
       busyRef.current = false;
       return;
     }
-    if (!qr?.p || !qr?.s) {
+    // Normalize the compact { p, s } shape (used by the ID card) to the
+    // canonical { payload, sig } the API verifies.
+    const qr = {
+      payload: parsed.payload ?? parsed.p,
+      sig: parsed.sig ?? parsed.s,
+    };
+    if (!qr.payload || !qr.sig) {
       toast.error('Invalid QR', 'Missing signature fields.');
       busyRef.current = false;
       return;

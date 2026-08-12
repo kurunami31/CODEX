@@ -47,10 +47,15 @@ router.post('/attendance/scan', async (req, res) => {
 
   const { eventId, qr } = req.body || {};
   if (typeof eventId !== 'string' || !eventId) return res.status(400).json({ error: 'eventId is required.' });
-  if (!qr || typeof qr.payload !== 'string' || typeof qr.sig !== 'string') {
+  if (typeof eventId !== 'string' || eventId.length > 64) return res.status(400).json({ error: 'Invalid eventId.' });
+
+  // Accept both the canonical { payload, sig } and the compact { p, s }
+  // shapes that the ID card has shipped over time.
+  const payloadB64 = qr?.payload ?? qr?.p;
+  const sigB64 = qr?.sig ?? qr?.s;
+  if (typeof payloadB64 !== 'string' || !payloadB64 || typeof sigB64 !== 'string' || !sigB64) {
     return res.status(400).json({ error: 'QR payload and signature are required.' });
   }
-  if (typeof eventId !== 'string' || eventId.length > 64) return res.status(400).json({ error: 'Invalid eventId.' });
 
   const sb = supabaseFor(token);
   const { data: { user }, error: authError } = await sb.auth.getUser();
@@ -63,7 +68,7 @@ router.post('/attendance/scan', async (req, res) => {
     return res.status(403).json({ error: 'Only moderators and admins can record attendance.' });
   }
 
-  const verified = verifyIdentity(qr.payload, qr.sig);
+  const verified = verifyIdentity(payloadB64, sigB64);
   if (verified.error) return res.status(400).json({ error: verified.error });
   const { sid, n } = verified.payload;
 

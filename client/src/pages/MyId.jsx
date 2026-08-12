@@ -55,11 +55,11 @@ export default function MyId() {
         throw new Error(j.error || 'Could not sign your ID.');
       }
       const { payload, sig } = await res.json();
-      const url = await QRCode.toDataURL(JSON.stringify({ p: payload, s: sig }), {
+      const url = await QRCode.toDataURL(JSON.stringify({ payload, sig }), {
         width: 480,
         margin: 1,
         color: { dark: '#0b2b3a', light: '#ffffff' },
-        errorCorrectionLevel: 'M',
+        errorCorrectionLevel: 'H',
       });
       setQr(url);
       setQrError('');
