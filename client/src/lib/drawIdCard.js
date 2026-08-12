@@ -4,6 +4,24 @@
 
 import { initials, avatarStyle, truncate } from '../lib/format';
 
+// Pull the hex stops out of avatarStyle()'s CSS gradient string
+// (e.g. 'linear-gradient(135deg,#0ED0B6,#7ce9d8)') so we can draw a
+// matching gradient on canvas — addColorStop needs plain colors.
+function avatarGradientColors(seed) {
+  const css = avatarStyle(seed);
+  const hex = String(css).match(/#[0-9a-fA-F]{6}/g) || [];
+  return hex.length ? hex : ['#0ed0b6', '#7ce9d8'];
+}
+
+function fillAvatarTile(ctx, x, y, w, h, seed) {
+  const colors = avatarGradientColors(seed);
+  const g = ctx.createLinearGradient(x, y, x + w, y + h);
+  g.addColorStop(0, colors[0]);
+  g.addColorStop(1, colors[colors.length - 1]);
+  ctx.fillStyle = g;
+  ctx.fillRect(x, y, w, h);
+}
+
 // canvas is 2× the visual card (428×270 → 856×540)
 const W = 856;
 const H = 540;
@@ -116,12 +134,7 @@ export async function drawIdCard(ctx, { profile, avatarUrl, qr }) {
 
   // portrait photo
   const drawInitialsTile = () => {
-    const a = avatarStyle(profile?.full_name || profile?.student_id || '');
-    const g = ctx.createLinearGradient(photoX, photoY, photoX + photoW, photoY + photoH);
-    g.addColorStop(0, a);
-    g.addColorStop(1, a);
-    ctx.fillStyle = g;
-    ctx.fillRect(photoX, photoY, photoW, photoH);
+    fillAvatarTile(ctx, photoX, photoY, photoW, photoH, profile?.full_name || profile?.student_id || '');
     ctx.fillStyle = '#04252b';
     ctx.font = `700 44px ${BODY}`;
     ctx.textAlign = 'center';
