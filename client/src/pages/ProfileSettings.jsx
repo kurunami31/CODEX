@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import Avatar from '../components/Avatar';
+import { roleLabel } from '../lib/roles';
 import { CameraIcon, IdIcon, ShieldIcon, MailIcon, LockIcon, CheckIcon } from '../components/icons/Icons';
 
 const YEAR_LEVELS = ['1st Year', '2nd Year', '3rd Year', '4th Year'];
@@ -207,7 +208,7 @@ export default function ProfileSettings() {
         </div>
         <div className="settings-row">
           <span className="settings-key"><ShieldIcon width={15} height={15} /> Role</span>
-          <span className="settings-val">{profile.role}</span>
+          <span className="settings-val">{roleLabel(profile.role)}</span>
           <span className="chip">locked</span>
         </div>
         <p className="ocr-label" style={{ margin: 0 }}>

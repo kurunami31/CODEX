@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { formatEventDate, isUpcoming, timeAgo } from '../lib/format';
+import { isStaff as checkStaff } from '../lib/roles';
 import Avatar from '../components/Avatar';
 import {
   ChevronLeftIcon, ClockIcon, MapPinIcon, CameraIcon, QrIcon, CheckIcon,
@@ -21,7 +22,7 @@ export default function EventDetail() {
   const [loading, setLoading] = useState(true);
   const [showQr, setShowQr] = useState(false);
 
-  const isStaff = profile?.role === 'admin' || profile?.role === 'moderator';
+  const isStaff = checkStaff(profile?.role);
 
   useEffect(() => {
     (async () => {

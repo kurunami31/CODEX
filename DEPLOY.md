@@ -74,6 +74,33 @@ If new sign-ups fail, check in this order:
    single address (~4/hour). Retrying the same address repeatedly shows
    "Email rate limit exceeded"; wait about an hour.
 
+## 2.6. Super admin — full control role
+
+The `superadmin` role manages everything: every member (edit details, change
+roles, delete accounts), every post (moderate), and every attendance record.
+Admins keep their existing event + attendance powers; **only a superadmin can
+change roles**, and student IDs can never be rewritten — even by one.
+
+1. After the schema has run, promote an existing account in the SQL Editor
+   (runs as postgres, so the role-lock trigger permits it):
+
+   ```sql
+   update public.profiles p set role = 'superadmin'
+   from auth.users u
+   where p.id = u.id and u.email = 'you@yourdomain.com';
+   ```
+
+2. Log in with that account → the sidebar now shows **Super Admin** (Root
+   access). From there you can:
+   - **Students** — search all members, see emails, enroll new students
+     (email + password), edit details, change roles, delete accounts.
+   - **Posts** — browse every post and delete any of them.
+   - **Attendance** — see the full log across events and remove mistaken scans.
+3. Enrolling students and seeing emails uses the **service-role key** — it must
+   exist as `SUPABASE_SERVICE_ROLE_KEY` in the server env (Vercel) or `.env`
+   locally. The key never reaches the browser; the API verifies the caller is
+   a superadmin before using it.
+
 ## 3. Deploy to Vercel
 
 1. Push this folder to a GitHub repo.
@@ -87,6 +114,8 @@ If new sign-ups fail, check in this order:
    - `VITE_SUPABASE_ANON_KEY` (same value)
    - `GROQ_API_KEY`
    - `SECRET_KEY`
+   - `SUPABASE_SERVICE_ROLE_KEY` (only needed for the Super Admin features;
+     get it from Supabase → Project Settings → API → `service_role` key)
 5. **Deploy**. Your site gets HTTPS automatically — required for the camera
    QR scanner to work on phones.
 
@@ -114,7 +143,8 @@ manual student ID — still role-checked server-side.
 ## 5. Security checklist (already built in)
 
 - [x] Row Level Security on every table; attendance only via SECURITY DEFINER RPCs
-- [x] Role/student-ID immutable after sign-up (trigger + RLS `with check`)
+- [x] Student ID immutable after sign-up (trigger + RLS `with check`); roles
+      changeable only by a superadmin (trigger-enforced)
 - [x] QR codes HMAC-signed + 5-minute expiry (anti-forgery, anti-replay)
 - [x] GROQ key + `SECRET_KEY` never leave the server
 - [x] Helmet security headers, HSTS, `X-Frame-Options: DENY`

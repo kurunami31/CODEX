@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { formatEventDate, isUpcoming, timeAgo } from '../lib/format';
+import { roleLabel } from '../lib/roles';
 import Avatar from '../components/Avatar';
 import {
   ShieldIcon, CalendarIcon, UsersIcon, CameraIcon, PlusIcon, XIcon,
@@ -12,6 +13,7 @@ import {
 
 export default function Admin() {
   const toast = useToast();
+  const { profile } = useAuth();
   const [events, setEvents] = useState([]);
   const [selected, setSelected] = useState(null);
   const [attendees, setAttendees] = useState([]);
@@ -55,8 +57,6 @@ export default function Admin() {
     loadEvents();
   };
 
-  const role = (r) => (r === 'admin' ? 'Administrator' : r === 'moderator' ? 'Moderator' : 'Student');
-
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <div className="events-head">
@@ -76,7 +76,7 @@ export default function Admin() {
           { icon: <CalendarIcon width={15} height={15} />, k: 'events', v: events.length },
           { icon: <UsersIcon width={15} height={15} />, k: 'attendance records', v: attendees.length },
           { icon: <QrIcon width={15} height={15} />, k: 'qr signing', v: 'HMAC v2' },
-          { icon: <AlertIcon width={15} height={15} />, k: 'your role', v: role('admin') },
+          { icon: <AlertIcon width={15} height={15} />, k: 'your role', v: roleLabel(profile?.role) },
         ].map((s) => (
           <div key={s.k} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px', background: 'var(--bg)', borderRadius: 'var(--r-md)', border: '1px solid var(--line)' }}>
             <span style={{ color: 'var(--accent-2)' }}>{s.icon}</span>

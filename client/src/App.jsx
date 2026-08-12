@@ -16,6 +16,7 @@ const Profile = lazy(() => import('./pages/Profile'));
 const ProfileSettings = lazy(() => import('./pages/ProfileSettings'));
 const ScannerPage = lazy(() => import('./pages/ScannerPage'));
 const Admin = lazy(() => import('./pages/Admin'));
+const SuperAdmin = lazy(() => import('./pages/SuperAdmin'));
 
 function Lazy({ children }) {
   return <Suspense fallback={<div style={{ padding: 30 }}><div className="skeleton" style={{ height: 160 }} /></div>}>{children}</Suspense>;
@@ -29,10 +30,10 @@ function RequireAuth({ children }) {
   return children;
 }
 
-function RequireRole({ role, children }) {
+function RequireRole({ roles, children }) {
   const { profile, loading } = useAuth();
   if (loading || !profile) return null;
-  if (profile.role !== role) return <Navigate to="/app/feed" replace />;
+  if (!roles.includes(profile.role)) return <Navigate to="/app/feed" replace />;
   return children;
 }
 
@@ -87,8 +88,16 @@ export default function App() {
           <Route
             path="admin"
             element={
-              <RequireRole role="admin">
+              <RequireRole roles={['admin', 'superadmin']}>
                 <Lazy><Admin /></Lazy>
+              </RequireRole>
+            }
+          />
+          <Route
+            path="superadmin"
+            element={
+              <RequireRole roles={['superadmin']}>
+                <Lazy><SuperAdmin /></Lazy>
               </RequireRole>
             }
           />

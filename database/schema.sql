@@ -17,13 +17,19 @@ create table if not exists public.profiles (
   year_level  text not null check (year_level in ('1st Year','2nd Year','3rd Year','4th Year')),
   section     text not null,
   course      text not null default 'BSIT' check (course in ('BSIT','BSEM','BSAB','other')),
-  role        text not null default 'student' check (role in ('student','moderator','admin')),
+  role        text not null default 'student' check (role in ('student','moderator','admin','superadmin')),
   avatar_url  text,
   created_at  timestamptz not null default now()
 );
 
 -- idempotent upgrade for databases created before avatars existed
 alter table public.profiles add column if not exists avatar_url text;
+
+-- idempotent upgrade: allow the superadmin role on databases created earlier
+-- (drops + re-adds the default-named check constraint with the new role)
+alter table public.profiles drop constraint if exists profiles_role_check;
+alter table public.profiles add constraint profiles_role_check
+  check (role in ('student','moderator','admin','superadmin'));
 
 -- ────────────────────────────────────────────────
 --  EVENTS (posted by admins)
@@ -81,6 +87,13 @@ alter table public.likes
   add constraint likes_user_id_fkey foreign key (user_id)
     references public.profiles(id) on delete cascade;
 
+-- Deleting a staff account must not fail because they created events —
+-- events survive and simply lose their creator.
+alter table public.events
+  drop constraint if exists events_created_by_fkey,
+  add constraint events_created_by_fkey foreign key (created_by)
+    references auth.users(id) on delete set null;
+
 -- ────────────────────────────────────────────────
 --  ROW LEVEL SECURITY
 -- ────────────────────────────────────────────────
@@ -109,6 +122,17 @@ create policy "profiles_insert_own" on public.profiles
 create policy "profiles_update_own" on public.profiles
   for update to authenticated using (id = auth.uid())
   with check (id = auth.uid() and role = (select role from public.profiles where id = auth.uid()));
+-- superadmins manage every member (edit details, change roles). Both USING
+-- and WITH CHECK are gated on the acting user's role so that a student
+-- updating their own row can never pass this policy's check.
+drop policy if exists "profiles_superadmin_update" on public.profiles;
+create policy "profiles_superadmin_update" on public.profiles
+  for update to authenticated
+  using ((select role from public.profiles where id = auth.uid()) = 'superadmin')
+  with check ((select role from public.profiles where id = auth.uid()) = 'superadmin');
+-- NOTE: account deletion intentionally has no direct DELETE policy — it goes
+-- through the public.superadmin_delete_user RPC so the auth.users row (and
+-- posts/likes/attendance) is removed with it, never orphaning an account.
 
 -- events: everyone signed in can read; only admins write
 drop policy if exists "events_select_all"  on public.events;
@@ -117,7 +141,7 @@ create policy "events_select_all" on public.events
   for select to authenticated using (true);
 create policy "events_admin_write" on public.events
   for insert to authenticated
-  with check ((select role from public.profiles where id = auth.uid()) = 'admin');
+  with check ((select role from public.profiles where id = auth.uid()) in ('admin','superadmin'));
 
 -- attendance: no direct writes — all recording goes through the
 -- security-definer RPCs (mark_attendance / event_attendance). Students
@@ -129,6 +153,15 @@ create policy "attendance_no_public_access" on public.attendance
 create policy "attendance_select_own" on public.attendance
   for select to authenticated
   using (student_id = (select p.student_id from public.profiles p where p.id = auth.uid()));
+-- superadmins see every attendance record and may remove mistaken scans
+drop policy if exists "attendance_superadmin_select" on public.attendance;
+drop policy if exists "attendance_superadmin_delete" on public.attendance;
+create policy "attendance_superadmin_select" on public.attendance
+  for select to authenticated
+  using ((select role from public.profiles where id = auth.uid()) = 'superadmin');
+create policy "attendance_superadmin_delete" on public.attendance
+  for delete to authenticated
+  using ((select role from public.profiles where id = auth.uid()) = 'superadmin');
 
 -- posts: everyone signed in reads and posts; authors edit, archive and
 -- delete their own posts
@@ -145,6 +178,17 @@ create policy "posts_update_own" on public.posts
   with check (author_id = auth.uid());
 create policy "posts_delete_own" on public.posts
   for delete to authenticated using (author_id = auth.uid());
+-- superadmins may moderate any post (check gated on the acting user, same
+-- reasoning as profiles_superadmin_update)
+drop policy if exists "posts_superadmin_update" on public.posts;
+drop policy if exists "posts_superadmin_delete" on public.posts;
+create policy "posts_superadmin_update" on public.posts
+  for update to authenticated
+  using ((select role from public.profiles where id = auth.uid()) = 'superadmin')
+  with check ((select role from public.profiles where id = auth.uid()) = 'superadmin');
+create policy "posts_superadmin_delete" on public.posts
+  for delete to authenticated
+  using ((select role from public.profiles where id = auth.uid()) = 'superadmin');
 
 -- likes: anyone signed in can read / like / unlike
 drop policy if exists "likes_select_all" on public.likes;
@@ -169,10 +213,18 @@ security definer
 set search_path = public
 as $$
 begin
-  if tg_op = 'UPDATE' and (new.role is distinct from old.role
-                        or new.student_id is distinct from old.student_id
+  -- student ID and the row id can never change — for anyone.
+  if tg_op = 'UPDATE' and (new.student_id is distinct from old.student_id
                         or new.id is distinct from old.id) then
-    raise exception 'Profile identity (role / student ID) is immutable after creation';
+    raise exception 'Profile identity (student ID) is immutable after creation';
+  end if;
+  -- roles CAN change, but only by a superadmin (or the SQL Editor, where
+  -- auth.uid() is null — that is how the first super admin is bootstrapped).
+  if tg_op = 'UPDATE' and new.role is distinct from old.role then
+    if auth.uid() is not null and
+       coalesce((select role from public.profiles where id = auth.uid()), '') <> 'superadmin' then
+      raise exception 'Only a super admin can change a member''s role';
+    end if;
   end if;
   return new;
 end;
@@ -216,7 +268,7 @@ declare
   v_profile record;
   v_result  jsonb;
 begin
-  if v_role not in ('admin','moderator') then
+  if v_role not in ('admin','moderator','superadmin') then
     raise exception 'Insufficient permissions: only moderators and admins can mark attendance';
   end if;
 
@@ -273,7 +325,7 @@ declare
   v_role text := public.get_my_role();
   v_rows jsonb;
 begin
-  if v_role not in ('admin','moderator') then
+  if v_role not in ('admin','moderator','superadmin') then
     raise exception 'Insufficient permissions';
   end if;
 
@@ -304,7 +356,7 @@ security definer
 set search_path = public
 as $$
 begin
-  if public.get_my_role() <> 'admin' then
+  if public.get_my_role() not in ('admin','superadmin') then
     raise exception 'Insufficient permissions';
   end if;
   delete from public.events where id = p_event_id;
@@ -313,9 +365,34 @@ $$;
 
 grant execute on function public.delete_event(uuid) to authenticated;
 
+-- ────────────────────────────────────────────────
+--  RPC: delete a member account (superadmins only)
+--  Removes the auth.users row; profiles/posts/likes/attendance
+--  cascade away automatically. Cannot delete your own account.
+-- ────────────────────────────────────────────────
+create or replace function public.superadmin_delete_user(p_user_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if (select role from public.profiles where id = auth.uid()) <> 'superadmin' then
+    raise exception 'Insufficient permissions';
+  end if;
+  if p_user_id = auth.uid() then
+    raise exception 'You cannot delete your own account';
+  end if;
+  delete from auth.users where id = p_user_id;
+end;
+$$;
+
+grant execute on function public.superadmin_delete_user(uuid) to authenticated;
+
 -- Defense in depth: lock the RPCs down to authenticated users only.
 revoke all on function public.get_my_role, public.mark_attendance,
-        public.event_attendance, public.delete_event from anon, public;
+        public.event_attendance, public.delete_event, public.superadmin_delete_user
+        from anon, public;
 
 -- Tell PostgREST to reload its schema cache so the RPCs (and any new
 -- tables/policies) become visible through the REST API immediately.
@@ -374,4 +451,16 @@ create policy "avatars_own_delete" on storage.objects
 --
 --  Then decide on email confirmation (Authentication → Providers
 --  → Email): OFF for instant sign-ups, ON for verified sign-ups.
+--
+--  SUPER ADMIN — bootstrap the first one after the schema runs:
+--  (runs as postgres in the SQL Editor, so the role-lock trigger permits it)
+--
+--  update public.profiles p set role = 'superadmin'
+--  from auth.users u
+--  where p.id = u.id and u.email = 'you@yourdomain.com';
+--
+--  The superadmin role can: manage every member (edit / change roles /
+--  delete accounts via public.superadmin_delete_user), moderate any post,
+--  and see / correct every attendance record. Only a superadmin may change
+--  roles — admins keep their existing event + attendance powers.
 -- ============================================================

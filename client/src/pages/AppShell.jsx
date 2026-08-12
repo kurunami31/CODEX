@@ -2,13 +2,15 @@ import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import Avatar from '../components/Avatar';
-import { HomeIcon, RssIcon, CalendarIcon, IdIcon, ShieldIcon, LogOutIcon, SearchIcon, CameraIcon, GearIcon, SunIcon, MoonIcon } from '../components/icons/Icons';
+import { isStaff as checkStaff, isAdmin as checkAdmin, roleLabel } from '../lib/roles';
+import { HomeIcon, RssIcon, CalendarIcon, IdIcon, ShieldIcon, LogOutIcon, SearchIcon, CameraIcon, GearIcon, SunIcon, MoonIcon, CrownIcon } from '../components/icons/Icons';
 
 const TITLES = {
   '/app/feed': 'feed',
   '/app/events': 'events',
   '/app/idcard': 'my id',
   '/app/admin': 'control',
+  '/app/superadmin': 'root access',
   '/app/settings': 'settings',
 };
 
@@ -18,7 +20,7 @@ export default function AppShell() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const isStaff = profile?.role === 'admin' || profile?.role === 'moderator';
+  const staff = checkStaff(profile?.role);
 
   const title = TITLES[location.pathname] || 'codex';
 
@@ -27,7 +29,8 @@ export default function AppShell() {
     { to: '/app/events', label: 'Events', icon: <CalendarIcon width={20} height={20} /> },
     { to: '/app/idcard', label: 'My ID', icon: <IdIcon width={20} height={20} /> },
     { to: '/app/settings', label: 'Settings', icon: <GearIcon width={20} height={20} /> },
-    ...(profile?.role === 'admin' ? [{ to: '/app/admin', label: 'Control', icon: <ShieldIcon width={20} height={20} /> }] : []),
+    ...(checkAdmin(profile?.role) ? [{ to: '/app/admin', label: 'Control', icon: <ShieldIcon width={20} height={20} /> }] : []),
+    ...(profile?.role === 'superadmin' ? [{ to: '/app/superadmin', label: 'Super Admin', icon: <CrownIcon width={20} height={20} /> }] : []),
   ];
 
   const handleLogout = async () => {
@@ -60,7 +63,7 @@ export default function AppShell() {
             </NavLink>
           ))}
 
-          {isStaff && (
+          {staff && (
             <>
               <div className="nav-group">staff tools</div>
               <NavLink
@@ -79,7 +82,7 @@ export default function AppShell() {
             <Avatar name={profile?.full_name} seed={user?.id} size={36} ring url={profile?.avatar_url} />
             <div style={{ minWidth: 0 }}>
               <div className="u-name" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{profile?.full_name || '…'}</div>
-              <div className="u-role">{profile?.role || '…'}</div>
+              <div className="u-role">{roleLabel(profile?.role)}</div>
             </div>
             <button className="icon-btn" style={{ marginLeft: 'auto', width: 32, height: 32, borderRadius: 9 }} onClick={handleLogout} title="Log out" aria-label="Log out">
               <LogOutIcon width={15} height={15} />

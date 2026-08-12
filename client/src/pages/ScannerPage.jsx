@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { formatEventDate } from '../lib/format';
+import { isStaff as checkStaff } from '../lib/roles';
 import {
   XIcon, FlashIcon, CameraIcon, QrIcon, CheckIcon, AlertIcon,
   ChevronLeftIcon, CalendarIcon,
@@ -29,7 +30,7 @@ export default function ScannerPage() {
   const scannerRef = useRef(null);
   const busyRef = useRef(false);
 
-  const isStaff = profile?.role === 'admin' || profile?.role === 'moderator';
+  const isStaff = checkStaff(profile?.role);
 
   useEffect(() => {
     if (!isStaff) navigate('/app/feed', { replace: true });

@@ -8,6 +8,7 @@ import PostCard from '../components/PostCard';
 import usePostActions from '../lib/usePostActions';
 import usePostLikes from '../lib/usePostLikes';
 import { formatEventDate } from '../lib/format';
+import { roleLabel } from '../lib/roles';
 import { ChevronLeftIcon, RssIcon, ArchiveIcon, GearIcon, UsersIcon } from '../components/icons/Icons';
 
 export default function Profile() {
@@ -127,7 +128,7 @@ export default function Profile() {
         <div className="profile-meta">
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
             <h1 className="profile-name">{author?.full_name || '…'}</h1>
-            <span className={`role-pill role-pill--${author?.role || 'student'}`}>{author?.role || 'student'}</span>
+            <span className={`role-pill role-pill--${author?.role || 'student'}`}>{roleLabel(author?.role)}</span>
           </div>
           <div className="ocr-label profile-sub">
             DOrSU · {author?.course || 'BSIT'} · {author?.year_level || '—'} · Section {author?.section || '—'}

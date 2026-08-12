@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Avatar from './Avatar';
 import { formatEventDate } from '../lib/format';
+import { roleLabel } from '../lib/roles';
 import { HeartIcon, ShareIcon, PencilIcon, TrashIcon, ArchiveIcon, MenuDotsIcon } from './icons/Icons';
 
 const LIMIT = 2000;
@@ -55,7 +56,7 @@ export default function PostCard({ post, liked, likeCount, onLike, onShare, mine
             <span>{when.day} · {when.time}</span>
           </span>
         </button>
-        <span className={`role-pill post-role role-pill--${author?.role || 'student'}`}>{author?.role || 'student'}</span>
+        <span className={`role-pill post-role role-pill--${author?.role || 'student'}`}>{roleLabel(author?.role)}</span>
         {(mine || manage) && (
           <div className="post-menu" ref={menuRef}>
             <button

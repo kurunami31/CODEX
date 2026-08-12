@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { formatEventDate, isUpcoming } from '../lib/format';
+import { isStaff as checkStaff, isAdmin as checkAdmin } from '../lib/roles';
 import {
   CalendarIcon, MapPinIcon, ClockIcon, PlusIcon, XIcon, ChevronRightIcon,
   CameraIcon, QrIcon, CheckIcon, TerminalIcon, AlertIcon,
@@ -17,8 +18,8 @@ export default function Events() {
   const [showCreate, setShowCreate] = useState(false);
   const [myAttendance, setMyAttendance] = useState(new Map());
 
-  const isAdmin = profile?.role === 'admin';
-  const isStaff = profile?.role === 'admin' || profile?.role === 'moderator';
+  const isAdmin = checkAdmin(profile?.role);
+  const isStaff = checkStaff(profile?.role);
 
   const loadEvents = async () => {
     const { data, error } = await supabase

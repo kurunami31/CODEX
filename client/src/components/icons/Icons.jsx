@@ -365,6 +365,15 @@ export function MenuDotsIcon(props) {
   );
 }
 
+export function CrownIcon(props) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M3.5 8.5 7.5 13 12 6.5 16.5 13l4-4.5V18H3.5V8.5Z" />
+      <path d="M3.5 18h17M6.5 16.5h11" />
+    </svg>
+  );
+}
+
 export function EyeIcon(props) {
   return (
     <svg {...base} {...props}>

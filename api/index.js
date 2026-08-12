@@ -5,6 +5,7 @@ import { configBanner } from './lib/env.js';
 import feedRouter from './routes/feed.js';
 import chatRouter from './routes/chat.js';
 import attendanceRouter from './routes/attendance.js';
+import adminRouter from './routes/admin.js';
 
 const app = express();
 
@@ -67,7 +68,9 @@ app.use(configBanner);
 app.use('/api', apiLimiter);
 app.use('/api/feed', feedRouter);
 app.use('/api/chat', chatLimiter, chatRouter);
-app.use('/api', staffLimiter, attendanceRouter);app.use('/api', (_req, res) => {
+app.use('/api', staffLimiter, attendanceRouter);
+app.use('/api/admin', staffLimiter, adminRouter);
+app.use('/api', (_req, res) => {
   res.status(404).json({ error: 'Not found' });
 });
 
