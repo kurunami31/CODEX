@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { supabase, supabaseFor } from '../lib/supabase.js';
 import { signIdentity, verifyIdentity } from '../lib/identity.js';
+import { ID_SIGN_TTL_MS } from '../lib/env.js';
 
 const router = Router();
 
@@ -35,7 +36,7 @@ router.post('/id/sign', async (req, res) => {
   });
 
   res.set('Cache-Control', 'no-store');
-  res.json({ payload, sig, ttlMs: 5 * 60 * 1000 });
+  res.json({ payload, sig, ttlMs: ID_SIGN_TTL_MS });
 });
 
 // POST /api/attendance/scan — moderator/admin only. Verifies the QR

@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import Avatar from '../components/Avatar';
 import { drawIdCard } from '../lib/drawIdCard';
-import { IdIcon, QrIcon, DownloadIcon, CheckIcon, AlertIcon, ClockIcon, CalendarIcon } from '../components/icons/Icons';
+import { IdIcon, QrIcon, DownloadIcon, CheckIcon, AlertIcon, CalendarIcon } from '../components/icons/Icons';
 
 export default function MyId() {
   const { profile, user } = useAuth();
@@ -14,7 +14,6 @@ export default function MyId() {
   const [qrError, setQrError] = useState('');
   const [refreshing, setRefreshing] = useState(false);
   const [downloading, setDownloading] = useState(false);
-  const [expiresIn, setExpiresIn] = useState(300);
   const [myEvents, setMyEvents] = useState([]);
 
   const downloadId = async () => {
@@ -32,7 +31,7 @@ export default function MyId() {
       a.download = `codex-id-${String(profile?.student_id || 'student').replace(/[^a-z0-9-]/gi, '')}.png`;
       a.href = canvas.toDataURL('image/png');
       a.click();
-      toast.ok('ID downloaded', 'The QR is scannable for a few minutes — re-download before each event.');
+      toast.ok('ID downloaded', 'Your ID carries the same year-long QR — no need to re-download.');
     } catch (err) {
       toast.error('Download failed', err?.message || 'Could not render your ID.');
     } finally {
@@ -63,7 +62,6 @@ export default function MyId() {
       });
       setQr(url);
       setQrError('');
-      setExpiresIn(300);
     } catch (err) {
       setQrError(err.message);
     } finally {
@@ -71,16 +69,11 @@ export default function MyId() {
     }
   }, [profile]);
 
+  // Sign once — the QR stays valid for the whole academic year, so there's
+  // no periodic refresh. (Refresh is still available manually if ever needed.)
   useEffect(() => {
     signQr();
-    const t = setInterval(signQr, 280000);
-    return () => clearInterval(t);
   }, [signQr]);
-
-  useEffect(() => {
-    const t = setInterval(() => setExpiresIn((s) => (s > 0 ? s - 1 : 0)), 1000);
-    return () => clearInterval(t);
-  }, []);
 
   useEffect(() => {
     (async () => {
@@ -155,12 +148,12 @@ export default function MyId() {
           </button>
           {qr && (
             <span className="chip chip--teal">
-              <ClockIcon width={12} height={12} /> expires in {Math.floor(expiresIn / 60)}:{String(expiresIn % 60).padStart(2, '0')}
+              <CheckIcon width={12} height={12} /> valid for the academic year
             </span>
           )}
           {qr && (
             <span className="chip">
-              <DownloadIcon width={12} height={12} /> saved QR is scannable for ~5 min — refresh before each event
+              <DownloadIcon width={12} height={12} /> same QR on screen and in your saved copy
             </span>
           )}
           <span className="chip">

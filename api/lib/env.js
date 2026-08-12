@@ -19,4 +19,7 @@ export function configBanner(req, res, next) {
   next();
 }
 
-export const ID_SIGN_TTL_MS = 5 * 60 * 1000;
+// Signed identity QRs are valid for the whole academic year (~366 days).
+// They're re-issued once per school year by the org; the on-screen ID shows
+// the same QR all year instead of rotating every few minutes.
+export const ID_SIGN_TTL_MS = 366 * 24 * 60 * 60 * 1000;
