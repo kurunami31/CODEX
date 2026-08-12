@@ -139,21 +139,35 @@ export default function AppShell() {
         </main>
       </div>
 
-      <nav className="bottomnav">
+      <nav className="bottomnav" aria-label="Primary">
         <ul>
-          {navItems.map((item) => (
+          {/* core tabs only — admin tools live in the hamburger drawer so the
+              pill always fits on small screens */}
+          {navItems
+            .filter((item) => ['/app/feed', '/app/events', '/app/idcard', '/app/settings'].includes(item.to))
+            .map((item) => (
             <li key={item.to}>
-              <NavLink to={item.to} className={({ isActive }) => (isActive ? 'a--on' : '')}>
+              <NavLink
+                to={item.to}
+                className={({ isActive }) => (isActive ? 'nav-link--on' : '')}
+                aria-current={item.to === location.pathname ? 'page' : undefined}
+              >
+                <span className="nav-dot" aria-hidden="true" />
                 {item.icon}
-                {item.label}
+                <span>{item.label}</span>
               </NavLink>
             </li>
           ))}
           {staff && (
             <li>
-              <NavLink to="/app/events" className={({ isActive }) => (isActive ? 'a--on' : '')}>
+              <NavLink
+                to="/app/events"
+                className={() => (location.pathname.startsWith('/app/scanner') ? 'nav-link--on' : '')}
+                aria-current={location.pathname.startsWith('/app/scanner') ? 'page' : undefined}
+              >
+                <span className="nav-dot" aria-hidden="true" />
                 <CameraIcon width={18} height={18} />
-                Scan
+                <span>Scan</span>
               </NavLink>
             </li>
           )}
