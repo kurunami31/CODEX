@@ -125,12 +125,13 @@ export async function drawIdCard(ctx, { profile, avatarUrl, qr }) {
   // ── main: photo + name/details + QR ──
   const mainTop = stripY + stripH + 20;
   const mainBottom = H - 64;
-  const mainH = mainBottom - mainTop;
 
-  const photoW = 130;
-  const photoH = mainH - 8;
+  // Portrait matches the on-screen card: 4:5 photo box, centered crop
+  // (object-fit: cover equivalent) — never stretched.
+  const photoW = 150;
+  const photoH = Math.round(photoW * 1.25); // 4:5
   const photoX = x0 + 8;
-  const photoY = mainTop + 4;
+  const photoY = mainTop + 8;
 
   // portrait photo
   const drawInitialsTile = () => {
@@ -149,10 +150,10 @@ export async function drawIdCard(ctx, { profile, avatarUrl, qr }) {
     try {
       const bust = `${avatarUrl}${avatarUrl.includes('?') ? '&' : '?'}dl=${Date.now()}`;
       const img = await loadImage(bust);
-      // center-crop the image into the portrait box
-      const s = Math.min(img.width / photoW, img.height / photoH);
-      const sw = photoW * s;
-      const sh = photoH * s;
+      // cover-crop: scale so the box is fully covered, then center the window
+      const scale = Math.max(img.width / photoW, img.height / photoH);
+      const sw = photoW * scale;
+      const sh = photoH * scale;
       const sx = (img.width - sw) / 2;
       const sy = (img.height - sh) / 2;
       ctx.drawImage(img, sx, sy, sw, sh, photoX, photoY, photoW, photoH);
@@ -170,8 +171,8 @@ export async function drawIdCard(ctx, { profile, avatarUrl, qr }) {
   ctx.stroke();
 
   // info column
-  const infoX = photoX + photoW + 30;
-  const infoW = x1 - 30 - 186 - infoX; // room for QR on the right
+  const infoX = photoX + photoW + 26;
+  const infoW = x1 - 30 - 178 - infoX; // room for QR on the right
 
   ctx.fillStyle = MUTED;
   ctx.font = `11px ${OCR}`;
@@ -232,7 +233,7 @@ export async function drawIdCard(ctx, { profile, avatarUrl, qr }) {
   ctx.fillText('DAVAO ORIENTAL STATE UNIVERSITY', x0, mainBottom + 24);
   ctx.fillStyle = '#075e55';
   ctx.textAlign = 'right';
-  ctx.fillText('EST. 2018 · REPUBLIC ACT 11033', x1, mainBottom + 24);
+  ctx.fillText('CODEBYTERS · BSIT STUDENT ORGANIZATION', x1, mainBottom + 24);
   ctx.textAlign = 'left';
 
   return ctx;
