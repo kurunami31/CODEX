@@ -1,19 +1,51 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import html2canvas from 'html2canvas';
 import QRCode from 'qrcode';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import Avatar from '../components/Avatar';
-import { IdIcon, QrIcon, CheckIcon, AlertIcon, ClockIcon, CalendarIcon } from '../components/icons/Icons';
+import { IdIcon, QrIcon, DownloadIcon, CheckIcon, AlertIcon, ClockIcon, CalendarIcon } from '../components/icons/Icons';
 
 export default function MyId() {
   const { profile, user } = useAuth();
   const toast = useToast();
+  const cardRef = useRef(null);
   const [qr, setQr] = useState('');
   const [qrError, setQrError] = useState('');
   const [refreshing, setRefreshing] = useState(false);
+  const [downloading, setDownloading] = useState(false);
   const [expiresIn, setExpiresIn] = useState(300);
   const [myEvents, setMyEvents] = useState([]);
+
+  const downloadId = async () => {
+    const card = cardRef.current;
+    if (!card || downloading) return;
+    setDownloading(true);
+    try {
+      const canvas = await html2canvas(card, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: '#ffffff',
+        logging: false,
+        onclone: (doc) => {
+          // make cross-origin images (avatars on supabase CDN) fetchable
+          doc.querySelectorAll('img').forEach((img) => {
+            if (img.src && !img.src.startsWith('data:')) img.crossOrigin = 'anonymous';
+          });
+        },
+      });
+      const a = document.createElement('a');
+      a.download = `codex-id-${String(profile?.student_id || 'student').replace(/[^a-z0-9-]/gi, '')}.png`;
+      a.href = canvas.toDataURL('image/png');
+      a.click();
+      toast.ok('ID downloaded', 'The QR is scannable for a few minutes — re-download before each event.');
+    } catch (err) {
+      toast.error('Download failed', err?.message || 'Could not capture your ID.');
+    } finally {
+      setDownloading(false);
+    }
+  };
 
   const signQr = useCallback(async () => {
     if (!profile) return;
@@ -77,7 +109,7 @@ export default function MyId() {
       </div>
 
       <div className="idcard-stage">
-        <div className="idcard">
+        <div className="idcard" ref={cardRef}>
           <div className="idcard-head">
             <img src="/assets/dorsu-logo.png" alt="DOrSU" />
             <div className="idcard-org">
@@ -122,12 +154,20 @@ export default function MyId() {
         </div>
 
         <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'center' }}>
+          <button className="btn btn-primary btn-sm" onClick={downloadId} disabled={downloading || !qr}>
+            <DownloadIcon width={15} height={15} /> {downloading ? 'Rendering…' : 'Download ID'}
+          </button>
           <button className="btn btn-accent btn-sm" onClick={signQr} disabled={refreshing}>
             <QrIcon width={15} height={15} /> {refreshing ? 'Refreshing…' : 'Refresh QR'}
           </button>
           {qr && (
             <span className="chip chip--teal">
               <ClockIcon width={12} height={12} /> expires in {Math.floor(expiresIn / 60)}:{String(expiresIn % 60).padStart(2, '0')}
+            </span>
+          )}
+          {qr && (
+            <span className="chip">
+              <DownloadIcon width={12} height={12} /> saved QR is scannable for ~5 min — refresh before each event
             </span>
           )}
           <span className="chip">

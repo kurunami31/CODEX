@@ -123,6 +123,15 @@ export function MenuIcon(props) {
   );
 }
 
+export function DownloadIcon(props) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M12 3.5v11M7.5 10.5 12 15l4.5-4.5" />
+      <path d="M4.5 15.5v3.5a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2v-3.5" />
+    </svg>
+  );
+}
+
 export function PlusIcon(props) {
   return (
     <svg {...base} {...props}>
