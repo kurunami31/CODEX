@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import Avatar from '../components/Avatar';
 import { roleLabel } from '../lib/roles';
+import { useFontScale, TEXT_SCALES } from '../context/FontScaleContext';
 import { CameraIcon, IdIcon, ShieldIcon, MailIcon, LockIcon, CheckIcon } from '../components/icons/Icons';
 
 const YEAR_LEVELS = ['1st Year', '2nd Year', '3rd Year', '4th Year'];
@@ -11,6 +12,7 @@ const MAX_AVATAR_BYTES = 3 * 1024 * 1024;
 
 export default function ProfileSettings() {
   const { profile, user, refreshProfile } = useAuth();
+  const { scaleId, setScale } = useFontScale();
   const toast = useToast();
   const fileRef = useRef(null);
   const [busy, setBusy] = useState(false);
@@ -190,6 +192,36 @@ export default function ProfileSettings() {
             {busy ? 'Saving…' : 'Save changes'}
           </button>
         </form>
+      </div>
+
+      <div className="section-title">
+        <MailIcon width={14} height={14} /> appearance
+      </div>
+      <div className="panel" style={{ padding: 18, display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div className="text-size-row">
+          <div className="text-size-info">
+            <b>Text size</b>
+            <span className="ocr-label">scales the whole app to your preference</span>
+          </div>
+          <div className="text-size-opts" role="radiogroup" aria-label="Text size">
+            {TEXT_SCALES.map((s) => (
+              <button
+                key={s.id}
+                type="button"
+                role="radio"
+                aria-checked={scaleId === s.id}
+                className={`text-size-opt${scaleId === s.id ? ' text-size-opt--on' : ''}`}
+                onClick={() => setScale(s.id)}
+                title={s.name}
+              >
+                <span style={{ fontSize: s.id === 'small' ? 14 : s.id === 'large' ? 22 : 18 }}>{s.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+        <p className="ocr-label" style={{ margin: 0 }}>
+          <CheckIcon width={12} height={12} style={{ verticalAlign: -2 }} /> your choice is saved on this device.
+        </p>
       </div>
 
       <div className="section-title">

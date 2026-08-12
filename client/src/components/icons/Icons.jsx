@@ -115,6 +115,14 @@ export function XIcon(props) {
   );
 }
 
+export function MenuIcon(props) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M4 6.5h16M4 12h16M4 17.5h16" />
+    </svg>
+  );
+}
+
 export function PlusIcon(props) {
   return (
     <svg {...base} {...props}>
