@@ -232,11 +232,11 @@ export default function Feed() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
             <img src="/assets/codebyterts-logo.gif" alt="" style={{ width: 34, height: 34, objectFit: 'contain' }} />
             <div>
-              <b style={{ fontSize: 14 }}>CODEBYTERS</b>
+              <b style={{ fontSize: 15 }}>CODEBYTERS</b>
               <div className="ocr-label">bsit · dorsu</div>
             </div>
           </div>
-          <p style={{ fontSize: 12.5, lineHeight: 1.6, color: 'var(--ink-soft)', margin: '0 0 12px' }}>
+          <p style={{ fontSize: 13.5, lineHeight: 1.6, color: 'var(--ink-soft)', margin: '0 0 12px' }}>
             The org that codes, builds, and ships. Questions, collabs and memes — all welcome here.
           </p>
           <div className="chip chip--teal">● members online</div>
@@ -246,7 +246,7 @@ export default function Feed() {
           <div className="ocr-label" style={{ marginBottom: 12 }}>// trending now</div>
           {learn.hn.slice(0, 4).map((h, i) => (
             <a key={h.id} href={h.link} target="_blank" rel="noreferrer" style={{ display: 'block', padding: '9px 0', borderBottom: i < 3 ? '1px solid var(--bg-2)' : 0 }}>
-              <div style={{ fontSize: 12.5, fontWeight: 600, lineHeight: 1.45, color: 'var(--ink)' }}>{h.title}</div>
+              <div style={{ fontSize: 13.5, fontWeight: 600, lineHeight: 1.45, color: 'var(--ink)' }}>{h.title}</div>
               <div className="ocr-label" style={{ marginTop: 3 }}>{timeAgo(h.published)}</div>
             </a>
           ))}

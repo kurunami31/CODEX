@@ -15,9 +15,8 @@ export default function Welcome() {
           <img src="/assets/codebyterts-logo.gif" alt="CODEBYTERS logo" />
           <span className="brand-name">CODEBYTERS</span>
         </div>
-        <div className="brand-sub ocr-label ocr-label--light" style={{ textAlign: 'right', lineHeight: 1.8 }}>
-          <div>dorsu · faculty of computing,</div>
-          <div>engineering, &amp; technology · b.s.i.t.</div>
+        <div className="brand-sub ocr-label ocr-label--light welcome-org">
+          dorsu · faculty of computing · engineering &amp; technology · b.s.i.t.
         </div>
       </nav>
 
@@ -62,7 +61,7 @@ export default function Welcome() {
               { icon: <IdIcon width={18} height={18} />, label: 'Digital student ID for BSIT' },
               { icon: <BotIcon width={18} height={18} />, label: 'AI assistant, always online' },
             ].map((f) => (
-              <div key={f.label} style={{ display: 'flex', gap: 10, alignItems: 'center', color: 'rgba(234,255,250,0.85)', fontSize: 13 }}>
+              <div key={f.label} style={{ display: 'flex', gap: 10, alignItems: 'center', color: 'rgba(234,255,250,0.85)', fontSize: 14 }}>
                 <span style={{ color: 'var(--accent)', display: 'grid', placeItems: 'center' }}>{f.icon}</span>
                 {f.label}
               </div>
