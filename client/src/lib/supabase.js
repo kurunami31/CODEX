@@ -49,3 +49,26 @@ export async function getFreshSession() {
   }
   return session;
 }
+
+// Authenticated call to the serverless API. If the server rejects the
+// access token (401 — expired while the page was in the background, or
+// the device clock is off), refresh the session locally and retry once
+// before giving up.
+export async function apiFetch(path, { method = 'POST', body } = {}) {
+  const session = await getFreshSession();
+  if (!session) throw new Error('Session expired — log in again.');
+
+  const send = (token) =>
+    fetch(path, {
+      method,
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+    });
+
+  let res = await send(session.access_token);
+  if (res.status === 401) {
+    const { data: fresh, error } = await supabase.auth.refreshSession();
+    if (!error && fresh?.session) res = await send(fresh.session.access_token);
+  }
+  return res;
+}

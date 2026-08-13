@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import QRCode from 'qrcode';
-import { supabase, getFreshSession } from '../lib/supabase';
+import { supabase, apiFetch } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import Avatar from '../components/Avatar';
@@ -109,12 +109,7 @@ export default function MyId() {
     signQrBusyRef.current = true;
     setRefreshing(true);
     try {
-      const session = await getFreshSession();
-      if (!session) throw new Error('Session expired — log in again.');
-      const res = await fetch('/api/id/sign', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
-      });
+      const res = await apiFetch('/api/id/sign');
       if (!res.ok) {
         const j = await res.json().catch(() => ({}));
         throw new Error(j.error || 'Could not sign your ID.');
@@ -155,12 +150,7 @@ export default function MyId() {
     presenceBusyRef.current = true;
     setPresenceBusy(true);
     try {
-      const session = await getFreshSession();
-      if (!session) throw new Error('Session expired — log in again.');
-      const res = await fetch('/api/id/presence', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
-      });
+      const res = await apiFetch('/api/id/presence');
       if (!res.ok) {
         const j = await res.json().catch(() => ({}));
         throw new Error(j.error || 'Could not start presence verification.');

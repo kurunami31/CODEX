@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Html5Qrcode } from 'html5-qrcode';
-import { supabase, getFreshSession } from '../lib/supabase';
+import { apiFetch } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { formatEventDate } from '../lib/format';
@@ -114,12 +114,8 @@ export default function ScannerPage() {
 
     setBusy(true);
     try {
-      const session = await getFreshSession();
-      if (!session) throw new Error('Session expired — log in again.');
-      const res = await fetch('/api/attendance/scan', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
-        body: JSON.stringify({ eventId: activeEvent.id, qr }),
+      const res = await apiFetch('/api/attendance/scan', {
+        body: { eventId: activeEvent.id, qr },
       });
       const body = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(body.error || 'Scan rejected.');
