@@ -1411,3 +1411,18 @@ html[data-theme='dark'] .role-pill--superadmin { color: #c9a8ff; border-color: r
 html[data-theme='dark'] .err-box { background: rgba(229, 72, 77, 0.14); color: #ff9b9e; }
 html[data-theme='dark'] .portal-config { color: #ffc46b; }
 html[data-theme='dark'] .portal-config code { background: rgba(255, 255, 255, 0.1); }
+
+.dl-format {
+  display: inline-flex; align-items: center; gap: 2px;
+  padding: 3px; border-radius: var(--r-sm);
+  background: var(--bg); border: 1px solid var(--line);
+}
+.dl-format button {
+  font-family: var(--f-ocr); font-size: calc(0.6875rem * var(--text-scale));
+  letter-spacing: 0.14em; color: rgba(255, 255, 255, 0.6);
+  background: transparent; border: none; cursor: pointer;
+  padding: 5px 10px; border-radius: calc(var(--r-sm) - 2px);
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.dl-format button.dl-format--on { background: var(--accent-2); color: #04252b; font-weight: 700; }
+.dl-format button:hover:not(.dl-format--on) { background: rgba(255, 255, 255, 0.08); color: #fff; }

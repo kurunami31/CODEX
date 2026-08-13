@@ -18,6 +18,22 @@ export default function MyId() {
   const [refreshing, setRefreshing] = useState(false);
   const [presenceBusy, setPresenceBusy] = useState(false);
   const [downloading, setDownloading] = useState(false);
+  const [format, setFormat] = useState(() => {
+    try {
+      const saved = localStorage.getItem('codex_id_dl_format');
+      return saved === 'jpeg' ? 'jpeg' : 'png';
+    } catch {
+      return 'png';
+    }
+  });
+  const pickFormat = (f) => {
+    setFormat(f);
+    try {
+      localStorage.setItem('codex_id_dl_format', f);
+    } catch {
+      /* ignore */
+    }
+  };
   const [myEvents, setMyEvents] = useState([]);
   const presenceBusyRef = useRef(false);
   const presenceLeftRef = useRef(90);
@@ -35,16 +51,47 @@ export default function MyId() {
       const ctx = canvas.getContext('2d');
       await drawIdCard(ctx, { profile, avatarUrl: profile?.avatar_url, qr });
 
-      const filename = `codex-id-${String(profile?.student_id || 'student').replace(/[^a-z0-9-]/gi, '')}.png`;
-      const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
-      if (!blob) throw new Error('Could not render the PNG.');
+      const isJpeg = format === 'jpeg';
+      const ext = isJpeg ? 'jpg' : 'png';
+      const mime = isJpeg ? 'image/jpeg' : 'image/png';
+      const filename = `codex-id-${String(profile?.student_id || 'student').replace(/[^a-z0-9-]/gi, '')}.${ext}`;
+      const blob = await new Promise((resolve) => canvas.toBlob(resolve, mime, isJpeg ? 0.92 : undefined));
+      if (!blob) throw new Error('Could not render the image.');
+
+      // Universal mobile picker path: on Android the blob URL opens the
+      // system "Save image as" dialog; everywhere it hands the file to the
+      // OS share sheet ("Save Image" / share to Drive, etc.).
+      const mobileSave = async () => {
+        const url = URL.createObjectURL(blob);
+        try {
+          if ('download' in HTMLAnchorElement.prototype) {
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.setAttribute('download', filename);
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            toast.ok('ID saved', `Saved as ${ext.toUpperCase()} — check your downloads.`);
+          } else {
+            // Very old in-app browsers: <a download> is unsupported — open
+            // the image in a new tab and let the user long-press → Save Image.
+            const win = window.open(url, '_blank');
+            if (win) {
+              toast.info('Save the image', 'Long-press the image and choose "Save Image".');
+            } else {
+              toast.error('Could not save', 'Your browser blocked the save — allow pop-ups and try again.');
+            }
+          }
+        } finally {
+          setTimeout(() => URL.revokeObjectURL(url), 60_000);
+        }
+      };
 
       const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || navigator.maxTouchPoints > 1;
 
-      // Mobile: hand the file to the OS share sheet — "Save Image" works on
-      // iOS Safari and Android Chrome, where <a download> often does nothing.
       if (isMobile && typeof navigator.canShare === 'function') {
-        const file = new File([blob], filename, { type: 'image/png' });
+        const file = new File([blob], filename, { type: mime });
         if (navigator.canShare({ files: [file] })) {
           try {
             await navigator.share({ files: [file], title: 'CODEBYTERS digital ID', text: 'My CODEBYTERS digital ID' });
@@ -52,33 +99,16 @@ export default function MyId() {
             return;
           } catch (err) {
             if (err?.name === 'AbortError') return; // user dismissed the sheet — no toast
-            // any other share failure falls through to the regular download
+            // any other share failure falls through to the direct save below
           }
         }
       }
 
-      // Desktop (and mobile without file sharing): blob URL download.
-      // Kept OFF desktop share sheets — on Windows Chrome navigator.canShare
-      // reports true, which would open the Windows share dialog instead of
-      // saving the file the user asked for.
-      const url = URL.createObjectURL(blob);
-      try {
-        if ('download' in HTMLAnchorElement.prototype) {
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = filename;
-          document.body.appendChild(a);
-          a.click();
-          a.remove();
-        } else {
-          // Very old iOS Safari: <a download> is unsupported — open the PNG
-          // in a new tab so the user can long-press → Save Image.
-          window.open(url, '_blank');
-        }
-      } finally {
-        setTimeout(() => URL.revokeObjectURL(url), 5000);
-      }
-      toast.ok('ID downloaded', 'Your ID carries the same year-long QR — no need to re-download.');
+      // Desktop and mobile-without-share: direct download / save-as. On
+      // desktop this always saves the file — no share dialogs (Windows
+      // Chrome reports navigator.canShare as true, which would hijack the
+      // save into the Windows share dialog instead).
+      await mobileSave();
     } catch (err) {
       toast.error('Download failed', err?.message || 'Could not render your ID.');
     } finally {
@@ -286,9 +316,15 @@ export default function MyId() {
             </button>
           )}
           {!presenceMode && (
-            <button className="btn btn-primary btn-sm" onClick={downloadId} disabled={downloading || !qr}>
-              <DownloadIcon width={15} height={15} /> {downloading ? 'Rendering…' : 'Download ID'}
-            </button>
+            <>
+              <div className="dl-format" role="group" aria-label="Save format">
+                <button className={format === 'png' ? 'dl-format--on' : ''} onClick={() => pickFormat('png')}>PNG</button>
+                <button className={format === 'jpeg' ? 'dl-format--on' : ''} onClick={() => pickFormat('jpeg')}>JPEG</button>
+              </div>
+              <button className="btn btn-primary btn-sm" onClick={downloadId} disabled={downloading || !qr}>
+                <DownloadIcon width={15} height={15} /> {downloading ? 'Rendering…' : 'Save as ' + format.toUpperCase()}
+              </button>
+            </>
           )}
           {!presenceMode && (
             <button className="btn btn-dark btn-sm" onClick={signQr} disabled={refreshing}>
