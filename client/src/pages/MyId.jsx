@@ -33,10 +33,39 @@ export default function MyId() {
       canvas.height = 540;
       const ctx = canvas.getContext('2d');
       await drawIdCard(ctx, { profile, avatarUrl: profile?.avatar_url, qr });
-      const a = document.createElement('a');
-      a.download = `codex-id-${String(profile?.student_id || 'student').replace(/[^a-z0-9-]/gi, '')}.png`;
-      a.href = canvas.toDataURL('image/png');
-      a.click();
+
+      const filename = `codex-id-${String(profile?.student_id || 'student').replace(/[^a-z0-9-]/gi, '')}.png`;
+      const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
+      if (!blob) throw new Error('Could not render the PNG.');
+
+      // Mobile: hand the file to the OS share sheet — "Save Image" works on
+      // iOS Safari and Android Chrome, where <a download> often does nothing.
+      if (typeof navigator.canShare === 'function') {
+        const file = new File([blob], filename, { type: 'image/png' });
+        if (navigator.canShare({ files: [file] })) {
+          try {
+            await navigator.share({ files: [file], title: 'CODEBYTERS digital ID', text: 'My CODEBYTERS digital ID' });
+            toast.ok('ID saved', 'Saved via your device share sheet.');
+            return;
+          } catch (err) {
+            if (err?.name === 'AbortError') return; // user dismissed the sheet — no toast
+            // any other share failure falls through to the regular download
+          }
+        }
+      }
+
+      // Desktop / fallback: blob URL download (works where data: URLs don't).
+      const url = URL.createObjectURL(blob);
+      try {
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      } finally {
+        setTimeout(() => URL.revokeObjectURL(url), 5000);
+      }
       toast.ok('ID downloaded', 'Your ID carries the same year-long QR — no need to re-download.');
     } catch (err) {
       toast.error('Download failed', err?.message || 'Could not render your ID.');
