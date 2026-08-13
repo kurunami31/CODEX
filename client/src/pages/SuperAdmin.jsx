@@ -1,13 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { supabase, getFreshSession } from '../lib/supabase';
-import { useAuth } from '../context/AuthContext';
+import { supabase, apiFetch, getFreshSession } from '../lib/supabase';import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { timeAgo } from '../lib/format';
 import { roleLabel } from '../lib/roles';
 import Avatar from '../components/Avatar';
 import {
   CrownIcon, UsersIcon, RssIcon, QrIcon, PlusIcon, XIcon, PencilIcon, TrashIcon,
-  SearchIcon, AlertIcon, CheckIcon, WalletIcon,
+  SearchIcon, AlertIcon, CheckIcon, WalletIcon, WrenchIcon,
 } from '../components/icons/Icons';
 
 const YEARS = ['1st Year', '2nd Year', '3rd Year', '4th Year'];
@@ -44,6 +43,41 @@ export default function SuperAdmin() {
   const firstRun = useRef(true);
 
   const token = async () => (await getFreshSession())?.access_token;
+
+  const [maint, setMaint] = useState({ enabled: false, message: '' });
+  const [maintLoaded, setMaintLoaded] = useState(false);
+  const [maintBusy, setMaintBusy] = useState(false);
+
+  const loadMaint = useCallback(async () => {
+    try {
+      const res = await fetch('/api/status');
+      if (!res.ok) return;
+      const j = await res.json();
+      setMaint({ enabled: Boolean(j.maintenance?.enabled), message: j.maintenance?.message || '' });
+    } finally {
+      setMaintLoaded(true);
+    }
+  }, []);
+
+  const saveMaint = async () => {
+    setMaintBusy(true);
+    try {
+      const res = await apiFetch('/api/admin/maintenance', {
+        body: { enabled: maint.enabled, message: maint.message || null },
+      });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(j.error || 'Could not save maintenance mode.');
+      toast.ok(j.enabled ? 'Maintenance ON' : 'Maintenance OFF', j.enabled ? 'Everyone now sees the maintenance page.' : 'The app is live again.');
+    } catch (err) {
+      toast.error('Maintenance error', err.message);
+    } finally {
+      setMaintBusy(false);
+    }
+  };
+
+  useEffect(() => {
+    loadMaint();
+  }, [loadMaint]);
 
   const loadStudents = useCallback(async () => {
     setLoadingStudents(true);
@@ -206,6 +240,47 @@ export default function SuperAdmin() {
             </div>
           </div>
         ))}
+      </div>
+
+      <div className="panel" style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+          <div>
+            <h3 style={{ margin: 0, fontSize: 15, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <WrenchIcon width={15} height={15} style={{ color: 'var(--warn)' }} /> Maintenance mode
+            </h3>
+            <span style={{ color: 'rgba(255,255,255,0.55)', fontSize: 12, marginTop: 4, display: 'block', maxWidth: 480, lineHeight: 1.45 }}>
+              Shows a maintenance page to everyone except super admins, so you can still get in, verify fixes, and flip it back off.
+            </span>
+          </div>
+          {maintLoaded && (
+            <span className={`chip ${maint.enabled ? 'chip--warn' : 'chip--ok'}`}>
+              {maint.enabled ? 'MAINTENANCE ON' : 'LIVE'}
+            </span>
+          )}
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <input
+            type="checkbox"
+            checked={maint.enabled}
+            onChange={(e) => setMaint({ ...maint, enabled: e.target.checked })}
+            style={{ width: 22, height: 22, accentColor: 'var(--accent-2)', cursor: 'pointer' }}
+            id="maint-toggle"
+          />
+          <label htmlFor="maint-toggle" style={{ fontSize: 14, cursor: 'pointer' }}>Block the app for everyone</label>
+        </div>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <input
+            className="input"
+            style={{ flex: 1, minWidth: 220 }}
+            placeholder="Optional message, e.g. We'll be back at 5 PM — fixing the ID QR."
+            value={maint.message}
+            maxLength={200}
+            onChange={(e) => setMaint({ ...maint, message: e.target.value })}
+          />
+          <button className="btn btn-accent" onClick={saveMaint} disabled={maintBusy}>
+            {maintBusy ? 'Saving…' : 'Save'}
+          </button>
+        </div>
       </div>
 
       <div className="seg-tabs" role="tablist">

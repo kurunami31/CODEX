@@ -367,6 +367,15 @@ button { font-family: inherit; cursor: pointer; }
 .loading-frame img { width: 100%; height: auto; }
 .loading-title { font-family: var(--f-display); font-size: clamp(26px, 6vw, 40px); color: #eafffa; letter-spacing: 0.04em; }
 .loading-sub { font-family: var(--f-ocr); font-size: calc(0.75rem * var(--text-scale)); letter-spacing: 0.22em; color: var(--accent); text-transform: uppercase; }
+.maintenance-msg {
+  max-width: min(420px, 82vw);
+  margin-top: 18px;
+  color: rgba(234, 255, 250, 0.78);
+  font-size: calc(0.875rem * var(--text-scale));
+  line-height: 1.55;
+  text-align: center;
+  white-space: pre-line;
+}
 .loading-bar {
   width: min(320px, 70vw); height: 5px; border-radius: 99px;
   background: rgba(255, 255, 255, 0.08); overflow: hidden;

@@ -438,3 +438,11 @@ export function CommentIcon(props) {
     </svg>
   );
 }
+
+export function WrenchIcon(props) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M14.5 6.5a4.5 4.5 0 0 0-6.1 6.1L3 18l3 3 5.4-5.4a4.5 4.5 0 0 0 6.1-6.1l-3 3-3-3 3-3z" />
+    </svg>
+  );
+}

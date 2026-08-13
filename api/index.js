@@ -2,6 +2,7 @@ import express from 'express';
 import helmet from 'helmet';
 import { rateLimit } from 'express-rate-limit';
 import { configBanner } from './lib/env.js';
+import { supabase } from './lib/supabase.js';
 import feedRouter from './routes/feed.js';
 import chatRouter from './routes/chat.js';
 import attendanceRouter from './routes/attendance.js';
@@ -34,6 +35,30 @@ app.use(express.json({ limit: '16kb', strict: true }));
 // Health check stays reachable even before env vars are configured.
 app.get('/api/health', (_req, res) => {
   res.json({ ok: true, service: 'codex-api' });
+});
+
+// Public status — lets the frontend show a maintenance page without
+// touching Supabase credentials, and works for logged-out visitors.
+app.get('/api/status', async (_req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('app_settings')
+      .select('value, updated_at')
+      .eq('key', 'maintenance')
+      .maybeSingle();
+    if (error) throw error;
+    const v = data?.value ?? {};
+    res.set('Cache-Control', 'no-store');
+    res.json({
+      maintenance: {
+        enabled: Boolean(v.enabled),
+        message: typeof v.message === 'string' && v.message ? v.message : null,
+        updatedAt: data?.updated_at || null,
+      },
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Could not read app status.' });
+  }
 });
 
 // Generic API rate limit: 120 req / min / IP

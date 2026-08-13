@@ -149,4 +149,28 @@ router.post('/users', async (req, res) => {
   res.status(201).json({ ok: true, id: created.user.id, email });
 });
 
+// POST /api/admin/maintenance — superadmin toggles maintenance mode.
+// The flag is stored in app_settings; /api/status broadcasts it to every
+// visitor so the frontend can show a maintenance page instantly.
+router.post('/maintenance', async (req, res) => {
+  const caller = await requireSuperAdmin(req, res);
+  if (!caller) return;
+  const admin = adminClientOr500(res);
+  if (!admin) return;
+
+  const enabled = req.body?.enabled === true;
+  const message = typeof req.body?.message === 'string' ? req.body.message.trim().slice(0, 200) : '';
+  const value = { enabled, message: message || null };
+  const now = new Date().toISOString();
+
+  const { error } = await admin.from('app_settings').upsert(
+    { key: 'maintenance', value, updated_at: now },
+    { onConflict: 'key' }
+  );
+
+  if (error) return res.status(500).json({ error: error.message || 'Could not save maintenance mode.' });
+  res.set('Cache-Control', 'no-store');
+  res.json({ ok: true, enabled, message: message || null, updatedAt: now });
+});
+
 export default router;

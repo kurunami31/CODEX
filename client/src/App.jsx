@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, lazy, Suspense } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 import LoadingScreen from './pages/LoadingScreen';
+import MaintenancePage from './pages/MaintenancePage';
 import Welcome from './pages/Welcome';
 import Auth from './pages/Auth';
 import AppShell from './pages/AppShell';
@@ -45,9 +46,45 @@ function RedirectIfAuthed({ children }) {
 }
 
 export default function App() {
-  const { session, loading, ready } = useAuth();
+  const { session, loading, ready, profile } = useAuth();
   const [introDone, setIntroDone] = useState(false);
   const doneRef = useRef(false);
+  const [maintenance, setMaintenance] = useState(null);
+  const maintenanceRef = useRef(null);
+  maintenanceRef.current = maintenance;
+
+  // Maintenance flag comes from /api/status; while it is ON we keep polling
+  // so the page recovers by itself as soon as the org flips it back.
+  useEffect(() => {
+    let alive = true;
+    let timer;
+    const check = async () => {
+      try {
+        const res = await fetch('/api/status');
+        if (!res.ok) return;
+        const j = await res.json();
+        if (alive) setMaintenance(j.maintenance || { enabled: false });
+      } catch {
+        /* offline / API unreachable — show the app normally */
+      }
+    };
+    check();
+    timer = setInterval(() => {
+      if (maintenanceRef.current?.enabled || maintenance === null) check();
+    }, 30_000);
+    return () => {
+      alive = false;
+      clearInterval(timer);
+    };
+  }, []);
+
+  // Everyone is blocked by maintenance — except super admins, who still get
+  // the full app (and the toggle in Root access) so they can verify fixes.
+  let maintenanceBlocked = false;
+  if (maintenance?.enabled) {
+    if (!session) maintenanceBlocked = true;
+    else if (!loading && profile?.role !== 'superadmin') maintenanceBlocked = true;
+  }
 
   useEffect(() => {
     if (doneRef.current) return;
@@ -64,8 +101,10 @@ export default function App() {
   return (
     <>
       {!introDone && <LoadingScreen />}
-      {!ready && <ConfigGate />}
-      <Routes>
+      {maintenanceBlocked && <MaintenancePage message={maintenance.message} />}
+      {!maintenanceBlocked && !ready && <ConfigGate />}
+      {!maintenanceBlocked && (
+        <Routes>
         <Route path="/" element={introDone ? <Navigate to="/welcome" replace /> : null} />
         <Route path="/welcome" element={<RedirectIfAuthed><Welcome /></RedirectIfAuthed>} />
         <Route path="/auth" element={<RedirectIfAuthed><Auth /></RedirectIfAuthed>} />
@@ -103,8 +142,9 @@ export default function App() {
           />
         </Route>
         <Route path="*" element={<Navigate to="/welcome" replace />} />
-      </Routes>
-      {session && !loading && <ChatAssistant />}
+        </Routes>
+      )}
+      {!maintenanceBlocked && session && !loading && <ChatAssistant />}
     </>
   );
 }

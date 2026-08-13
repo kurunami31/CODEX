@@ -649,3 +649,23 @@ create policy "postimages_own_delete" on storage.objects
 --  and see / correct every attendance record. Only a superadmin may change
 --  roles â€” admins keep their existing event + attendance powers.
 -- ============================================================
+-- ============================================================
+-- App settings — public flags consumed by /api/status (e.g.
+-- maintenance mode). Publicly readable so the maintenance page
+-- renders even before login; only the server API (service role)
+-- may write, which RLS enforces.
+-- ============================================================
+create table if not exists public.app_settings (
+  key        text primary key,
+  value      jsonb not null default '{}'::jsonb,
+  updated_at timestamptz not null default now()
+);
+
+alter table public.app_settings enable row level security;
+
+drop policy if exists "app_settings_read" on public.app_settings;
+create policy "app_settings_read"
+  on public.app_settings for select
+  using (true);
+
+grant select on public.app_settings to anon, authenticated;
