@@ -82,8 +82,7 @@ export default function SuperAdmin() {
   const loadStudents = useCallback(async () => {
     setLoadingStudents(true);
     try {
-      const t = await token();
-      const res = await fetch('/api/admin/users', { headers: { Authorization: `Bearer ${t}` } });
+      const res = await apiFetch('/api/admin/users', { method: 'GET' });
       const body = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(body.error || 'Could not list students.');
       setStudents(body.users || []);
@@ -572,11 +571,8 @@ function StudentModal({ mode, student, onClose, onSaved }) {
         return setError('Password must be at least 8 characters.');
       }
       try {
-        const t = (await getFreshSession())?.access_token;
-        const res = await fetch('/api/admin/users', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${t}` },
-          body: JSON.stringify({
+        const res = await apiFetch('/api/admin/users', {
+          body: {
             email: form.email,
             password: form.password,
             full_name: form.full_name.trim(),
@@ -585,7 +581,7 @@ function StudentModal({ mode, student, onClose, onSaved }) {
             section: form.section.trim(),
             course: form.course,
             role: form.role,
-          }),
+          },
         });
         const body = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(body.error || 'Could not create the account.');

@@ -164,14 +164,26 @@ export default function MyId() {
       setQr(await renderQr(payload, sig));
       setQrError('');
     } catch (err) {
-      // Offline? Fall back to the cached year-long QR instead of failing.
+      // Distinguish a real network failure from a server rejection:
+      // "Invalid session." means the token was rejected (an old cached
+      // bundle or expired login), and claiming "offline" would mislead.
+      const msg = err?.message || 'Could not sign your ID.';
+      const isSessionError = /invalid session|session expired|log in again|missing token/i.test(msg);
+      const isNetworkError = err instanceof TypeError || /failed to fetch|network|offline/i.test(msg);
       const cached = cachedQr();
-      if (cached) {
-        setQr(await renderQr(cached.payload, cached.sig));
+      if (cached) setQr(await renderQr(cached.payload, cached.sig));
+      if (isSessionError) {
+        setQrError('Session expired — log in again to refresh your ID.');
+        toast.error('Session expired', 'Please log in again to refresh your ID.');
+      } else if (isNetworkError && cached) {
         setQrError('');
         toast.info('Offline mode', 'Showing your saved ID QR — it is valid all year.');
+      } else if (cached) {
+        setQrError('');
+        toast.info('Showing saved ID', 'Fresh signing failed — your saved QR is still valid all year.');
       } else {
-        setQrError(err.message);
+        setQrError(msg);
+        toast.error('Could not sign ID', msg);
       }
     } finally {
       signQrBusyRef.current = false;
