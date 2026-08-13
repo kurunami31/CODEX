@@ -39,9 +39,11 @@ export default function MyId() {
       const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
       if (!blob) throw new Error('Could not render the PNG.');
 
+      const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || navigator.maxTouchPoints > 1;
+
       // Mobile: hand the file to the OS share sheet — "Save Image" works on
       // iOS Safari and Android Chrome, where <a download> often does nothing.
-      if (typeof navigator.canShare === 'function') {
+      if (isMobile && typeof navigator.canShare === 'function') {
         const file = new File([blob], filename, { type: 'image/png' });
         if (navigator.canShare({ files: [file] })) {
           try {
@@ -55,15 +57,24 @@ export default function MyId() {
         }
       }
 
-      // Desktop / fallback: blob URL download (works where data: URLs don't).
+      // Desktop (and mobile without file sharing): blob URL download.
+      // Kept OFF desktop share sheets — on Windows Chrome navigator.canShare
+      // reports true, which would open the Windows share dialog instead of
+      // saving the file the user asked for.
       const url = URL.createObjectURL(blob);
       try {
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
+        if ('download' in HTMLAnchorElement.prototype) {
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = filename;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+        } else {
+          // Very old iOS Safari: <a download> is unsupported — open the PNG
+          // in a new tab so the user can long-press → Save Image.
+          window.open(url, '_blank');
+        }
       } finally {
         setTimeout(() => URL.revokeObjectURL(url), 5000);
       }
