@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Html5Qrcode } from 'html5-qrcode';
-import { supabase } from '../lib/supabase';
+import { supabase, getFreshSession } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { formatEventDate } from '../lib/format';
@@ -114,7 +114,7 @@ export default function ScannerPage() {
 
     setBusy(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      const session = await getFreshSession();
       if (!session) throw new Error('Session expired — log in again.');
       const res = await fetch('/api/attendance/scan', {
         method: 'POST',

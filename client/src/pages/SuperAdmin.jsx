@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { supabase } from '../lib/supabase';
+import { supabase, getFreshSession } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { timeAgo } from '../lib/format';
@@ -43,7 +43,7 @@ export default function SuperAdmin() {
   const [busy, setBusy] = useState(false);
   const firstRun = useRef(true);
 
-  const token = async () => (await supabase.auth.getSession()).data.session?.access_token;
+  const token = async () => (await getFreshSession())?.access_token;
 
   const loadStudents = useCallback(async () => {
     setLoadingStudents(true);
@@ -497,7 +497,7 @@ function StudentModal({ mode, student, onClose, onSaved }) {
         return setError('Password must be at least 8 characters.');
       }
       try {
-        const t = (await supabase.auth.getSession()).data.session?.access_token;
+        const t = (await getFreshSession())?.access_token;
         const res = await fetch('/api/admin/users', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${t}` },

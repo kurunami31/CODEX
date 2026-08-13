@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import QRCode from 'qrcode';
-import { supabase } from '../lib/supabase';
+import { supabase, getFreshSession } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import Avatar from '../components/Avatar';
@@ -78,7 +78,7 @@ export default function MyId() {
     if (!profile) return;
     setRefreshing(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      const session = await getFreshSession();
       if (!session) throw new Error('Session expired — log in again.');
       const res = await fetch('/api/id/sign', {
         method: 'POST',
@@ -123,7 +123,7 @@ export default function MyId() {
     presenceBusyRef.current = true;
     setPresenceBusy(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      const session = await getFreshSession();
       if (!session) throw new Error('Session expired — log in again.');
       const res = await fetch('/api/id/presence', {
         method: 'POST',

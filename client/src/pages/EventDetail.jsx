@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import QRCode from 'qrcode';
-import { supabase } from '../lib/supabase';
+import { supabase, getFreshSession } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { formatEventDate, isUpcoming, timeAgo } from '../lib/format';
@@ -228,7 +228,8 @@ function LiveQr() {
 
   const sign = async () => {
     try {
-      const token = (await supabase.auth.getSession()).data.session?.access_token;
+      const session = await getFreshSession();
+      const token = session?.access_token;
       if (!token) throw new Error('Not signed in');
       const res = await fetch('/api/id/sign', {
         method: 'POST',
