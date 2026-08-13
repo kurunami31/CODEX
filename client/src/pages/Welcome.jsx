@@ -73,6 +73,7 @@ export default function Welcome() {
       <footer className="welcome-foot">
         <img src="/assets/dorsu-logo.png" alt="Davao Oriental State University" />
         <span>davao oriental state university · codebyters student organization · mati city</span>
+        <a className="welcome-fb" href="https://www.facebook.com/codebyters" target="_blank" rel="noopener noreferrer">follow us · facebook.com/codebyters</a>
       </footer>
     </div>
   );
