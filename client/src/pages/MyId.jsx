@@ -21,6 +21,7 @@ export default function MyId() {
   const [myEvents, setMyEvents] = useState([]);
   const presenceBusyRef = useRef(false);
   const presenceLeftRef = useRef(90);
+  const signQrBusyRef = useRef(false);
 
   const downloadId = async () => {
     if (downloading || !qr) return;
@@ -104,7 +105,8 @@ export default function MyId() {
   }, []);
 
   const signQr = useCallback(async () => {
-    if (!profile) return;
+    if (!profile || signQrBusyRef.current) return;
+    signQrBusyRef.current = true;
     setRefreshing(true);
     try {
       const session = await getFreshSession();
@@ -136,6 +138,7 @@ export default function MyId() {
         setQrError(err.message);
       }
     } finally {
+      signQrBusyRef.current = false;
       setRefreshing(false);
     }
   }, [profile, qrCacheKey, cachedQr, renderQr, toast]);

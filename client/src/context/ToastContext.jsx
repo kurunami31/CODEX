@@ -1,4 +1,4 @@
-import { createContext, useContext, useCallback, useState } from 'react';
+import { createContext, useContext, useCallback, useMemo, useState } from 'react';
 import { CheckIcon, AlertIcon } from '../components/icons/Icons';
 
 const ToastContext = createContext(null);
@@ -12,11 +12,17 @@ export function ToastProvider({ children }) {
     setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 4200);
   }, []);
 
-  const toast = {
-    ok: (title, msg) => push('ok', title, msg),
-    error: (title, msg) => push('error', title, msg),
-    info: (title, msg) => push('info', title, msg),
-  };
+  // Stable identity: if this object were recreated per render, every toast
+  // would re-render all consumers, which could re-run effects that depend on
+  // `toast` and push another toast — an infinite toast flood.
+  const toast = useMemo(
+    () => ({
+      ok: (title, msg) => push('ok', title, msg),
+      error: (title, msg) => push('error', title, msg),
+      info: (title, msg) => push('info', title, msg),
+    }),
+    [push]
+  );
 
   return (
     <ToastContext.Provider value={toast}>
