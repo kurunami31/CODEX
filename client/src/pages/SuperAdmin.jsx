@@ -7,7 +7,7 @@ import { roleLabel } from '../lib/roles';
 import Avatar from '../components/Avatar';
 import {
   CrownIcon, UsersIcon, RssIcon, QrIcon, PlusIcon, XIcon, PencilIcon, TrashIcon,
-  SearchIcon, AlertIcon,
+  SearchIcon, AlertIcon, CheckIcon, WalletIcon,
 } from '../components/icons/Icons';
 
 const YEARS = ['1st Year', '2nd Year', '3rd Year', '4th Year'];
@@ -123,6 +123,16 @@ export default function SuperAdmin() {
     loadStudents();
   };
 
+  const setMembership = async (s, paid) => {
+    if (!paid && !window.confirm(`Revoke ${s.full_name || s.email}'s confirmed membership?`)) return;
+    setBusy(true);
+    const { error } = await supabase.rpc('confirm_membership', { p_user_id: s.id, p_paid: paid });
+    setBusy(false);
+    if (error) return toast.error('Membership error', error.message);
+    toast.ok(paid ? 'Dues confirmed' : 'Dues revoked', `${s.full_name || 'Member'} is now marked as ${paid ? 'paid' : 'unpaid'}.`);
+    loadStudents();
+  };
+
   const deletePost = async (p) => {
     if (!window.confirm('Delete this post permanently?')) return;
     const { error } = await supabase.from('posts').delete().eq('id', p.id);
@@ -183,6 +193,7 @@ export default function SuperAdmin() {
       <div className="panel" style={{ padding: '18px 20px', display: 'flex', gap: 12, flexWrap: 'wrap' }}>
         {[
           { icon: <UsersIcon width={15} height={15} />, k: 'members', v: students.length },
+          { icon: <WalletIcon width={15} height={15} />, k: 'dues paid', v: students.filter((s) => s.membership_paid).length },
           { icon: <RssIcon width={15} height={15} />, k: 'posts', v: posts.length },
           { icon: <QrIcon width={15} height={15} />, k: 'attendance records', v: attendance.length },
           { icon: <CrownIcon width={15} height={15} />, k: 'your role', v: roleLabel(profile?.role) },
@@ -250,6 +261,7 @@ export default function SuperAdmin() {
                   <th>id no.</th>
                   <th>year / section</th>
                   <th>role</th>
+                  <th>membership</th>
                   <th>joined</th>
                   <th>actions</th>
                 </tr>
@@ -268,9 +280,41 @@ export default function SuperAdmin() {
                     <td style={{ fontFamily: 'var(--f-ocr)', fontSize: 12 }}>{s.student_id || '—'}</td>
                     <td>{s.year_level} · {s.section}</td>
                     <td><span className={`role-pill role-pill--${s.role || 'student'}`}>{roleLabel(s.role)}</span></td>
+                    <td>
+                      {s.membership_paid ? (
+                        <span className="chip chip--ok" title={s.membership_paid_at ? `Confirmed ${timeAgo(s.membership_paid_at)}` : 'Confirmed'}>
+                          <CheckIcon width={11} height={11} /> paid
+                        </span>
+                      ) : (
+                        <span className="chip chip--warn"><WalletIcon width={11} height={11} /> unpaid</span>
+                      )}
+                    </td>
                     <td style={{ whiteSpace: 'nowrap', color: 'var(--muted)', fontSize: 12 }}>{s.created_at ? timeAgo(s.created_at) : '—'}</td>
                     <td>
                       <div style={{ display: 'flex', gap: 6 }}>
+                        {s.membership_paid ? (
+                          <button
+                            className="icon-btn"
+                            style={{ color: 'var(--warn)' }}
+                            title="Revoke membership confirmation"
+                            aria-label={`Revoke ${s.full_name || s.email} membership`}
+                            onClick={() => setMembership(s, false)}
+                            disabled={busy}
+                          >
+                            <XIcon width={14} height={14} />
+                          </button>
+                        ) : (
+                          <button
+                            className="icon-btn"
+                            style={{ color: 'var(--ok)' }}
+                            title="Confirm membership fee"
+                            aria-label={`Confirm ${s.full_name || s.email} membership`}
+                            onClick={() => setMembership(s, true)}
+                            disabled={busy}
+                          >
+                            <CheckIcon width={14} height={14} />
+                          </button>
+                        )}
                         <button className="icon-btn" title="Edit member" aria-label={`Edit ${s.full_name || s.email}`} onClick={() => setEditing(s)}>
                           <PencilIcon width={14} height={14} />
                         </button>

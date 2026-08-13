@@ -10,7 +10,7 @@ import usePostLikes from '../lib/usePostLikes';
 import usePostComments from '../lib/usePostComments';
 import { formatEventDate } from '../lib/format';
 import { roleLabel } from '../lib/roles';
-import { ChevronLeftIcon, RssIcon, ArchiveIcon, GearIcon, UsersIcon } from '../components/icons/Icons';
+import { ChevronLeftIcon, RssIcon, ArchiveIcon, GearIcon, UsersIcon, CheckIcon, WalletIcon } from '../components/icons/Icons';
 
 export default function Profile() {
   const { id } = useParams();
@@ -142,6 +142,15 @@ export default function Profile() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
             <h1 className="profile-name">{author?.full_name || '…'}</h1>
             <span className={`role-pill role-pill--${author?.role || 'student'}`}>{roleLabel(author?.role)}</span>
+            {author?.membership_paid ? (
+              <span className="chip chip--ok" title={author.membership_paid_at ? `Confirmed ${formatEventDate(author.membership_paid_at).day}` : 'Membership confirmed'}>
+                <CheckIcon width={11} height={11} /> dues paid
+              </span>
+            ) : (
+              <span className="chip chip--warn" title="Membership fee not yet confirmed by an officer">
+                <WalletIcon width={11} height={11} /> dues unpaid
+              </span>
+            )}
           </div>
           <div className="ocr-label profile-sub">
             DOrSU · {author?.course || 'BSIT'} · {author?.year_level || '—'} · Section {author?.section || '—'}

@@ -231,6 +231,16 @@ export function CheckIcon(props) {
   );
 }
 
+export function WalletIcon(props) {
+  return (
+    <svg {...base} {...props}>
+      <rect x="3" y="6" width="18" height="13" rx="2.5" />
+      <path d="M3 9.5h18" />
+      <circle cx="16.5" cy="13.5" r="1.2" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
 export function PencilIcon(props) {
   return (
     <svg {...base} {...props}>

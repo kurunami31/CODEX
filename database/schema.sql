@@ -32,6 +32,17 @@ alter table public.profiles add constraint profiles_role_check
   check (role in ('student','moderator','admin','superadmin'));
 
 -- ────────────────────────────────────────────────
+--  MEMBERSHIP DUES — members see their own status; only admins
+--  and super admins can confirm (flip) payment. The columns are
+--  guarded by the lock_profile_identity trigger below, so a member
+--  can never mark themselves paid through their own row update.
+-- ────────────────────────────────────────────────
+alter table public.profiles add column if not exists membership_paid boolean not null default false;
+alter table public.profiles add column if not exists membership_paid_at timestamptz;
+alter table public.profiles add column if not exists membership_confirmed_by uuid
+  references auth.users(id) on delete set null;
+
+-- ────────────────────────────────────────────────
 --  EVENTS (posted by admins)
 -- ────────────────────────────────────────────────
 create table if not exists public.events (
@@ -226,6 +237,16 @@ begin
       raise exception 'Only a super admin can change a member''s role';
     end if;
   end if;
+  -- membership dues CAN change, but only by an admin / superadmin — a member
+  -- can never mark their own fee as paid.
+  if tg_op = 'UPDATE' and (new.membership_paid is distinct from old.membership_paid
+                        or new.membership_paid_at is distinct from old.membership_paid_at
+                        or new.membership_confirmed_by is distinct from old.membership_confirmed_by) then
+    if auth.uid() is not null and
+       coalesce((select role from public.profiles where id = auth.uid()), '') not in ('admin','superadmin') then
+      raise exception 'Only admins can confirm membership payments';
+    end if;
+  end if;
   return new;
 end;
 $$;
@@ -389,9 +410,37 @@ $$;
 
 grant execute on function public.superadmin_delete_user(uuid) to authenticated;
 
+-- ────────────────────────────────────────────────
+--  RPC: confirm / revoke a member's dues (admins / superadmins)
+--  Sets membership_paid plus audit columns (when + who).
+-- ────────────────────────────────────────────────
+create or replace function public.confirm_membership(p_user_id uuid, p_paid boolean)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if coalesce((select role from public.profiles where id = auth.uid()), '') not in ('admin','superadmin') then
+    raise exception 'Insufficient permissions: only admins can confirm membership payments';
+  end if;
+  update public.profiles
+     set membership_paid = p_paid,
+         membership_paid_at = case when p_paid then now() else null end,
+         membership_confirmed_by = case when p_paid then auth.uid() else null end
+   where id = p_user_id;
+  if not found then
+    raise exception 'Member not found';
+  end if;
+end;
+$$;
+
+grant execute on function public.confirm_membership(uuid, boolean) to authenticated;
+
 -- Defense in depth: lock the RPCs down to authenticated users only.
 revoke all on function public.get_my_role, public.mark_attendance,
-        public.event_attendance, public.delete_event, public.superadmin_delete_user
+        public.event_attendance, public.delete_event, public.superadmin_delete_user,
+        public.confirm_membership
         from anon, public;
 
 -- Tell PostgREST to reload its schema cache so the RPCs (and any new

@@ -8,7 +8,7 @@ import { roleLabel } from '../lib/roles';
 import Avatar from '../components/Avatar';
 import {
   ShieldIcon, CalendarIcon, UsersIcon, CameraIcon, PlusIcon, XIcon,
-  AlertIcon, CheckIcon, QrIcon, DownloadIcon,
+  AlertIcon, CheckIcon, QrIcon, DownloadIcon, WalletIcon,
 } from '../components/icons/Icons';
 
 export default function Admin() {
@@ -18,6 +18,8 @@ export default function Admin() {
   const [selected, setSelected] = useState(null);
   const [attendees, setAttendees] = useState([]);
   const [stats, setStats] = useState([]); // [{ event_id, title, event_date, present }]
+  const [unpaid, setUnpaid] = useState([]);
+  const [confirmingId, setConfirmingId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -38,10 +40,30 @@ export default function Admin() {
     if (!error && data) setStats(data);
   }, []);
 
+  const loadUnpaid = useCallback(async () => {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('id, full_name, student_id, year_level, section, created_at')
+      .eq('membership_paid', false)
+      .order('created_at', { ascending: true });
+    if (error) toast.error('Membership error', error.message);
+    else setUnpaid(data || []);
+  }, [toast]);
+
   useEffect(() => {
     loadEvents();
     loadStats();
-  }, [loadEvents, loadStats]);
+    loadUnpaid();
+  }, [loadEvents, loadStats, loadUnpaid]);
+
+  const confirmDues = async (p) => {
+    setConfirmingId(p.id);
+    const { error } = await supabase.rpc('confirm_membership', { p_user_id: p.id, p_paid: true });
+    setConfirmingId(null);
+    if (error) return toast.error('Could not confirm', error.message);
+    toast.ok('Payment confirmed', `${p.full_name} is now marked as paid.`);
+    loadUnpaid();
+  };
 
   const selectEvent = async (ev) => {
     setSelected(ev);
@@ -130,6 +152,7 @@ export default function Admin() {
         {[
           { icon: <CalendarIcon width={15} height={15} />, k: 'events', v: events.length },
           { icon: <UsersIcon width={15} height={15} />, k: 'attendance records', v: attendees.length },
+          { icon: <WalletIcon width={15} height={15} />, k: 'dues unpaid', v: unpaid.length },
           { icon: <QrIcon width={15} height={15} />, k: 'qr signing', v: 'HMAC v2' },
           { icon: <AlertIcon width={15} height={15} />, k: 'your role', v: roleLabel(profile?.role) },
         ].map((s) => (
@@ -141,6 +164,59 @@ export default function Admin() {
             </div>
           </div>
         ))}
+      </div>
+
+      <div className="section-title">membership dues</div>
+      <div className="panel" style={{ padding: '20px 22px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12, flexWrap: 'wrap' }}>
+          <WalletIcon width={18} height={18} style={{ color: 'var(--warn)' }} />
+          <b style={{ fontSize: 15 }}>Awaiting payment confirmation</b>
+          <span className="chip chip--warn" style={{ marginLeft: 'auto' }}>{unpaid.length} unpaid</span>
+        </div>
+        {unpaid.length === 0 ? (
+          <div className="empty-state">
+            <span className="ico"><CheckIcon width={24} height={24} /></span>
+            <b>All dues collected</b>
+            <p>Every member's membership fee is confirmed. Nice work.</p>
+          </div>
+        ) : (
+          <div className="table-wrap">
+            <table className="codex-table">
+              <thead>
+                <tr>
+                  <th>member</th>
+                  <th>id no.</th>
+                  <th>year / section</th>
+                  <th>joined</th>
+                  <th>confirm</th>
+                </tr>
+              </thead>
+              <tbody>
+                {unpaid.map((p) => (
+                  <tr key={p.id}>
+                    <td style={{ display: 'flex', alignItems: 'center', gap: 10, whiteSpace: 'nowrap' }}>
+                      <Avatar name={p.full_name} seed={p.student_id} size={28} url={p.avatar_url} />
+                      <b>{p.full_name}</b>
+                    </td>
+                    <td style={{ fontFamily: 'var(--f-ocr)', fontSize: 12 }}>{p.student_id}</td>
+                    <td>{p.year_level} · {p.section}</td>
+                    <td style={{ whiteSpace: 'nowrap', color: 'var(--muted)', fontSize: 12 }}>{timeAgo(p.created_at)}</td>
+                    <td>
+                      <button
+                        className="btn btn-accent btn-sm"
+                        onClick={() => confirmDues(p)}
+                        disabled={confirmingId === p.id}
+                      >
+                        <CheckIcon width={14} height={14} />
+                        {confirmingId === p.id ? 'Confirming…' : 'Confirm payment'}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       <div className="section-title">attendance analytics</div>
