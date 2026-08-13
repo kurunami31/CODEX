@@ -21,7 +21,10 @@ export default function Welcome() {
       </nav>
 
       <main className="welcome-hero grid-bg-dark">
-        <img className="welcome-logo" src="/assets/codebyterts-logo.gif" alt="CODEBYTERS logo" />
+        <div className="welcome-logos">
+          <img className="welcome-logo" src="/assets/cb-logo.png" alt="CODEBYTERS logo" />
+          <img className="welcome-logo" src="/assets/it-logo.png" alt="BSIT logo" />
+        </div>
         <div className="welcome-tag cursor-blink">welcome to the community platform of</div>
         <h1 className="welcome-title">CODEX</h1>
         <p className="welcome-desc">
