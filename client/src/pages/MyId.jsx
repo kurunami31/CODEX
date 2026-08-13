@@ -272,7 +272,6 @@ export default function MyId() {
           </div>
           <div className="idcard-foot">
             <span>davao oriental state university</span>
-            <span className="code">est. 2018 · republic act 11033</span>
           </div>
         </div>
 
