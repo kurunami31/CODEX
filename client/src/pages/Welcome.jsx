@@ -47,10 +47,10 @@ export default function Welcome() {
 
       <section className="welcome-gallery">
         <div className="gallery-item">
-          <img src="/assets/community-1.jpg" alt="CODEBYTERS community" />
+          <img src="/assets/it-logo.png" alt="BSIT logo" />
         </div>
         <div className="gallery-item">
-          <img src="/assets/community-2.jpg" alt="CODEBYTERS event" />
+          <img src="/assets/cb-logo.png" alt="CODEBYTERS logo" />
         </div>
         <div className="gallery-item" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 10, background: 'rgba(14,208,182,0.07)', border: '1px solid rgba(14,208,182,0.25)' }}>
           <div className="ocr-label ocr-label--light" style={{ padding: '0 16px' }}>what&apos;s inside</div>
@@ -71,7 +71,7 @@ export default function Welcome() {
       </section>
 
       <footer className="welcome-foot">
-        <img src="/assets/cb-it-logo.png" alt="CODEBYTERS · BSIT logo" />
+        <img src="/assets/dorsu-logo.png" alt="Davao Oriental State University" />
         <span>davao oriental state university · codebyters student organization · mati city</span>
         <a className="welcome-fb" href="https://www.facebook.com/codebyters" target="_blank" rel="noopener noreferrer">follow us · facebook.com/codebyters</a>
       </footer>
