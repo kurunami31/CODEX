@@ -456,6 +456,17 @@ button { font-family: inherit; cursor: pointer; }
 }
 .welcome-foot img { height: 28px; width: auto; object-fit: contain; opacity: 0.85; }
 .welcome-foot span { font-family: var(--f-ocr); font-size: calc(0.6875rem * var(--text-scale)); letter-spacing: 0.16em; text-transform: uppercase; color: rgba(234, 255, 250, 0.55); }
+.welcome-foot .welcome-credit {
+  display: flex; align-items: center; gap: 6px;
+  font-family: var(--f-ocr); font-size: calc(0.6875rem * var(--text-scale)); letter-spacing: 0.14em; text-transform: uppercase;
+  color: rgba(234, 255, 250, 0.55); white-space: nowrap;
+}
+.welcome-foot .welcome-credit a {
+  color: var(--accent); text-decoration: none;
+  padding: 6px 12px; border: 1px solid rgba(14, 208, 182, 0.35); border-radius: var(--r-sm);
+  background: rgba(14, 208, 182, 0.08); transition: background 0.15s ease, border-color 0.15s ease;
+}
+.welcome-foot .welcome-credit a:hover { background: rgba(14, 208, 182, 0.18); border-color: rgba(14, 208, 182, 0.6); }
 .welcome-foot .welcome-fb {
   font-family: var(--f-ocr); font-size: calc(0.6875rem * var(--text-scale)); letter-spacing: 0.14em; text-transform: uppercase;
   color: var(--accent); text-decoration: none;
@@ -1357,6 +1368,7 @@ table.codex-table { width: 100%; border-collapse: collapse; font-size: calc(0.87
   .welcome-gallery::-webkit-scrollbar { display: none; }
   .gallery-item { flex: 0 0 min(320px, 76vw); width: auto; aspect-ratio: 1 / 1.08; scroll-snap-align: center; }
   .welcome-foot { flex-direction: column; gap: 10px; text-align: center; padding: 22px 18px calc(22px + var(--safe-b)); }
+  .welcome-foot .welcome-credit { flex-wrap: wrap; justify-content: center; }
   .welcome-foot .welcome-fb { margin-top: 2px; }
 }
 
