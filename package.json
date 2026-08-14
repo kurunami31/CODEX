@@ -16,7 +16,8 @@
     "dev:client": "npm run dev --workspace client",
     "build": "npm run build --workspace client",
     "start": "node server/index.js",
-    "preview": "npm run preview --workspace client"
+    "preview": "npm run preview --workspace client",
+    "lint": "eslint ."
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.0",
@@ -28,7 +29,10 @@
     "rss-parser": "^3.13.0"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.5",
     "concurrently": "^9.0.1",
+    "eslint": "^9.39.5",
+    "globals": "^17.11.0",
     "pg": "^8.23.0"
   }
 }

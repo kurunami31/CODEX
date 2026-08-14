@@ -61,7 +61,7 @@ app.get('/api/status', async (_req, res) => {
         updatedAt: data?.updated_at || null,
       },
     });
-  } catch (err) {
+  } catch {
     res.status(500).json({ error: 'Could not read app status.' });
   }
 });

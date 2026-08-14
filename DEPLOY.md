@@ -34,6 +34,10 @@ npm run dev        # API on :3001, web on :5173
    also start with **zero events** — an admin creates those from the app.
    Note: `client/check-avatar.mjs` / `client/check-posts.mjs` still expect
    the old demo credentials; against a fresh DB they need a real account.
+   Re-running this file later is safe (everything is idempotent) and applies
+   newer hardening — e.g. the trigger now also locks `course` to
+   admins/superadmins, so a non-BSIT member can't self-upgrade to BSIT to
+   dodge the BSIT-only attendance rule.
 3. **Authentication → Providers → Email**: decide on "Confirm email".
    - **OFF** → instant sign-ups (student fills the form and is in).
    - **ON** (recommended for real use) → verified sign-ups. The app shows a
@@ -161,10 +165,14 @@ manual student ID — still role-checked server-side.
       anti-replay (90 s TTL) for physical-attendance proof. The yearly ID QR
       is intentionally long-lived by design — treat ID photos as a credential
 - [x] GROQ key + `SECRET_KEY` never leave the server
+- [x] The AI assistant requires a signed-in session (anonymous callers can't
+      burn GROQ credits); per-user quota on top of the per-IP limiter
 - [x] Helmet security headers, HSTS, `X-Frame-Options: DENY`
 - [x] Production Content-Security-Policy via Vercel headers
 - [x] `Permissions-Policy: camera=(self)` — camera only for our own page
 - [x] Rate limiting (120/min API, 12/min chat, 120/min attendance+ID endpoints)
+- [x] `course` locked to admins/superadmins — the BSIT-only attendance rule
+      can't be bypassed by a member editing their own course
 - [x] Request body cap (16 KB), no CORS (strictly same-origin)
 - [x] `X-Powered-By` removed, no stack traces leaked
 - [x] Server-side input validation + prompt injection guards on chat

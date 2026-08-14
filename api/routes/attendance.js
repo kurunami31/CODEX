@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { supabase, supabaseFor } from '../lib/supabase.js';
+import { supabaseFor } from '../lib/supabase.js';
 import { signIdentity, verifyIdentity, PRESENCE_TTL_MS } from '../lib/identity.js';
 import { ID_SIGN_TTL_MS } from '../lib/env.js';
 

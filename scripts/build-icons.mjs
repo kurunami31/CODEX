@@ -128,10 +128,6 @@ function encodePng(width, height, rgba) {
 }
 
 // ── compositing ────────────────────────────────────────────────────
-function hex(c) {
-  return [c.r, c.g, c.b, c.a];
-}
-
 // brand vertical gradient: primary #1A5D78 (top) → deep #0B2B3A (bottom)
 function bgPixel(x, y, size) {
   const t = y / (size - 1);
