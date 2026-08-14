@@ -247,6 +247,15 @@ begin
       raise exception 'Only admins can confirm membership payments';
     end if;
   end if;
+  -- course CAN change, but only by an admin / superadmin — otherwise a
+  -- non-BSIT member could flip their own course to 'BSIT' and bypass the
+  -- BSIT-only rule enforced by mark_attendance.
+  if tg_op = 'UPDATE' and new.course is distinct from old.course then
+    if auth.uid() is not null and
+       coalesce((select role from public.profiles where id = auth.uid()), '') not in ('admin','superadmin') then
+      raise exception 'Only admins can change a member''s course';
+    end if;
+  end if;
   return new;
 end;
 $$;
@@ -650,7 +659,7 @@ create policy "postimages_own_delete" on storage.objects
 --  roles — admins keep their existing event + attendance powers.
 -- ============================================================
 -- ============================================================
--- App settings � public flags consumed by /api/status (e.g.
+-- App settings � public flags consumed by /api/status (e.g.
 -- maintenance mode). Publicly readable so the maintenance page
 -- renders even before login; only the server API (service role)
 -- may write, which RLS enforces.

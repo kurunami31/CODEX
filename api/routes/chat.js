@@ -1,11 +1,26 @@
 import { Router } from 'express';
+import { supabaseFor } from '../lib/supabase.js';
 import { groq, SYSTEM_PROMPT, DEFAULT_MODEL } from '../lib/groq.js';
 
 const router = Router();
 
 const MAX_MESSAGES = 12;
 
+function bearer(req) {
+  const h = req.headers.authorization || '';
+  return h.startsWith('Bearer ') ? h.slice(7).trim() : '';
+}
+
 router.post('/', async (req, res) => {
+  // The assistant is a member feature and every completion costs money, so
+  // reject unauthenticated callers before streaming anything to GROQ.
+  const token = bearer(req);
+  if (!token) return res.status(401).json({ error: 'Missing session token.' });
+
+  const sb = supabaseFor(token);
+  const { data: { user }, error: authError } = await sb.auth.getUser();
+  if (authError || !user) return res.status(401).json({ error: 'Invalid session.' });
+
   const { messages } = req.body || {};
 
   if (!Array.isArray(messages) || messages.length === 0) {

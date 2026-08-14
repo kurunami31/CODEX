@@ -12,6 +12,11 @@ const app = express();
 
 app.disable('x-powered-by');
 
+// Vercel routes traffic through its edge proxy — trust the first hop so
+// the rate limiters key on the real client IP instead of a single shared
+// proxy IP (otherwise every visitor shares one 120/min bucket).
+app.set('trust proxy', 1);
+
 // ── Security headers ─────────────────────────────────────────────
 app.use(
   helmet({
@@ -23,7 +28,7 @@ app.use(helmet.hidePoweredBy());
 app.use(helmet.noSniff());
 app.use(helmet.frameguard({ action: 'deny' }));
 app.use(helmet.referrerPolicy({ policy: 'strict-origin-when-cross-origin' }));
-app.use(helmet.hsts({ maxAge: 31536000, preload: true }));
+app.use(helmet.hsts({ maxAge: 63072000, includeSubDomains: true, preload: true }));
 app.use(helmet.permittedCrossDomainPolicies({ permittedPolicies: 'none' }));
 
 // ── No CORS: the API is strictly same-origin (Vite dev proxy / Vercel).

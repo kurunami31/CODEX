@@ -9,7 +9,9 @@ export function missingEnv(name) {
 }
 
 export function configBanner(req, res, next) {
-  const missing = ['SUPABASE_URL', 'SUPABASE_ANON_KEY', 'GROQ_API_KEY'].filter(missingEnv);
+  // SECRET_KEY powers the QR signatures — without it the ID/scan endpoints
+  // fail, so report it up front like the other required vars.
+  const missing = ['SUPABASE_URL', 'SUPABASE_ANON_KEY', 'GROQ_API_KEY', 'SECRET_KEY'].filter(missingEnv);
   if (missing.length > 0) {
     return res.status(500).json({
       error: `Server configuration incomplete. Missing env vars: ${missing.join(', ')}`,

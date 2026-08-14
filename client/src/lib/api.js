@@ -1,3 +1,5 @@
+import { getFreshSession, supabase } from './supabase';
+
 export async function fetchFeedHn() {
   const res = await fetch('/api/feed/hackernews');
   if (!res.ok) throw new Error('HN feed unavailable');
@@ -11,12 +13,24 @@ export async function fetchFeedGitHub() {
 }
 
 export async function chatStream(messages, onDelta, signal) {
-  const res = await fetch('/api/chat', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ messages }),
-    signal,
-  });
+  // The chat endpoint requires a valid session (GROQ usage costs money) —
+  // send the access token and refresh it once if the server rejects it.
+  const session = await getFreshSession();
+  if (!session) throw new Error('Session expired — log in again.');
+
+  const send = (token) =>
+    fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ messages }),
+      signal,
+    });
+
+  let res = await send(session.access_token);
+  if (res.status === 401) {
+    const { data: fresh, error } = await supabase.auth.refreshSession();
+    if (!error && fresh?.session) res = await send(fresh.session.access_token);
+  }
 
   if (!res.ok) {
     let detail = 'The assistant is unreachable.';

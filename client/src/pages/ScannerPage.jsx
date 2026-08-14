@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Html5Qrcode } from 'html5-qrcode';
-import { apiFetch } from '../lib/supabase';
+import { supabase, apiFetch } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { formatEventDate } from '../lib/format';
