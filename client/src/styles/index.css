@@ -461,8 +461,6 @@ button { font-family: inherit; cursor: pointer; }
   background: rgba(14, 208, 182, 0.08); transition: background 0.15s ease, border-color 0.15s ease;
 }
 .welcome-foot .welcome-fb:hover { background: rgba(14, 208, 182, 0.18); border-color: rgba(14, 208, 182, 0.6); }
-.welcome-foot .welcome-foot-logos { display: flex; align-items: center; gap: 10px; }
-.welcome-foot .welcome-foot-logos img { width: 40px; height: 40px; object-fit: contain; opacity: 0.95; }
 
 /* ── auth page ──────────────────────────────────────────── */
 .auth-wrap {
