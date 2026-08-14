@@ -21,10 +21,7 @@ export default function Welcome() {
       </nav>
 
       <main className="welcome-hero grid-bg-dark">
-        <div className="welcome-logos">
-          <img className="welcome-logo" src="/assets/cb-logo.png" alt="CODEBYTERS logo" />
-          <img className="welcome-logo" src="/assets/it-logo.png" alt="BSIT logo" />
-        </div>
+        <img className="welcome-logo" src="/assets/bot.gif" alt="CODEBYTERS mascot" />
         <div className="welcome-tag cursor-blink">welcome to the community platform of</div>
         <h1 className="welcome-title">CODEX</h1>
         <p className="welcome-desc">
@@ -74,6 +71,10 @@ export default function Welcome() {
       </section>
 
       <footer className="welcome-foot">
+        <div className="welcome-foot-logos">
+          <img src="/assets/cb-logo.png" alt="CODEBYTERS logo" />
+          <img src="/assets/it-logo.png" alt="BSIT logo" />
+        </div>
         <img src="/assets/dorsu-logo.png" alt="Davao Oriental State University" />
         <span>davao oriental state university · codebyters student organization · mati city</span>
         <a className="welcome-fb" href="https://www.facebook.com/codebyters" target="_blank" rel="noopener noreferrer">follow us · facebook.com/codebyters</a>
