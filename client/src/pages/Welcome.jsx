@@ -46,11 +46,11 @@ export default function Welcome() {
       </main>
 
       <section className="welcome-gallery">
-        <div className="gallery-item gallery-item--white">
-          <img src="/assets/it-logo.png" alt="BSIT logo" />
-        </div>
         <div className="gallery-item">
           <img src="/assets/cb-logo.png" alt="CODEBYTERS logo" />
+        </div>
+        <div className="gallery-item gallery-item--white">
+          <img src="/assets/it-logo.png" alt="BSIT logo" />
         </div>
         <div className="gallery-item" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 10, background: 'rgba(14,208,182,0.07)', border: '1px solid rgba(14,208,182,0.25)' }}>
           <div className="ocr-label ocr-label--light" style={{ padding: '0 16px' }}>what&apos;s inside</div>
