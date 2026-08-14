@@ -1325,6 +1325,50 @@ table.codex-table { width: 100%; border-collapse: collapse; font-size: calc(0.87
   .gallery-item { width: 100%; }
 }
 
+/* ── welcome page · mobile polish ───────────────────────── */
+@supports (min-height: 100svh) { .welcome { min-height: 100svh; } }
+
+@keyframes rise { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
+
+@media (max-width: 860px) {
+  .welcome-nav { padding: 14px clamp(14px, 4vw, 24px); }
+  .welcome-hero { padding: 26px 18px 46px; gap: 9px; }
+  .welcome-hero > * { animation: rise 0.6s cubic-bezier(0.22, 1, 0.36, 1) both; }
+  .welcome-hero > *:nth-child(1) { animation-delay: 0.02s; }
+  .welcome-hero > *:nth-child(2) { animation-delay: 0.09s; }
+  .welcome-hero > *:nth-child(3) { animation-delay: 0.16s; }
+  .welcome-hero > *:nth-child(4) { animation-delay: 0.23s; }
+  .welcome-hero > *:nth-child(5) { animation-delay: 0.30s; }
+  .welcome-hero > *:nth-child(6) { animation-delay: 0.37s; }
+  .welcome-hero > *:nth-child(7) { animation-delay: 0.44s; }
+  .welcome-hero > .welcome-logo {
+    animation: rise 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0.02s both, floaty 4.5s ease-in-out 0.7s infinite;
+  }
+  .welcome-tag { letter-spacing: 0.16em; padding: 0 12px; }
+  .welcome-title { font-size: clamp(54px, 17vw, 96px); }
+  .welcome-desc { margin: 12px 0 22px; line-height: 1.6; }
+  .welcome-stats { gap: clamp(16px, 6vw, 30px); margin-top: 32px; }
+  .welcome-gallery {
+    gap: 14px; justify-content: flex-start;
+    overflow-x: auto; scroll-snap-type: x mandatory;
+    padding: 4px 20px 46px; -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .welcome-gallery::-webkit-scrollbar { display: none; }
+  .gallery-item { flex: 0 0 min(320px, 76vw); width: auto; aspect-ratio: 1 / 1.08; scroll-snap-align: center; }
+  .welcome-foot { flex-direction: column; gap: 10px; text-align: center; padding: 22px 18px calc(22px + var(--safe-b)); }
+  .welcome-foot .welcome-fb { margin-top: 2px; }
+}
+
+@media (max-width: 480px) {
+  .welcome-nav { padding: 12px 14px; }
+  .welcome-nav .brand img { height: 32px; }
+  .welcome-org { line-height: 1.5; letter-spacing: 0.08em; }
+  .welcome-logo { width: min(128px, 30vw); }
+  .gallery-item { flex: 0 0 82vw; aspect-ratio: 1 / 1.12; }
+  .stat b { font-size: clamp(20px, 6vw, 26px); }
+}
+
 /* ── profile settings ──────────────────────────────────── */
 .avatar-edit {
   display: flex; align-items: center; gap: 16px;
