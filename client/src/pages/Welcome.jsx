@@ -12,7 +12,7 @@ export default function Welcome() {
 
       <nav className="welcome-nav">
         <div className="brand">
-          <img src="/assets/cb-it-logo.png" alt="CODEBYTERS · BSIT logo" />
+          <img src="/assets/codebyterts-logo.gif" alt="CODEBYTERS logo" />
           <span className="brand-name">CODEBYTERS</span>
         </div>
         <div className="brand-sub ocr-label ocr-label--light welcome-org">
@@ -46,7 +46,7 @@ export default function Welcome() {
       </main>
 
       <section className="welcome-gallery">
-        <div className="gallery-item">
+        <div className="gallery-item gallery-item--white">
           <img src="/assets/it-logo.png" alt="BSIT logo" />
         </div>
         <div className="gallery-item">
