@@ -12,7 +12,7 @@ export default function Welcome() {
 
       <nav className="welcome-nav">
         <div className="brand">
-          <img src="/assets/codebyterts-logo.gif" alt="CODEBYTERS logo" />
+          <img src="/assets/cb-it-logo.png" alt="CODEBYTERS · BSIT logo" />
           <span className="brand-name">CODEBYTERS</span>
         </div>
         <div className="brand-sub ocr-label ocr-label--light welcome-org">
@@ -71,7 +71,7 @@ export default function Welcome() {
       </section>
 
       <footer className="welcome-foot">
-        <img src="/assets/dorsu-logo.png" alt="Davao Oriental State University" />
+        <img src="/assets/cb-it-logo.png" alt="CODEBYTERS · BSIT logo" />
         <span>davao oriental state university · codebyters student organization · mati city</span>
         <a className="welcome-fb" href="https://www.facebook.com/codebyters" target="_blank" rel="noopener noreferrer">follow us · facebook.com/codebyters</a>
       </footer>
