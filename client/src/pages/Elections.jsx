@@ -5,7 +5,7 @@ import { useToast } from '../context/ToastContext';
 import Avatar from '../components/Avatar';
 import {
   GavelIcon, PlusIcon, XIcon, CheckIcon, LockIcon, UnlockIcon,
-  UsersIcon, TrophyIcon, SearchIcon,
+  UsersIcon, TrophyIcon, SearchIcon, PencilIcon, TrashIcon, ArchiveIcon,
 } from '../components/icons/Icons';
 
 const POSITIONS = [
@@ -29,6 +29,7 @@ export default function Elections() {
   const [selections, setSelections] = useState({}); // electionId -> { position: candidateId }
   const [busy, setBusy] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
+  const [editFor, setEditFor] = useState(null); // election being edited
   const [addFor, setAddFor] = useState(null); // election id currently adding a candidate to
   const [tally, setTally] = useState({}); // electionId -> rows
   const [tallyBusy, setTallyBusy] = useState({});
@@ -117,6 +118,19 @@ export default function Elections() {
     load();
   };
 
+  const saveElection = async (election, title, description) => {
+    setBusy(true);
+    const { error } = await supabase
+      .from('elections')
+      .update({ title, description: description || null })
+      .eq('id', election.id);
+    setBusy(false);
+    if (error) return toast.error('Could not save', error.message);
+    toast.ok('Election updated', 'Changes are live.');
+    setEditFor(null);
+    load();
+  };
+
   const toggleOpen = async (election) => {
     setBusy(true);
     const { error } = await supabase
@@ -126,6 +140,33 @@ export default function Elections() {
     setBusy(false);
     if (error) return toast.error('Update failed', error.message);
     toast.ok(election.open ? 'Election closed' : 'Election opened', election.open ? 'Voting has ended.' : 'Members can now vote.');
+    load();
+  };
+
+  const archiveElection = async (election) => {
+    setBusy(true);
+    const { error } = await supabase
+      .from('elections')
+      .update({ archived: !election.archived })
+      .eq('id', election.id);
+    setBusy(false);
+    if (error) return toast.error('Update failed', error.message);
+    toast.ok(election.archived ? 'Election restored' : 'Election archived', election.archived ? 'Back on the list.' : 'Hidden from members — restore it anytime.');
+    load();
+  };
+
+  const deleteElection = async (election) => {
+    if (!window.confirm(`Delete "${election.title}" permanently? Its candidates and every vote are removed too.`)) return;
+    setBusy(true);
+    const { error } = await supabase.from('elections').delete().eq('id', election.id);
+    setBusy(false);
+    if (error) return toast.error('Could not delete', error.message);
+    toast.ok('Election deleted', 'Removed with its candidates and votes.');
+    setTally((t) => {
+      const next = { ...t };
+      delete next[election.id];
+      return next;
+    });
     load();
   };
 
@@ -162,8 +203,9 @@ export default function Elections() {
     setTally((t) => ({ ...t, [electionId]: data || [] }));
   };
 
-  const openElections = elections.filter((e) => e.open);
-  const closedElections = elections.filter((e) => !e.open);
+  const openElections = elections.filter((e) => e.open && !e.archived);
+  const closedElections = elections.filter((e) => !e.open && !e.archived);
+  const archivedElections = elections.filter((e) => e.archived);
   const openFor = addFor ? elections.find((e) => e.id === addFor) : null;
   const availableMembers = useMemo(() => {
     const q = memberSearch.trim().toLowerCase();
@@ -219,6 +261,11 @@ export default function Elections() {
                 onPick={pick}
                 onSubmit={() => submitVotes(election.id)}
                 busy={busy}
+                isAdmin={isAdmin}
+                onClose={() => toggleOpen(election)}
+                onEdit={() => setEditFor(election)}
+                onDelete={() => deleteElection(election)}
+                onAddCandidate={() => setAddFor(election.id)}
               />
             ))
           )}
@@ -238,12 +285,21 @@ export default function Elections() {
                   <b style={{ fontSize: 15 }}>{election.title}</b>
                   {election.description && <span className="ocr-label" style={{ flexBasis: '100%' }}>{election.description}</span>}
                   {isAdmin && (
-                    <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
+                    <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                       <button className="btn btn-outline btn-sm" onClick={() => loadTally(election.id)} disabled={tallyBusy[election.id]}>
                         <TrophyIcon width={14} height={14} /> {tallyBusy[election.id] ? 'Counting…' : 'View tally'}
                       </button>
-                      <button className="btn btn-ghost btn-sm" onClick={() => toggleOpen(election)} disabled={busy}>
+                      <button className="btn btn-outline btn-sm" onClick={() => toggleOpen(election)} disabled={busy}>
                         <UnlockIcon width={14} height={14} /> Reopen
+                      </button>
+                      <button className="btn btn-ghost btn-sm" onClick={() => setEditFor(election)} disabled={busy}>
+                        <PencilIcon width={14} height={14} /> Edit
+                      </button>
+                      <button className="btn btn-ghost btn-sm" onClick={() => archiveElection(election)} disabled={busy}>
+                        <ArchiveIcon width={14} height={14} /> Archive
+                      </button>
+                      <button className="icon-btn" style={{ width: 30, height: 30, borderRadius: 8, color: 'var(--danger)' }} onClick={() => deleteElection(election)} disabled={busy} title="Delete election" aria-label="Delete election">
+                        <TrashIcon width={13} height={13} />
                       </button>
                     </div>
                   )}
@@ -251,6 +307,30 @@ export default function Elections() {
                 {tally[election.id] && <TallyTable rows={tally[election.id]} />}
               </div>
             ))
+          )}
+
+          {isAdmin && archivedElections.length > 0 && (
+            <>
+              <div className="section-title">archived</div>
+              {archivedElections.map((election) => (
+                <div className="panel" key={election.id} style={{ padding: '18px 20px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                    <span className="chip"><ArchiveIcon width={11} height={11} /> archived</span>
+                    <b style={{ fontSize: 15 }}>{election.title}</b>
+                    <span className="ocr-label">{election.description}</span>
+                    <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
+                      <button className="btn btn-outline btn-sm" onClick={() => archiveElection(election)} disabled={busy}>
+                        <UnlockIcon width={14} height={14} /> Restore
+                      </button>
+                      <button className="btn btn-ghost btn-sm" onClick={() => deleteElection(election)} disabled={busy}>
+                        <TrashIcon width={14} height={14} /> Delete
+                      </button>
+                    </div>
+                  </div>
+                  {tally[election.id] && <TallyTable rows={tally[election.id]} />}
+                </div>
+              ))}
+            </>
           )}
         </>
       )}
@@ -291,9 +371,18 @@ export default function Elections() {
       )}
 
       {createOpen && (
-        <CreateElectionModal
+        <ElectionFormModal
           onClose={() => setCreateOpen(false)}
-          onCreate={createElection}
+          onSubmit={createElection}
+          busy={busy}
+        />
+      )}
+
+      {editFor && (
+        <ElectionFormModal
+          initial={editFor}
+          onClose={() => setEditFor(null)}
+          onSubmit={(title, description) => saveElection(editFor, title, description)}
           busy={busy}
         />
       )}
@@ -313,7 +402,7 @@ export default function Elections() {
   );
 }
 
-function ElectionBallot({ election, candidates, myVotes, selections, onPick, onSubmit, busy }) {
+function ElectionBallot({ election, candidates, myVotes, selections, onPick, onSubmit, busy, isAdmin, onClose, onEdit, onDelete, onAddCandidate }) {
   const positions = [...new Set(candidates.map((c) => c.position))];
   if (positions.length === 0) return null;
   const chosenCount = Object.keys(selections).length;
@@ -325,6 +414,22 @@ function ElectionBallot({ election, candidates, myVotes, selections, onPick, onS
         <span className="chip chip--ok"><UnlockIcon width={11} height={11} /> open</span>
         <b style={{ fontSize: 16 }}>{election.title}</b>
         {election.description && <span className="ocr-label" style={{ flexBasis: '100%' }}>{election.description}</span>}
+        {isAdmin && (
+          <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <button className="btn btn-outline btn-sm" onClick={onAddCandidate} disabled={busy}>
+              <PlusIcon width={13} height={13} /> Candidate
+            </button>
+            <button className="btn btn-outline btn-sm" onClick={onClose} disabled={busy}>
+              <LockIcon width={13} height={13} /> Close
+            </button>
+            <button className="btn btn-ghost btn-sm" onClick={onEdit} disabled={busy}>
+              <PencilIcon width={13} height={13} /> Edit
+            </button>
+            <button className="icon-btn" style={{ width: 30, height: 30, borderRadius: 8, color: 'var(--danger)' }} onClick={onDelete} disabled={busy} title="Delete election" aria-label="Delete election">
+              <TrashIcon width={13} height={13} />
+            </button>
+          </div>
+        )}
       </div>
 
       {votedAll ? (
@@ -410,22 +515,24 @@ function TallyTable({ rows }) {
   );
 }
 
-function CreateElectionModal({ onClose, onCreate, busy }) {
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
+function ElectionFormModal({ initial, onClose, onSubmit, busy }) {
+  const [title, setTitle] = useState(initial?.title || '');
+  const [description, setDescription] = useState(initial?.description || '');
   const [error, setError] = useState('');
 
   const submit = (e) => {
     e.preventDefault();
     if (!title.trim()) return setError('Title is required.');
-    onCreate(title, description);
+    onSubmit(title, description);
   };
 
   return (
     <div className="modal-back" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
       <div className="modal">
         <div className="modal-head">
-          <h3><PlusIcon width={17} height={17} style={{ verticalAlign: -3, marginRight: 6, color: 'var(--accent-2)' }} />New election</h3>
+          <h3><PlusIcon width={17} height={17} style={{ verticalAlign: -3, marginRight: 6, color: 'var(--accent-2)' }} />
+            {initial ? 'Edit election' : 'New election'}
+          </h3>
           <button className="icon-btn" onClick={onClose} aria-label="Close"><XIcon width={16} height={16} /></button>
         </div>
         <form className="modal-body auth-form" onSubmit={submit}>
@@ -438,7 +545,7 @@ function CreateElectionModal({ onClose, onCreate, busy }) {
             <textarea id="elec-desc" className="textarea" placeholder="Who should lead the org next term?" value={description} onChange={(e) => setDescription(e.target.value)} maxLength={500} />
           </div>
           {error && <div className="err-box"><span>!</span><span>{error}</span></div>}
-          <button className="btn btn-accent btn-lg" disabled={busy}>{busy ? 'Creating…' : 'Create election'}</button>
+          <button className="btn btn-accent btn-lg" disabled={busy}>{busy ? 'Saving…' : initial ? 'Save changes' : 'Create election'}</button>
         </form>
       </div>
     </div>

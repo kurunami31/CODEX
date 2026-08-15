@@ -785,14 +785,18 @@ $$;
 grant execute on function public.mark_attendance(uuid, text) to authenticated;
 
 -- ── Elections: digital voting for org officers ──
+-- `archived` hides a finished election from members while keeping its
+-- results for officers (unarchive to bring it back).
 create table if not exists public.elections (
   id          uuid primary key default gen_random_uuid(),
   title       text not null,
   description text,
   open        boolean not null default false,
+  archived    boolean not null default false,
   created_by  uuid references auth.users(id) on delete set null,
   created_at  timestamptz not null default now()
 );
+alter table public.elections add column if not exists archived boolean not null default false;
 
 create table if not exists public.election_candidates (
   id          uuid primary key default gen_random_uuid(),
@@ -845,6 +849,7 @@ revoke all on table public.elections, public.election_candidates, public.electio
 drop policy if exists "elections_select_all" on public.elections;
 drop policy if exists "elections_admin_write" on public.elections;
 drop policy if exists "elections_admin_update" on public.elections;
+drop policy if exists "elections_admin_delete" on public.elections;
 drop policy if exists "election_candidates_select_all" on public.election_candidates;
 drop policy if exists "election_candidates_admin_write" on public.election_candidates;
 drop policy if exists "election_candidates_admin_delete" on public.election_candidates;
@@ -860,6 +865,9 @@ create policy "elections_admin_update" on public.elections
   for update to authenticated
   using ((select role from public.profiles where id = auth.uid()) in ('admin','superadmin'))
   with check ((select role from public.profiles where id = auth.uid()) in ('admin','superadmin'));
+create policy "elections_admin_delete" on public.elections
+  for delete to authenticated
+  using ((select role from public.profiles where id = auth.uid()) in ('admin','superadmin'));
 create policy "election_candidates_select_all" on public.election_candidates
   for select to authenticated using (true);
 create policy "election_candidates_admin_write" on public.election_candidates
