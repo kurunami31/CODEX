@@ -7,6 +7,7 @@ import PostCard from '../components/PostCard';
 import usePostActions from '../lib/usePostActions';
 import usePostLikes from '../lib/usePostLikes';
 import usePostComments from '../lib/usePostComments';
+import { postsSelect, supportsImages } from '../lib/columns';
 import { fetchFeedHn, fetchFeedGitHub } from '../lib/api';
 import { timeAgo } from '../lib/format';
 import { ExternalIcon, StarIcon, GithubIcon, RssIcon, BoxIcon, ArchiveIcon, ImageIcon, XIcon } from '../components/icons/Icons';
@@ -21,6 +22,7 @@ export default function Feed() {
   const toast = useToast();
 
   const [posts, setPosts] = useState([]);
+  const [hasImages, setHasImages] = useState(true);
   const [learn, setLearn] = useState({ hn: [], gh: [] });
   const [draft, setDraft] = useState('');
   const [imageFiles, setImageFiles] = useState([]);
@@ -36,12 +38,16 @@ export default function Feed() {
   const { likeCount, likedByMe, toggleLike, loadLikes } = usePostLikes(user);
   const comments = usePostComments(user);
 
-  const postSelect = 'id, author_id, content, created_at, archived, image_url, images, profiles!posts_author_id_fkey(id, full_name, role, year_level, avatar_url)';
+  // Databases without the latest schema lack posts.images — drop it from the
+  // projection so the feed still loads (single-photo mode until migration).
+  useEffect(() => {
+    supportsImages().then(setHasImages);
+  }, []);
 
   const loadPosts = useCallback(async () => {
     const { data, error } = await supabase
       .from('posts')
-      .select(postSelect)
+      .select(await postsSelect())
       .eq('archived', false)
       .order('created_at', { ascending: false });
     if (error) {
@@ -55,7 +61,7 @@ export default function Feed() {
     if (!user) return;
     const { data, error } = await supabase
       .from('posts')
-      .select(postSelect)
+      .select(await postsSelect())
       .eq('author_id', user.id)
       .eq('archived', true)
       .order('created_at', { ascending: false });
@@ -94,14 +100,15 @@ export default function Feed() {
     }
   };
 
+  const imageCap = hasImages ? MAX_IMAGES : 1;
+
   const pickImages = (files) => {
     if (!files || files.length === 0) return;
     const incoming = [...files];
-    const room = MAX_IMAGES - imageFiles.length;
-    if (incoming.length > room) {
-      toast.error('Too many photos', `You can attach up to ${MAX_IMAGES} images per post.`);
-      incoming.length = room;
-    }
+    const room = imageCap - imageFiles.length;      if (incoming.length > room) {
+        toast.error('Too many photos', `You can attach up to ${imageCap} image${imageCap === 1 ? '' : 's'} per post.`);
+        incoming.length = room;
+      }
     const next = [];
     for (const file of incoming) {
       if (!POST_IMAGE_TYPES.includes(file.type)) {
@@ -152,13 +159,14 @@ export default function Feed() {
         setImageFiles([]);
         setImagePreviews([]);
       }
-      const images = uploaded.length > 0 ? uploaded : null;
-      const { error } = await supabase.from('posts').insert({
+      const payload = {
         author_id: user.id,
         content,
-        images,
-        image_url: images ? images[0] : null,
-      });
+        image_url: uploaded.length > 0 ? uploaded[0] : null,
+      };
+      // Only write the images column when the database actually has it.
+      if (hasImages) payload.images = uploaded.length > 0 ? uploaded : null;
+      const { error } = await supabase.from('posts').insert(payload);
       if (error) throw error;
       setDraft('');
       toast.ok('Posted', 'Your message is live on the feed.');
@@ -277,7 +285,7 @@ export default function Feed() {
                 onClick={() => fileRef.current?.click()}
                 title="Attach photos"
               >
-                <ImageIcon width={15} height={15} /> Photo{imageFiles.length > 0 ? ` ${imageFiles.length}/${MAX_IMAGES}` : ''}
+                <ImageIcon width={15} height={15} /> Photo{imageFiles.length > 0 ? ` ${imageFiles.length}/${imageCap}` : ''}
               </button>
               <input
                 ref={fileRef}

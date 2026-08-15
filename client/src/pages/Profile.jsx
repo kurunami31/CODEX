@@ -8,6 +8,7 @@ import PostCard from '../components/PostCard';
 import usePostActions from '../lib/usePostActions';
 import usePostLikes from '../lib/usePostLikes';
 import usePostComments from '../lib/usePostComments';
+import { postsSelect } from '../lib/columns';
 import { formatEventDate } from '../lib/format';
 import { roleLabel } from '../lib/roles';
 import { ChevronLeftIcon, RssIcon, ArchiveIcon, GearIcon, UsersIcon, CheckIcon, WalletIcon } from '../components/icons/Icons';
@@ -29,8 +30,6 @@ export default function Profile() {
   const { likeCount, likedByMe, toggleLike, loadLikes } = usePostLikes(user);
   const comments = usePostComments(user);
 
-  const postSelect = 'id, author_id, content, created_at, archived, image_url, images, profiles!posts_author_id_fkey(id, full_name, role, year_level, avatar_url)';
-
   const loadAuthor = useCallback(async () => {
     const { data, error } = await supabase.from('profiles').select('*').eq('id', id).maybeSingle();
     if (error || !data) setNotFound(true);
@@ -40,7 +39,7 @@ export default function Profile() {
   const loadPosts = useCallback(async () => {
     const { data } = await supabase
       .from('posts')
-      .select(postSelect)
+      .select(await postsSelect())
       .eq('author_id', id)
       .eq('archived', false)
       .order('created_at', { ascending: false });
@@ -51,7 +50,7 @@ export default function Profile() {
     if (!isMe) return;
     const { data } = await supabase
       .from('posts')
-      .select(postSelect)
+      .select(await postsSelect())
       .eq('author_id', id)
       .eq('archived', true)
       .order('created_at', { ascending: false });

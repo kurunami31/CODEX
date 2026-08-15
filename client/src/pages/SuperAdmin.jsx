@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { supabase, apiFetch } from '../lib/supabase';import { useAuth } from '../context/AuthContext';
+import { supabase, apiFetch } from '../lib/supabase';
+import { postsSelect } from '../lib/columns';
+import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { timeAgo } from '../lib/format';
 import { roleLabel } from '../lib/roles';
@@ -95,7 +97,7 @@ export default function SuperAdmin() {
     setLoadingPosts(true);
     const { data, error } = await supabase
       .from('posts')
-      .select('id, content, created_at, archived, author_id, image_url, images, profiles!posts_author_id_fkey(id, full_name, role, avatar_url, student_id)')
+      .select(await postsSelect('id, full_name, role, avatar_url, student_id'))
       .order('created_at', { ascending: false })
       .limit(300);
     if (error) toast.error('Posts error', error.message);
