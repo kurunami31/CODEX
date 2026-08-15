@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
@@ -8,7 +8,7 @@ import { roleLabel } from '../lib/roles';
 import Avatar from '../components/Avatar';
 import {
   ShieldIcon, CalendarIcon, UsersIcon, CameraIcon, PlusIcon, XIcon,
-  AlertIcon, CheckIcon, QrIcon, DownloadIcon, WalletIcon,
+  AlertIcon, CheckIcon, QrIcon, DownloadIcon, WalletIcon, SearchIcon, IdIcon,
 } from '../components/icons/Icons';
 
 export default function Admin() {
@@ -19,8 +19,12 @@ export default function Admin() {
   const [attendees, setAttendees] = useState([]);
   const [stats, setStats] = useState([]); // [{ event_id, title, event_date, present }]
   const [unpaid, setUnpaid] = useState([]);
+  const [members, setMembers] = useState([]);
+  const [memberSearch, setMemberSearch] = useState('');
+  const [viewingId, setViewingId] = useState(null);
   const [confirmingId, setConfirmingId] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [loadingMembers, setLoadingMembers] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
   const [busy, setBusy] = useState(false);
   const [exporting, setExporting] = useState(false);
@@ -50,11 +54,22 @@ export default function Admin() {
     else setUnpaid(data || []);
   }, [toast]);
 
+  const loadMembers = useCallback(async () => {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('id, full_name, student_id, year_level, section, avatar_url, role, course, membership_paid')
+      .order('full_name', { ascending: true });
+    if (error) toast.error('Members error', error.message);
+    else setMembers(data || []);
+    setLoadingMembers(false);
+  }, [toast]);
+
   useEffect(() => {
     loadEvents();
     loadStats();
     loadUnpaid();
-  }, [loadEvents, loadStats, loadUnpaid]);
+    loadMembers();
+  }, [loadEvents, loadStats, loadUnpaid, loadMembers]);
 
   const confirmDues = async (p) => {
     setConfirmingId(p.id);
@@ -64,6 +79,16 @@ export default function Admin() {
     toast.ok('Payment confirmed', `${p.full_name} is now marked as paid.`);
     loadUnpaid();
   };
+
+  const filteredMembers = useMemo(() => {
+    const q = memberSearch.trim().toLowerCase();
+    if (!q) return members;
+    return members.filter((m) =>
+      [m.full_name, m.student_id, m.section, m.year_level, m.role].some((v) => v && String(v).toLowerCase().includes(q))
+    );
+  }, [members, memberSearch]);
+
+  const viewingMember = members.find((m) => m.id === viewingId) || null;
 
   const selectEvent = async (ev) => {
     setSelected(ev);
@@ -209,6 +234,68 @@ export default function Admin() {
                       >
                         <CheckIcon width={14} height={14} />
                         {confirmingId === p.id ? 'Confirming…' : 'Confirm payment'}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      <div className="section-title">digital ids · member directory</div>
+      <div className="panel" style={{ padding: '20px 22px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12, flexWrap: 'wrap' }}>
+          <IdIcon width={18} height={18} style={{ color: 'var(--accent-2)' }} />
+          <b style={{ fontSize: 15 }}>Registered members</b>
+          <span className="chip chip--teal" style={{ marginLeft: 'auto' }}>{members.length} members</span>
+          <div className="search-box" style={{ maxWidth: 260, width: '100%' }}>
+            <SearchIcon width={15} height={15} />
+            <input placeholder="Search name, ID, section…" value={memberSearch} onChange={(e) => setMemberSearch(e.target.value)} />
+          </div>
+        </div>
+        {loadingMembers ? (
+          <div className="skeleton" style={{ height: 60 }} />
+        ) : filteredMembers.length === 0 ? (
+          <div className="empty-state">
+            <span className="ico"><IdIcon width={24} height={24} /></span>
+            <b>{members.length === 0 ? 'No members yet' : 'No matches'}</b>
+            <p>{members.length === 0 ? 'Members appear here once they sign up or are enrolled.' : 'Try a different search.'}</p>
+          </div>
+        ) : (
+          <div className="table-wrap">
+            <table className="codex-table">
+              <thead>
+                <tr>
+                  <th>member</th>
+                  <th>id no.</th>
+                  <th>year / section</th>
+                  <th>role</th>
+                  <th>membership</th>
+                  <th>digital id</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredMembers.map((m) => (
+                  <tr key={m.id}>
+                    <td style={{ display: 'flex', alignItems: 'center', gap: 10, whiteSpace: 'nowrap' }}>
+                      <Avatar name={m.full_name} seed={m.student_id || m.id} size={30} url={m.avatar_url} />
+                      <b>{m.full_name || '—'}</b>
+                    </td>
+                    <td style={{ fontFamily: 'var(--f-ocr)', fontSize: 12 }}>{m.student_id || '—'}</td>
+                    <td>{m.year_level} · {m.section}</td>
+                    <td><span className={`role-pill role-pill--${m.role || 'student'}`}>{roleLabel(m.role)}</span></td>
+                    <td>
+                      {m.membership_paid ? (
+                        <span className="chip chip--ok"><CheckIcon width={11} height={11} /> paid</span>
+                      ) : (
+                        <span className="chip chip--warn"><WalletIcon width={11} height={11} /> unpaid</span>
+                      )}
+                    </td>
+                    <td>
+                      <button className="btn btn-outline btn-sm" onClick={() => setViewingId(m.id)}>
+                        <IdIcon width={14} height={14} /> View ID
                       </button>
                     </td>
                   </tr>
@@ -392,6 +479,7 @@ export default function Admin() {
       )}
 
       {showCreate && <CreateEventModal onClose={() => setShowCreate(false)} onCreated={() => { setShowCreate(false); loadEvents(); }} />}
+      {viewingMember && <IdCardModal member={viewingMember} onClose={() => setViewingId(null)} />}
     </div>
   );
 }
@@ -454,6 +542,77 @@ function CreateEventModal({ onClose, onCreated }) {
           {error && <div className="err-box"><span>!</span><span>{error}</span></div>}
           <button className="btn btn-accent btn-lg" disabled={busy}>{busy ? 'Creating…' : 'Publish event'}</button>
         </form>
+      </div>
+    </div>
+  );
+}
+
+function IdCardModal({ member, onClose }) {
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
+  return (
+    <div className="modal-back" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="modal modal--narrow" style={{ width: 'min(520px, 100%)' }}>
+        <div className="modal-head">
+          <h3>
+            <IdIcon width={17} height={17} style={{ verticalAlign: -3, marginRight: 6, color: 'var(--accent-2)' }} />
+            Digital ID — {member.full_name || 'Member'}
+          </h3>
+          <button className="icon-btn" onClick={onClose} aria-label="Close"><XIcon width={16} height={16} /></button>
+        </div>
+        <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14 }}>
+          <div className="idcard">
+            <div className="idcard-head">
+              <img src="/assets/dorsu-logo.png" alt="DOrSU" />
+              <div className="idcard-org">
+                <b>CODEBYTERS</b>
+                <span>bsit student organization</span>
+              </div>
+            </div>
+            <div className="idcard-strip">official student identity · bsit</div>
+            <div className="idcard-main">
+              <div className="idcard-photo">
+                {member.avatar_url ? (
+                  <img src={member.avatar_url} alt={`ID photo of ${member.full_name}`} />
+                ) : (
+                  <Avatar name={member.full_name} seed={member.student_id || member.id} size={56} />
+                )}
+              </div>
+              <div className="idcard-info">
+                <div className="lbl">name</div>
+                <div className="idcard-name">{member.full_name || 'Member'}</div>
+                <div className="lbl" style={{ marginTop: 8 }}>details</div>
+                <div className="idcard-details">
+                  YEAR : {member.year_level || '—'}<br />
+                  SEC  : {member.section || '—'}<br />
+                  ID   : {member.student_id || '—'}
+                </div>
+              </div>
+              <div className="idcard-qr">
+                <div style={{ width: 88, height: 88, display: 'grid', placeItems: 'center', background: '#fff', border: '2px solid var(--deep)', borderRadius: 6 }}>
+                  <CheckIcon width={40} height={40} style={{ color: 'var(--ok)' }} />
+                </div>
+                <span>verified member</span>
+              </div>
+            </div>
+            <div className="idcard-foot">
+              <span>davao oriental state university</span>
+              <span className="code">dorsu</span>
+            </div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', justifyContent: 'center' }}>
+            <CheckIcon width={14} height={14} style={{ color: 'var(--ok)' }} />
+            <span className="ocr-label" style={{ fontSize: 9 }}>
+              registered {roleLabel(member.role)} · {member.membership_paid ? 'dues paid' : 'dues unpaid'}
+            </span>
+          </div>
+        </div>
       </div>
     </div>
   );
