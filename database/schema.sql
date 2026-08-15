@@ -527,6 +527,43 @@ create policy "post_comments_superadmin_delete" on public.post_comments
   using ((select role from public.profiles where id = auth.uid()) = 'superadmin');
 
 -- ────────────────────────────────────────────────
+--  EVENT COMMENTS (Q&A on an event page)
+-- ────────────────────────────────────────────────
+create table if not exists public.event_comments (
+  id          uuid primary key default gen_random_uuid(),
+  event_id    uuid not null references public.events(id) on delete cascade,
+  author_id   uuid not null references public.profiles(id) on delete cascade,
+  content     text not null check (char_length(content) between 1 and 500),
+  created_at  timestamptz not null default now()
+);
+
+alter table public.event_comments
+  drop constraint if exists event_comments_event_id_fkey,
+  add constraint event_comments_event_id_fkey foreign key (event_id)
+    references public.events(id) on delete cascade;
+alter table public.event_comments
+  drop constraint if exists event_comments_author_id_fkey,
+  add constraint event_comments_author_id_fkey foreign key (author_id)
+    references public.profiles(id) on delete cascade;
+
+alter table public.event_comments enable row level security;
+revoke all on table public.event_comments from anon;
+
+drop policy if exists "event_comments_select_all" on public.event_comments;
+drop policy if exists "event_comments_insert_own" on public.event_comments;
+drop policy if exists "event_comments_delete_own" on public.event_comments;
+drop policy if exists "event_comments_superadmin_delete" on public.event_comments;
+create policy "event_comments_select_all" on public.event_comments
+  for select to authenticated using (true);
+create policy "event_comments_insert_own" on public.event_comments
+  for insert to authenticated with check (author_id = auth.uid());
+create policy "event_comments_delete_own" on public.event_comments
+  for delete to authenticated using (author_id = auth.uid());
+create policy "event_comments_superadmin_delete" on public.event_comments
+  for delete to authenticated
+  using ((select role from public.profiles where id = auth.uid()) = 'superadmin');
+
+-- ────────────────────────────────────────────────
 --  RSVPS (event headcount — "I'm going")
 -- ────────────────────────────────────────────────
 create table if not exists public.rsvps (

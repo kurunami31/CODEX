@@ -9,7 +9,7 @@ import { isStaff as checkStaff } from '../lib/roles';
 import Avatar from '../components/Avatar';
 import {
   ChevronLeftIcon, ClockIcon, MapPinIcon, CameraIcon, QrIcon, CheckIcon,
-  UsersIcon, IdIcon, AlertIcon,
+  UsersIcon, IdIcon, AlertIcon, CommentIcon, XIcon,
 } from '../components/icons/Icons';
 
 export default function EventDetail() {
@@ -23,8 +23,40 @@ export default function EventDetail() {
   const [showQr, setShowQr] = useState(false);
   const [rsvps, setRsvps] = useState([]);
   const [rsvpBusy, setRsvpBusy] = useState(false);
+  const [comments, setComments] = useState(null);
+  const [commentText, setCommentText] = useState('');
+  const [commentBusy, setCommentBusy] = useState(false);
 
   const isStaff = checkStaff(profile?.role);
+
+  const loadComments = async (eventId) => {
+    const { data, error } = await supabase
+      .from('event_comments')
+      .select('id, content, created_at, profiles!event_comments_author_id_fkey(id, full_name, role, avatar_url)')
+      .eq('event_id', eventId)
+      .order('created_at', { ascending: true });
+    if (error) toast.error('Comments error', error.message);
+    else setComments(data || []);
+  };
+
+  const postComment = async () => {
+    const text = commentText.trim();
+    if (!text || commentBusy || !user || !event) return;
+    setCommentBusy(true);
+    const { error } = await supabase
+      .from('event_comments')
+      .insert({ event_id: event.id, author_id: user.id, content: text.slice(0, 500) });
+    setCommentBusy(false);
+    if (error) return toast.error('Could not post', error.message);
+    setCommentText('');
+    await loadComments(event.id);
+  };
+
+  const deleteComment = async (comment) => {
+    const { error } = await supabase.from('event_comments').delete().eq('id', comment.id);
+    if (error) return toast.error('Could not delete', error.message);
+    await loadComments(event.id);
+  };
 
   const loadRsvps = async () => {
     const { data, error } = await supabase.from('rsvps').select('event_id, user_id');
@@ -62,6 +94,7 @@ export default function EventDetail() {
         setMyAttendance(mine?.length ? mine[0] : null);
       }
       loadRsvps();
+      loadComments(id);
       setLoading(false);
     })();
   }, [id, isStaff]);
@@ -149,6 +182,65 @@ export default function EventDetail() {
           )}
         </div>
       </article>
+
+      <div className="panel" style={{ padding: '20px 22px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+          <CommentIcon width={18} height={18} style={{ color: 'var(--accent-2)' }} />
+          <b style={{ fontSize: 15 }}>Discussion · Q&amp;A</b>
+          {comments !== null && (
+            <span className="chip chip--teal" style={{ marginLeft: 'auto' }}>{comments.length} comment{comments.length === 1 ? '' : 's'}</span>
+          )}
+        </div>
+
+        <div className="post-comments">
+          {comments === null ? (
+            <div className="skeleton" style={{ height: 44 }} />
+          ) : comments.length === 0 ? (
+            <div className="post-comments-empty">No questions yet — ask about the event here.</div>
+          ) : (
+            comments.map((c) => (
+              <div className="comment" key={c.id}>
+                <Avatar name={c.profiles?.full_name} seed={c.profiles?.id} size={34} url={c.profiles?.avatar_url} />
+                <div className="comment-body">
+                  <div className="comment-meta">
+                    <b>{c.profiles?.full_name || 'Member'}</b>
+                    <span>{timeAgo(c.created_at)}</span>
+                    {c.profiles?.role === 'admin' || c.profiles?.role === 'superadmin' ? (
+                      <span className="chip chip--teal" style={{ padding: '1px 7px' }}>officer</span>
+                    ) : c.profiles?.role === 'moderator' ? (
+                      <span className="chip" style={{ padding: '1px 7px' }}>mod</span>
+                    ) : null}
+                  </div>
+                  <p>{c.content}</p>
+                  {(c.profiles?.id === user?.id || profile?.role === 'superadmin') && (
+                    <div className="comment-actions">
+                      <button className="comment-act comment-act--danger" onClick={() => deleteComment(c)}>Delete</button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        {user && (
+          <div className="comment-form" style={{ marginTop: 12 }}>
+            <input
+              className="input"
+              placeholder="Ask a question about this event…"
+              value={commentText}
+              maxLength={500}
+              onChange={(e) => setCommentText(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') postComment();
+              }}
+            />
+            <button className="btn btn-accent btn-sm" onClick={postComment} disabled={!commentText.trim() || commentBusy}>
+              {commentBusy ? '…' : 'Post'}
+            </button>
+          </div>
+        )}
+      </div>
 
       {isStaff && (
         <div id="attendance-list" className="panel" style={{ padding: '20px 22px' }}>

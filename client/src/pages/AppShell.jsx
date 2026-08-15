@@ -1,7 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import { supabase } from '../lib/supabase';
+import { timeAgo } from '../lib/format';
 import Avatar from '../components/Avatar';
 import { isStaff as checkStaff, isAdmin as checkAdmin, roleLabel } from '../lib/roles';
 import { HomeIcon, RssIcon, CalendarIcon, IdIcon, ShieldIcon, LogOutIcon, SearchIcon, CameraIcon, GearIcon, SunIcon, MoonIcon, CrownIcon, MenuIcon, XIcon } from '../components/icons/Icons';
@@ -21,8 +23,77 @@ export default function AppShell() {
   const navigate = useNavigate();
   const location = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState(null);
+  const [searching, setSearching] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const searchRef = useRef(null);
 
   const staff = checkStaff(profile?.role);
+  const admin = checkAdmin(profile?.role);
+
+  const runSearch = async (q) => {
+    const term = q.trim();
+    if (term.length < 2) {
+      setResults(null);
+      setSearching(false);
+      return;
+    }
+    setSearching(true);
+    const like = `%${term}%`;
+    const [posts, events, members] = await Promise.all([
+      supabase
+        .from('posts')
+        .select('id, content, created_at, profiles!posts_author_id_fkey(full_name)')
+        .ilike('content', like)
+        .order('created_at', { ascending: false })
+        .limit(4),
+      supabase
+        .from('events')
+        .select('id, title, event_date, location')
+        .ilike('title', like)
+        .order('event_date', { ascending: true })
+        .limit(4),
+      supabase
+        .from('profiles')
+        .select('id, full_name, student_id, section, year_level, avatar_url, role')
+        .or(`full_name.ilike.${like},student_id.ilike.${like}`)
+        .limit(4),
+    ]);
+    setResults({ posts: posts.data || [], events: events.data || [], members: members.data || [] });
+    setSearching(false);
+  };
+
+  // debounced live search
+  useEffect(() => {
+    if (query.trim().length < 2) {
+      setResults(null);
+      setSearching(false);
+      setSearchOpen(false);
+      return;
+    }
+    const t = setTimeout(() => {
+      setSearchOpen(true);
+      runSearch(query);
+    }, 220);
+    return () => clearTimeout(t);
+  }, [query]);
+
+  // close the dropdown on outside click
+  useEffect(() => {
+    const onClick = (e) => {
+      if (searchRef.current && !searchRef.current.contains(e.target)) setSearchOpen(false);
+    };
+    document.addEventListener('mousedown', onClick);
+    return () => document.removeEventListener('mousedown', onClick);
+  }, []);
+
+  const goto = (to) => {
+    setQuery('');
+    setResults(null);
+    setSearchOpen(false);
+    navigate(to);
+  };
 
   const title = TITLES[location.pathname] || 'codex';
 
@@ -120,9 +191,79 @@ export default function AppShell() {
             {title}
             <span className="cursor-blink" style={{ color: 'var(--accent)', fontFamily: 'var(--f-ocr)' }} />
           </span>
-          <div className="search-box">
-            <SearchIcon width={16} height={16} />
-            <input placeholder="Search the community… (coming soon)" readOnly />
+          <div className="search-wrap" ref={searchRef}>
+            <div className="search-box">
+              <SearchIcon width={16} height={16} />
+              <input
+                placeholder="Search posts, events, members…"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                onFocus={() => { if (results) setSearchOpen(true); }}
+              />
+              {searching && <span className="spinner-mini" />}
+            </div>
+            {searchOpen && results && (
+              <div className="search-panel">
+                {results.posts.length === 0 && results.events.length === 0 && results.members.length === 0 ? (
+                  <div className="search-empty">No matches for “{query.trim()}”</div>
+                ) : (
+                  <>
+                    {results.posts.length > 0 && (
+                      <>
+                        <div className="search-group">posts</div>
+                        {results.posts.map((p) => (
+                          <button key={p.id} className="search-item" onClick={() => goto('/app/feed')}>
+                            <span className="ico"><RssIcon width={15} height={15} /></span>
+                            <span style={{ flex: 1, minWidth: 0 }}>
+                              <b>{p.content}</b>
+                              <span>{p.profiles?.full_name || 'Member'} · {timeAgo(p.created_at)}</span>
+                            </span>
+                          </button>
+                        ))}
+                      </>
+                    )}
+                    {results.events.length > 0 && (
+                      <>
+                        <div className="search-group">events</div>
+                        {results.events.map((e) => (
+                          <button key={e.id} className="search-item" onClick={() => goto(`/app/events/${e.id}`)}>
+                            <span className="ico"><CalendarIcon width={15} height={15} /></span>
+                            <span style={{ flex: 1, minWidth: 0 }}>
+                              <b>{e.title}</b>
+                              <span>{e.location || 'TBA'}</span>
+                            </span>
+                          </button>
+                        ))}
+                      </>
+                    )}
+                    {results.members.length > 0 && (
+                      <>
+                        <div className="search-group">members</div>
+                        {results.members.map((m) => (
+                          admin ? (
+                            <button key={m.id} className="search-item" onClick={() => goto('/app/admin')}>
+                              <Avatar name={m.full_name} seed={m.student_id || m.id} size={30} url={m.avatar_url} />
+                              <span style={{ flex: 1, minWidth: 0 }}>
+                                <b>{m.full_name || 'Member'}</b>
+                                <span>{m.year_level} · {m.section}{m.student_id ? ` · ${m.student_id}` : ''}</span>
+                              </span>
+                            </button>
+                          ) : (
+                            <div key={m.id} className="search-item search-item--plain">
+                              <Avatar name={m.full_name} seed={m.student_id || m.id} size={30} url={m.avatar_url} />
+                              <span style={{ flex: 1, minWidth: 0 }}>
+                                <b>{m.full_name || 'Member'}</b>
+                                <span>{m.year_level} · {m.section}{m.student_id ? ` · ${m.student_id}` : ''}</span>
+                              </span>
+                            </div>
+                          )
+                        ))}
+                      </>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
           </div>
           <button
             className="icon-btn theme-toggle"
