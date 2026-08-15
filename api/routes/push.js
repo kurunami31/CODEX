@@ -12,7 +12,7 @@ function bearer(req) {
 
 const vapidPublic = env('VAPID_PUBLIC_KEY');
 const vapidPrivate = env('VAPID_PRIVATE_KEY');
-const vapidSubject = env('VAPID_SUBJECT') || 'mailto:codex@codebyters.org';
+const vapidSubject = env('VAPID_SUBJECT') || 'mailto:dorsucodex2026@gmail.com';
 const pushEnabled = Boolean(vapidPublic && vapidPrivate);
 if (pushEnabled) {
   webpush.setVapidDetails(vapidSubject, vapidPublic, vapidPrivate);
