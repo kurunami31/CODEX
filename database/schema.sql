@@ -468,7 +468,7 @@ create table if not exists public.post_comments (
   id          uuid primary key default gen_random_uuid(),
   post_id     uuid not null references public.posts(id) on delete cascade,
   author_id   uuid not null references public.profiles(id) on delete cascade,
-  content     text not null check (char_length(content) between 1 and 500),
+  content     text not null check (char_length(content) <= 500),
   created_at  timestamptz not null default now(),
   image_url   text,
   parent_id   uuid references public.post_comments(id) on delete cascade,
@@ -480,6 +480,14 @@ create table if not exists public.post_comments (
 alter table public.post_comments add column if not exists image_url text;
 alter table public.post_comments add column if not exists parent_id uuid;
 alter table public.post_comments add column if not exists updated_at timestamptz;
+
+-- allow image-only comments (empty content when a photo is attached)
+alter table public.post_comments
+  drop constraint if exists post_comments_content_check,
+  add constraint post_comments_content_check check (
+    (content is not null and char_length(content) between 1 and 500)
+    or (image_url is not null and (content is null or char_length(content) = 0))
+  );
 
 -- posts: comments disappear with the post; commenters with the account
 alter table public.post_comments
