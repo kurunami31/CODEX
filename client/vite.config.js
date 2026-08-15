@@ -7,7 +7,10 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['assets/*.gif', 'assets/*.png', 'assets/*.jpg', 'fonts/*', 'pwa-192x192.png', 'pwa-512x512.png', 'pwa-maskable-512x512.png'],
+      // NOTE: no `includeAssets` — it precaches the same public files as
+      // workbox.globPatterns below, which makes Workbox throw
+      // "add-to-cache-list-conflicting-entries" and the service worker
+      // fails to install. globPatterns already covers every asset type.
       manifest: {
         name: 'CODEX · CODEBYTERS Community',
         short_name: 'CODEX',
