@@ -6,12 +6,15 @@ import { supabase } from '../lib/supabase';
 import { timeAgo } from '../lib/format';
 import Avatar from '../components/Avatar';
 import { isStaff as checkStaff, isAdmin as checkAdmin, roleLabel } from '../lib/roles';
-import { HomeIcon, RssIcon, CalendarIcon, IdIcon, ShieldIcon, LogOutIcon, SearchIcon, CameraIcon, GearIcon, SunIcon, MoonIcon, CrownIcon, MenuIcon, XIcon } from '../components/icons/Icons';
+import { HomeIcon, RssIcon, CalendarIcon, IdIcon, ShieldIcon, LogOutIcon, SearchIcon, CameraIcon, GearIcon, SunIcon, MoonIcon, CrownIcon, MenuIcon, XIcon, TrophyIcon, CertificateIcon, GavelIcon } from '../components/icons/Icons';
 
 const TITLES = {
   '/app/feed': 'feed',
   '/app/events': 'events',
   '/app/idcard': 'my id',
+  '/app/leaderboard': 'leaderboard',
+  '/app/certificates': 'certificates',
+  '/app/elections': 'elections',
   '/app/admin': 'control',
   '/app/superadmin': 'root access',
   '/app/settings': 'settings',
@@ -101,6 +104,9 @@ export default function AppShell() {
     { to: '/app/feed', label: 'Feed', icon: <RssIcon width={20} height={20} /> },
     { to: '/app/events', label: 'Events', icon: <CalendarIcon width={20} height={20} /> },
     { to: '/app/idcard', label: 'My ID', icon: <IdIcon width={20} height={20} /> },
+    { to: '/app/leaderboard', label: 'Leaderboard', icon: <TrophyIcon width={20} height={20} /> },
+    { to: '/app/certificates', label: 'Certificates', icon: <CertificateIcon width={20} height={20} /> },
+    { to: '/app/elections', label: 'Elections', icon: <GavelIcon width={20} height={20} /> },
     { to: '/app/settings', label: 'Settings', icon: <GearIcon width={20} height={20} /> },
     ...(checkAdmin(profile?.role) ? [{ to: '/app/admin', label: 'Control', icon: <ShieldIcon width={20} height={20} /> }] : []),
     ...(profile?.role === 'superadmin' ? [{ to: '/app/superadmin', label: 'Super Admin', icon: <CrownIcon width={20} height={20} /> }] : []),

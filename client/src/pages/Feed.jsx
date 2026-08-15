@@ -14,6 +14,7 @@ import { ExternalIcon, StarIcon, GithubIcon, RssIcon, BoxIcon, ArchiveIcon, Imag
 const LIMIT = 2000;
 const POST_IMAGE_MAX = 5 * 1024 * 1024;
 const POST_IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'];
+const MAX_IMAGES = 5;
 
 export default function Feed() {
   const { user, profile } = useAuth();
@@ -22,8 +23,8 @@ export default function Feed() {
   const [posts, setPosts] = useState([]);
   const [learn, setLearn] = useState({ hn: [], gh: [] });
   const [draft, setDraft] = useState('');
-  const [imageFile, setImageFile] = useState(null);
-  const [imagePreview, setImagePreview] = useState('');
+  const [imageFiles, setImageFiles] = useState([]);
+  const [imagePreviews, setImagePreviews] = useState([]);
   const [posting, setPosting] = useState(false);
   const [loading, setLoading] = useState(true);
   const [feedError, setFeedError] = useState('');
@@ -35,7 +36,7 @@ export default function Feed() {
   const { likeCount, likedByMe, toggleLike, loadLikes } = usePostLikes(user);
   const comments = usePostComments(user);
 
-  const postSelect = 'id, author_id, content, created_at, archived, image_url, profiles!posts_author_id_fkey(id, full_name, role, year_level, avatar_url)';
+  const postSelect = 'id, author_id, content, created_at, archived, image_url, images, profiles!posts_author_id_fkey(id, full_name, role, year_level, avatar_url)';
 
   const loadPosts = useCallback(async () => {
     const { data, error } = await supabase
@@ -93,56 +94,82 @@ export default function Feed() {
     }
   };
 
-  const pickImage = (file) => {
-    if (!file) return;
-    if (!POST_IMAGE_TYPES.includes(file.type)) {
-      toast.error('Unsupported file', 'Use PNG, JPEG, WebP or GIF.');
-      return;
+  const pickImages = (files) => {
+    if (!files || files.length === 0) return;
+    const incoming = [...files];
+    const room = MAX_IMAGES - imageFiles.length;
+    if (incoming.length > room) {
+      toast.error('Too many photos', `You can attach up to ${MAX_IMAGES} images per post.`);
+      incoming.length = room;
     }
-    if (file.size > POST_IMAGE_MAX) {
-      toast.error('Image too large', 'Keep it under 5 MB.');
-      return;
+    const next = [];
+    for (const file of incoming) {
+      if (!POST_IMAGE_TYPES.includes(file.type)) {
+        toast.error('Unsupported file', 'Use PNG, JPEG, WebP or GIF.');
+        continue;
+      }
+      if (file.size > POST_IMAGE_MAX) {
+        toast.error('Image too large', 'Keep each photo under 5 MB.');
+        continue;
+      }
+      next.push(file);
     }
-    setImageFile(file);
-    setImagePreview(URL.createObjectURL(file));
+    if (next.length === 0) return;
+    setImageFiles((prev) => [...prev, ...next]);
+    setImagePreviews((prev) => [...prev, ...next.map((f) => URL.createObjectURL(f))]);
   };
 
-  const uploadImage = async () => {
-    if (!imageFile) return null;
-    const ext = imageFile.name.includes('.') ? imageFile.name.slice(imageFile.name.lastIndexOf('.')).toLowerCase() : '.png';
-    const path = `${user.id}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}${ext}`;
-    const { error: upErr } = await supabase.storage
-      .from('post-images')
-      .upload(path, imageFile, { cacheControl: '31536000' });
-    if (upErr) throw upErr;
-    const { data: { publicUrl } } = supabase.storage.from('post-images').getPublicUrl(path);
-    return { publicUrl, path };
+  const removeImageAt = (i) => {
+    URL.revokeObjectURL(imagePreviews[i]);
+    setImageFiles((prev) => prev.filter((_, idx) => idx !== i));
+    setImagePreviews((prev) => prev.filter((_, idx) => idx !== i));
+  };
+
+  const uploadImages = async () => {
+    const urls = [];
+    for (const file of imageFiles) {
+      const ext = file.name.includes('.') ? file.name.slice(file.name.lastIndexOf('.')).toLowerCase() : '.png';
+      const path = `${user.id}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}${ext}`;
+      const { error: upErr } = await supabase.storage
+        .from('post-images')
+        .upload(path, file, { cacheControl: '31536000' });
+      if (upErr) throw upErr;
+      const { data: { publicUrl } } = supabase.storage.from('post-images').getPublicUrl(path);
+      urls.push(publicUrl);
+    }
+    return urls;
   };
 
   const submitPost = async () => {
     const content = draft.trim();
-    if ((!content && !imageFile) || posting) return;
+    if ((!content && imageFiles.length === 0) || posting) return;
     setPosting(true);
-    let imageUrl = null;
-    let uploadedPath = null;
+    let uploaded = [];
     try {
-      if (imageFile) {
-        const up = await uploadImage();
-        imageUrl = up.publicUrl;
-        uploadedPath = up.path;
-        if (imagePreview) URL.revokeObjectURL(imagePreview);
-        setImageFile(null);
-        setImagePreview('');
+      if (imageFiles.length > 0) {
+        uploaded = await uploadImages();
+        imagePreviews.forEach((p) => URL.revokeObjectURL(p));
+        setImageFiles([]);
+        setImagePreviews([]);
       }
-      const { error } = await supabase.from('posts').insert({ author_id: user.id, content, image_url: imageUrl });
+      const images = uploaded.length > 0 ? uploaded : null;
+      const { error } = await supabase.from('posts').insert({
+        author_id: user.id,
+        content,
+        images,
+        image_url: images ? images[0] : null,
+      });
       if (error) throw error;
       setDraft('');
       toast.ok('Posted', 'Your message is live on the feed.');
       loadPosts();
       comments.loadCounts();
     } catch (err) {
-      // If the insert failed after the upload, remove the orphaned file.
-      if (uploadedPath) await supabase.storage.from('post-images').remove([uploadedPath]);
+      // If the insert failed after the upload, remove the orphaned files.
+      if (uploaded.length > 0) {
+        const paths = uploaded.map((u) => u.split('/storage/v1/object/public/post-images/')[1]).filter(Boolean);
+        await supabase.storage.from('post-images').remove(paths);
+      }
       toast.error('Could not post', err.message);
     } finally {
       setPosting(false);
@@ -225,21 +252,21 @@ export default function Feed() {
               }}
             />
           </div>
-          {imagePreview && (
-            <div className="composer-image">
-              <img src={imagePreview} alt="Preview" />
-              <button
-                type="button"
-                className="icon-btn composer-image-x"
-                onClick={() => {
-                  URL.revokeObjectURL(imagePreview);
-                  setImagePreview('');
-                  setImageFile(null);
-                }}
-                aria-label="Remove image"
-              >
-                <XIcon width={14} height={14} />
-              </button>
+          {imagePreviews.length > 0 && (
+            <div className="composer-images">
+              {imagePreviews.map((src, i) => (
+                <div className="composer-image" key={`${src}-${i}`}>
+                  <img src={src} alt={`Preview ${i + 1}`} />
+                  <button
+                    type="button"
+                    className="icon-btn composer-image-x"
+                    onClick={() => removeImageAt(i)}
+                    aria-label="Remove image"
+                  >
+                    <XIcon width={14} height={14} />
+                  </button>
+                </div>
+              ))}
             </div>
           )}
           <div className="foot">
@@ -248,17 +275,18 @@ export default function Feed() {
                 type="button"
                 className="btn btn-ghost btn-sm"
                 onClick={() => fileRef.current?.click()}
-                title="Attach an image"
+                title="Attach photos"
               >
-                <ImageIcon width={15} height={15} /> Photo
+                <ImageIcon width={15} height={15} /> Photo{imageFiles.length > 0 ? ` ${imageFiles.length}/${MAX_IMAGES}` : ''}
               </button>
               <input
                 ref={fileRef}
                 type="file"
                 accept={POST_IMAGE_TYPES.join(',')}
+                multiple
                 style={{ display: 'none' }}
                 onChange={(e) => {
-                  pickImage(e.target.files?.[0]);
+                  pickImages(e.target.files);
                   e.target.value = '';
                 }}
               />
@@ -267,7 +295,7 @@ export default function Feed() {
             <button
               className="btn btn-accent btn-sm"
               onClick={submitPost}
-              disabled={(!draft.trim() && !imageFile) || posting}
+              disabled={(!draft.trim() && imageFiles.length === 0) || posting}
             >
               {posting ? 'Posting…' : 'Post'}
             </button>

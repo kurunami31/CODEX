@@ -16,6 +16,9 @@ const MyId = lazy(() => import('./pages/MyId'));
 const Profile = lazy(() => import('./pages/Profile'));
 const ProfileSettings = lazy(() => import('./pages/ProfileSettings'));
 const ScannerPage = lazy(() => import('./pages/ScannerPage'));
+const Leaderboard = lazy(() => import('./pages/Leaderboard'));
+const Certificates = lazy(() => import('./pages/Certificates'));
+const Elections = lazy(() => import('./pages/Elections'));
 const Admin = lazy(() => import('./pages/Admin'));
 const SuperAdmin = lazy(() => import('./pages/SuperAdmin'));
 
@@ -122,6 +125,9 @@ export default function App() {
           <Route path="events" element={<Events />} />
           <Route path="events/:id" element={<Lazy><EventDetail /></Lazy>} />
           <Route path="idcard" element={<Lazy><MyId /></Lazy>} />
+          <Route path="leaderboard" element={<Lazy><Leaderboard /></Lazy>} />
+          <Route path="certificates" element={<Lazy><Certificates /></Lazy>} />
+          <Route path="elections" element={<Lazy><Elections /></Lazy>} />
           <Route path="settings" element={<Lazy><ProfileSettings /></Lazy>} />
           <Route path="scanner/:eventId" element={<Lazy><ScannerPage /></Lazy>} />
           <Route

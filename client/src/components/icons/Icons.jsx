@@ -365,6 +365,15 @@ export function MailIcon(props) {
   );
 }
 
+export function UnlockIcon(props) {
+  return (
+    <svg {...base} {...props}>
+      <rect x="4.5" y="10.5" width="15" height="10.5" rx="2.5" />
+      <path d="M8 10.5V7.8a4 4 0 0 1 7.4-2.2" />
+    </svg>
+  );
+}
+
 export function SunIcon(props) {
   return (
     <svg {...base} {...props}>
@@ -452,6 +461,36 @@ export function WrenchIcon(props) {
   return (
     <svg {...base} {...props}>
       <path d="M14.5 6.5a4.5 4.5 0 0 0-6.1 6.1L3 18l3 3 5.4-5.4a4.5 4.5 0 0 0 6.1-6.1l-3 3-3-3 3-3z" />
+    </svg>
+  );
+}
+
+export function TrophyIcon(props) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M7 4h10v4a5 5 0 0 1-10 0V4Z" />
+      <path d="M7 5H4a3 3 0 0 0 3 3M17 5h3a3 3 0 0 1-3 3" />
+      <path d="M12 13v4M8.5 20h7M10 20h4" />
+    </svg>
+  );
+}
+
+export function GavelIcon(props) {
+  return (
+    <svg {...base} {...props}>
+      <path d="m13 5 6 6-2 2-6-6 2-2Z" />
+      <path d="m9 9 6 6" />
+      <path d="m6 12 2-2-2.5-2.5a2 2 0 0 1 0-2.8l1.8-1.8a2 2 0 0 1 2.8 0L12 5.5 10 7.5M3 21h8" />
+    </svg>
+  );
+}
+
+export function CertificateIcon(props) {
+  return (
+    <svg {...base} {...props}>
+      <rect x="3" y="5" width="18" height="14" rx="2" />
+      <path d="M12 16.5 10 18l-.6-1.8L8 16l1.4-1-.2-1.8 1.9.6 1.9-.6-.2 1.8 1.4 1-1.4.2L12 16.5Z" />
+      <path d="M8 9h8M8 12h5" />
     </svg>
   );
 }

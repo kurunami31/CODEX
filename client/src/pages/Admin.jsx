@@ -47,7 +47,7 @@ export default function Admin() {
   const loadUnpaid = useCallback(async () => {
     const { data, error } = await supabase
       .from('profiles')
-      .select('id, full_name, student_id, year_level, section, created_at')
+      .select('id, full_name, student_id, year_level, section, created_at, receipt_url')
       .eq('membership_paid', false)
       .order('created_at', { ascending: true });
     if (error) toast.error('Membership error', error.message);
@@ -213,6 +213,7 @@ export default function Admin() {
                   <th>id no.</th>
                   <th>year / section</th>
                   <th>joined</th>
+                  <th>proof</th>
                   <th>confirm</th>
                 </tr>
               </thead>
@@ -226,6 +227,15 @@ export default function Admin() {
                     <td style={{ fontFamily: 'var(--f-ocr)', fontSize: 12 }}>{p.student_id}</td>
                     <td>{p.year_level} · {p.section}</td>
                     <td style={{ whiteSpace: 'nowrap', color: 'var(--muted)', fontSize: 12 }}>{timeAgo(p.created_at)}</td>
+                    <td>
+                      {p.receipt_url ? (
+                        <a href={p.receipt_url} target="_blank" rel="noreferrer" className="receipt-mini" title="Open receipt in a new tab">
+                          <img src={p.receipt_url} alt="Payment receipt" loading="lazy" />
+                        </a>
+                      ) : (
+                        <span className="ocr-label" style={{ fontSize: 9 }}>no proof yet</span>
+                      )}
+                    </td>
                     <td>
                       <button
                         className="btn btn-accent btn-sm"

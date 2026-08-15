@@ -691,6 +691,231 @@ create policy "postimages_own_delete" on storage.objects
   using (bucket_id = 'post-images' and (storage.foldername(name))[1] = auth.uid()::text);
 
 -- ============================================================
+--  FEATURE PACK: dues receipts · points · leaderboard ·
+--  certificates · elections · push · multi-photo posts
+-- ============================================================
+
+-- ── Multi-photo posts: `images` (array of URLs) + legacy `image_url` ──
+alter table public.posts add column if not exists images jsonb;
+
+-- ── Dues receipt: members upload payment proof; staff view it ──
+alter table public.profiles add column if not exists receipt_url text;
+
+-- ── Points: +5 for a post, +10 for attending an event ──
+alter table public.profiles add column if not exists points integer not null default 0;
+
+create or replace function public.award_post_points()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  update public.profiles set points = points + 5 where id = new.author_id;
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_posts_award_points on public.posts;
+create trigger trg_posts_award_points
+  after insert on public.posts
+  for each row execute function public.award_post_points();
+
+-- Attendance awards +10 only on a NEW scan (duplicates earn nothing).
+-- Re-declares mark_attendance so existing deployments get the new logic.
+create or replace function public.mark_attendance(
+  p_event_id uuid,
+  p_student_id text
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_role    text := public.get_my_role();
+  v_profile record;
+  v_result  jsonb;
+begin
+  if v_role not in ('admin','moderator','superadmin') then
+    raise exception 'Insufficient permissions: only moderators and admins can mark attendance';
+  end if;
+
+  if not exists (select 1 from public.events where id = p_event_id) then
+    raise exception 'Event not found';
+  end if;
+
+  select p.* into v_profile
+  from public.profiles p
+  where p.student_id = p_student_id;
+
+  if v_profile is null then
+    raise exception 'No student found with ID %', p_student_id;
+  end if;
+
+  if v_profile.course <> 'BSIT' then
+    raise exception 'Attendance is reserved for BSIT students';
+  end if;
+
+  if not exists (select 1 from public.attendance a
+                 where a.event_id = p_event_id and a.student_id = p_student_id) then
+    insert into public.attendance (event_id, student_id, scanned_by)
+    values (p_event_id, p_student_id, auth.uid());
+    update public.profiles set points = points + 10 where student_id = p_student_id;
+  end if;
+
+  select jsonb_build_object(
+    'status', case when exists (
+      select 1 from public.attendance a
+      where a.event_id = p_event_id and a.student_id = p_student_id
+    ) then 'present' else 'duplicate' end,
+    'student', jsonb_build_object(
+      'student_id', v_profile.student_id,
+      'full_name', v_profile.full_name,
+      'year_level', v_profile.year_level,
+      'section',   v_profile.section,
+      'course',    v_profile.course
+    )
+  ) into v_result;
+
+  return v_result;
+end;
+$$;
+
+grant execute on function public.mark_attendance(uuid, text) to authenticated;
+
+-- ── Elections: digital voting for org officers ──
+create table if not exists public.elections (
+  id          uuid primary key default gen_random_uuid(),
+  title       text not null,
+  description text,
+  open        boolean not null default false,
+  created_by  uuid references auth.users(id) on delete set null,
+  created_at  timestamptz not null default now()
+);
+
+create table if not exists public.election_candidates (
+  id          uuid primary key default gen_random_uuid(),
+  election_id uuid not null references public.elections(id) on delete cascade,
+  user_id     uuid not null references public.profiles(id) on delete cascade,
+  position    text not null,
+  platform    text,
+  created_at  timestamptz not null default now(),
+  unique (election_id, user_id, position)
+);
+
+-- One row per (voter, position) so a member casts one vote for each
+-- office (president, vp, secretary…) — the unique constraint rejects a
+-- second vote in the same position while still allowing one per office.
+create table if not exists public.election_votes (
+  id           uuid primary key default gen_random_uuid(),
+  election_id  uuid not null references public.elections(id) on delete cascade,
+  voter_id     uuid not null references public.profiles(id) on delete cascade,
+  candidate_id uuid not null references public.election_candidates(id) on delete cascade,
+  position     text not null,
+  created_at   timestamptz not null default now(),
+  unique (election_id, voter_id, position)
+);
+
+alter table public.elections enable row level security;
+alter table public.election_candidates enable row level security;
+alter table public.election_votes enable row level security;
+revoke all on table public.elections, public.election_candidates, public.election_votes from anon;
+
+drop policy if exists "elections_select_all" on public.elections;
+drop policy if exists "elections_admin_write" on public.elections;
+drop policy if exists "election_candidates_select_all" on public.election_candidates;
+drop policy if exists "election_candidates_admin_write" on public.election_candidates;
+drop policy if exists "election_candidates_admin_delete" on public.election_candidates;
+drop policy if exists "election_votes_select_own" on public.election_votes;
+drop policy if exists "election_votes_insert_own" on public.election_votes;
+
+create policy "elections_select_all" on public.elections
+  for select to authenticated using (true);
+create policy "elections_admin_write" on public.elections
+  for insert to authenticated
+  with check ((select role from public.profiles where id = auth.uid()) in ('admin','superadmin'));
+create policy "elections_admin_update" on public.elections
+  for update to authenticated
+  using ((select role from public.profiles where id = auth.uid()) in ('admin','superadmin'))
+  with check ((select role from public.profiles where id = auth.uid()) in ('admin','superadmin'));
+create policy "election_candidates_select_all" on public.election_candidates
+  for select to authenticated using (true);
+create policy "election_candidates_admin_write" on public.election_candidates
+  for insert to authenticated
+  with check ((select role from public.profiles where id = auth.uid()) in ('admin','superadmin'));
+create policy "election_candidates_admin_delete" on public.election_candidates
+  for delete to authenticated
+  using ((select role from public.profiles where id = auth.uid()) in ('admin','superadmin'));
+create policy "election_votes_select_own" on public.election_votes
+  for select to authenticated using (voter_id = auth.uid());
+create policy "election_votes_insert_own" on public.election_votes
+  for insert to authenticated
+  with check (voter_id = auth.uid()
+    and exists (
+      select 1 from public.elections e
+      join public.election_candidates c on c.election_id = e.id
+      where e.id = election_id and e.open and c.id = candidate_id
+        and c.position = position
+    ));
+
+-- Tally RPC: staff only. Returns candidate vote counts per position.
+create or replace function public.election_tally(p_election_id uuid)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_role text := public.get_my_role();
+  v_rows jsonb;
+begin
+  if v_role not in ('admin','moderator','superadmin') then
+    raise exception 'Insufficient permissions';
+  end if;
+
+  select coalesce(jsonb_agg(row_to_jsonb(t) order by t.position, t.votes desc), '[]'::jsonb)
+  into v_rows
+  from (
+    select c.id as candidate_id, c.position, c.user_id, p.full_name, p.section,
+           count(v.voter_id)::int as votes
+    from public.election_candidates c
+    join public.profiles p on p.id = c.user_id
+    left join public.election_votes v on v.candidate_id = c.id
+    where c.election_id = p_election_id
+    group by c.id, c.position, c.user_id, p.full_name, p.section
+  ) t;
+
+  return v_rows;
+end;
+$$;
+
+grant execute on function public.election_tally(uuid) to authenticated;
+
+-- ── Push notifications: one row per device subscription ──
+create table if not exists public.push_subscriptions (
+  id         uuid primary key default gen_random_uuid(),
+  user_id    uuid not null references auth.users(id) on delete cascade,
+  endpoint   text not null,
+  keys       jsonb not null,
+  created_at timestamptz not null default now(),
+  unique (endpoint)
+);
+
+alter table public.push_subscriptions enable row level security;
+revoke all on table public.push_subscriptions from anon;
+
+drop policy if exists "push_subscriptions_select_own" on public.push_subscriptions;
+drop policy if exists "push_subscriptions_insert_own" on public.push_subscriptions;
+drop policy if exists "push_subscriptions_delete_own" on public.push_subscriptions;
+create policy "push_subscriptions_select_own" on public.push_subscriptions
+  for select to authenticated using (user_id = auth.uid());
+create policy "push_subscriptions_insert_own" on public.push_subscriptions
+  for insert to authenticated with check (user_id = auth.uid());
+create policy "push_subscriptions_delete_own" on public.push_subscriptions
+  for delete to authenticated using (user_id = auth.uid());
+
+-- ============================================================
 --  GOING LIVE — no demo accounts are seeded.
 --  New sign-ups create their own auth user + profile, so the
 --  old demo rows are intentionally omitted (they used to reserve

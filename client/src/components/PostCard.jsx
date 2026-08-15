@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Avatar from './Avatar';
 import CommentItem, { pickCommentImage } from './CommentItem';
@@ -26,6 +26,7 @@ export default function PostCard({
   const [commentImageFile, setCommentImageFile] = useState(null);
   const [commentImagePreview, setCommentImagePreview] = useState('');
   const [lightbox, setLightbox] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
   const menuRef = useRef(null);
   const menuBtnRef = useRef(null);
   const commentInputRef = useRef(null);
@@ -51,14 +52,26 @@ export default function PostCard({
     };
   }, [menuOpen]);
 
+  const images = useMemo(
+    () => (Array.isArray(post.images) && post.images.length > 0 ? post.images : post.image_url ? [post.image_url] : []),
+    [post.images, post.image_url]
+  );
+
   useEffect(() => {
     if (!lightbox) return;
     const onKey = (e) => {
       if (e.key === 'Escape') setLightbox(false);
+      if (e.key === 'ArrowRight') setLightboxIndex((i) => (i + 1) % images.length);
+      if (e.key === 'ArrowLeft') setLightboxIndex((i) => (i - 1 + images.length) % images.length);
     };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
-  }, [lightbox]);
+  }, [lightbox, images.length]);
+
+  const openLightbox = (i) => {
+    setLightboxIndex(i);
+    setLightbox(true);
+  };
 
   const goProfile = () => {
     const id = author?.id || post.author_id;
@@ -161,15 +174,30 @@ export default function PostCard({
       ) : (
         <>
           <p className="post-body">{post.content}</p>
-          {post.image_url && (
+          {images.length === 1 && (
             <button
               type="button"
               className="post-image-btn"
-              onClick={() => setLightbox(true)}
+              onClick={() => openLightbox(0)}
               aria-label="View post image"
             >
-              <img src={post.image_url} alt="" className="post-image" loading="lazy" />
+              <img src={images[0]} alt="" className="post-image" loading="lazy" />
             </button>
+          )}
+          {images.length > 1 && (
+            <div className="post-gallery">
+              {images.map((src, i) => (
+                <button
+                  type="button"
+                  key={src}
+                  className={`post-gallery-item${i === 0 ? ' post-gallery-item--lead' : ''}`}
+                  onClick={() => openLightbox(i)}
+                  aria-label={`View photo ${i + 1}`}
+                >
+                  <img src={src} alt="" loading="lazy" />
+                </button>
+              ))}
+            </div>
           )}
           <div className="post-actions">
             <button className={liked ? 'button--liked' : ''} onClick={onLike}>
@@ -275,13 +303,32 @@ export default function PostCard({
         </div>
       )}
 
-      {lightbox && post.image_url && (
+      {lightbox && images.length > 0 && (
         <div className="modal-back" onMouseDown={(e) => e.target === e.currentTarget && setLightbox(false)}>
           <div className="lightbox">
             <button className="icon-btn lightbox-close" onClick={() => setLightbox(false)} aria-label="Close">
               <XIcon width={18} height={18} />
             </button>
-            <img src={post.image_url} alt="Post" />
+            {images.length > 1 && (
+              <button
+                className="lightbox-nav lightbox-nav--prev"
+                onClick={(e) => { e.stopPropagation(); setLightboxIndex((i) => (i - 1 + images.length) % images.length); }}
+                aria-label="Previous photo"
+              >
+                ‹
+              </button>
+            )}
+            <img src={images[lightboxIndex]} alt="Post" />
+            {images.length > 1 && (
+              <button
+                className="lightbox-nav lightbox-nav--next"
+                onClick={(e) => { e.stopPropagation(); setLightboxIndex((i) => (i + 1) % images.length); }}
+                aria-label="Next photo"
+              >
+                ›
+              </button>
+            )}
+            {images.length > 1 && <span className="lightbox-count">{lightboxIndex + 1} / {images.length}</span>}
           </div>
         </div>
       )}

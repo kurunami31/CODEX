@@ -7,6 +7,7 @@ import feedRouter from './routes/feed.js';
 import chatRouter from './routes/chat.js';
 import attendanceRouter from './routes/attendance.js';
 import adminRouter from './routes/admin.js';
+import pushRouter from './routes/push.js';
 
 const app = express();
 
@@ -102,6 +103,7 @@ app.use('/api/feed', feedRouter);
 app.use('/api/chat', chatLimiter, chatRouter);
 app.use('/api', staffLimiter, attendanceRouter);
 app.use('/api/admin', staffLimiter, adminRouter);
+app.use('/api', pushRouter);
 app.use('/api', (_req, res) => {
   res.status(404).json({ error: 'Not found' });
 });

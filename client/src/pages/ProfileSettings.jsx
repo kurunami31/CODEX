@@ -1,11 +1,12 @@
-import { useState, useRef } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import Avatar from '../components/Avatar';
 import { roleLabel } from '../lib/roles';
 import { useFontScale, TEXT_SCALES } from '../context/FontScaleContext';
-import { CameraIcon, IdIcon, ShieldIcon, MailIcon, LockIcon, CheckIcon } from '../components/icons/Icons';
+import { enablePush, disablePush, hasLocalSubscription, isSupported } from '../lib/push';
+import { CameraIcon, IdIcon, ShieldIcon, MailIcon, LockIcon, CheckIcon, WalletIcon, ImageIcon, BellIcon, XIcon } from '../components/icons/Icons';
 
 const YEAR_LEVELS = ['1st Year', '2nd Year', '3rd Year', '4th Year'];
 const MAX_AVATAR_BYTES = 3 * 1024 * 1024;
@@ -24,8 +25,90 @@ export default function ProfileSettings() {
     yearLevel: profile?.year_level || YEAR_LEVELS[0],
     section: profile?.section || '',
   }));
+  const [receiptBusy, setReceiptBusy] = useState(false);
+  const receiptRef = useRef(null);
+  const [pushOn, setPushOn] = useState(false);
+  const [pushBusy, setPushBusy] = useState(false);
+  const [pushSupported, setPushSupported] = useState(false);
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      const supported = isSupported();
+      if (alive) setPushSupported(supported);
+      if (supported) {
+        const on = await hasLocalSubscription();
+        if (alive) setPushOn(on);
+      }
+    })();
+    return () => { alive = false; };
+  }, []);
 
   if (!profile) return null;
+
+  const uploadReceipt = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file || receiptBusy) return;
+    const okTypes = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'];
+    if (!okTypes.includes(file.type)) return toast.error('Unsupported format', 'Use PNG, JPG, WEBP or GIF.');
+    if (file.size > 5 * 1024 * 1024) return toast.error('File too large', 'Keep it under 5 MB.');
+    setReceiptBusy(true);
+    try {
+      const ext = file.name.includes('.') ? file.name.slice(file.name.lastIndexOf('.')).toLowerCase() : '.png';
+      const path = `receipts/${user.id}/receipt${ext}`;
+      const { error: upErr } = await supabase.storage.from('post-images').upload(path, file, { upsert: true, cacheControl: '31536000' });
+      if (upErr) throw upErr;
+      const { data: { publicUrl } } = supabase.storage.from('post-images').getPublicUrl(path);
+      const { error: dbErr } = await supabase.from('profiles').update({ receipt_url: `${publicUrl}?v=${Date.now()}` }).eq('id', user.id);
+      if (dbErr) throw dbErr;
+      refreshProfile();
+      toast.ok('Receipt uploaded', 'An officer will verify your payment.');
+    } catch (err) {
+      toast.error('Upload failed', err.message);
+    } finally {
+      setReceiptBusy(false);
+    }
+  };
+
+  const removeReceipt = async () => {
+    if (receiptBusy) return;
+    setReceiptBusy(true);
+    try {
+      const filePath = new URL(profile.receipt_url).pathname.replace(/^\/storage\/v1\/object\/public\/post-images\//, '');
+      await supabase.storage.from('post-images').remove([filePath]);
+      const { error } = await supabase.from('profiles').update({ receipt_url: null }).eq('id', user.id);
+      if (error) throw error;
+      refreshProfile();
+    } catch (err) {
+      toast.error('Could not remove', err.message);
+    } finally {
+      setReceiptBusy(false);
+    }
+  };
+
+  const togglePush = async () => {
+    if (pushBusy) return;
+    setPushBusy(true);
+    if (pushOn) {
+      await disablePush();
+      setPushOn(false);
+      toast.info('Notifications off', 'You won\'t get push alerts on this device.');
+    } else {
+      const res = await enablePush(user.id);
+      if (res.ok) {
+        setPushOn(true);
+        toast.ok('Notifications on', 'We\'ll ping you about events and replies.');
+      } else if (res.reason === 'denied') {
+        toast.error('Permission denied', 'Allow notifications in your browser settings to enable this.');
+      } else if (res.reason === 'not-configured') {
+        toast.info('Coming soon', 'Push isn\'t configured on the server yet — no action needed.');
+      } else if (res.reason !== 'unsupported') {
+        toast.error('Could not subscribe', res.reason);
+      }
+    }
+    setPushBusy(false);
+  };
 
   const pickAvatar = (e) => {
     const file = e.target.files?.[0];
@@ -192,6 +275,75 @@ export default function ProfileSettings() {
             {busy ? 'Saving…' : 'Save changes'}
           </button>
         </form>
+      </div>
+
+      <div className="section-title">
+        <WalletIcon width={14} height={14} /> membership dues
+      </div>
+      <div className="panel" style={{ padding: 18, display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div className="settings-row">
+          <span className="settings-key"><CheckIcon width={15} height={15} /> Status</span>
+          <span className="settings-val">
+            {profile.membership_paid ? (
+              <span className="chip chip--ok"><CheckIcon width={11} height={11} /> dues paid{profile.membership_paid_at ? ` · ${new Date(profile.membership_paid_at).toLocaleDateString()}` : ''}</span>
+            ) : (
+              <span className="chip chip--warn"><WalletIcon width={11} height={11} /> dues unpaid</span>
+            )}
+          </span>
+        </div>
+
+        {!profile.membership_paid && (
+          <div className="receipt-box">
+            {profile.receipt_url ? (
+              <div className="receipt-row">
+                <a href={profile.receipt_url} target="_blank" rel="noreferrer" className="receipt-thumb">
+                  <img src={profile.receipt_url} alt="Payment receipt" />
+                </a>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <b style={{ fontSize: 14 }}>Receipt uploaded</b>
+                  <span className="ocr-label" style={{ display: 'block' }}>waiting for an officer to confirm</span>
+                </div>
+                <button className="icon-btn" onClick={removeReceipt} disabled={receiptBusy} title="Remove receipt" aria-label="Remove receipt">
+                  <XIcon width={15} height={15} />
+                </button>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                <button className="btn btn-outline btn-sm" onClick={() => receiptRef.current?.click()} disabled={receiptBusy}>
+                  <ImageIcon width={14} height={14} /> {receiptBusy ? 'Uploading…' : 'Upload payment proof'}
+                </button>
+                <input ref={receiptRef} type="file" accept="image/png,image/jpeg,image/webp,image/gif" style={{ display: 'none' }} onChange={uploadReceipt} />
+                <span className="ocr-label">gcash / bank transfer screenshot · png, jpg, webp, gif · max 5 mb</span>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      <div className="section-title">
+        <BellIcon width={14} height={14} /> notifications
+      </div>
+      <div className="panel" style={{ padding: 18, display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div className="settings-row">
+          <span className="settings-key"><BellIcon width={15} height={15} /> Push alerts</span>
+          <button
+            type="button"
+            className={`switch${pushOn ? ' switch--on' : ''}`}
+            onClick={togglePush}
+            disabled={pushBusy || !pushSupported}
+            aria-pressed={pushOn}
+            aria-label="Toggle push notifications"
+          >
+            <span className="switch-knob" />
+          </button>
+        </div>
+        <p className="ocr-label" style={{ margin: 0 }}>
+          {pushOn
+            ? <><CheckIcon width={12} height={12} style={{ verticalAlign: -2 }} /> this device is subscribed — event alerts and comment replies will ping you.</>
+            : pushSupported
+              ? 'Turn on to get notified about new events and replies on your posts.'
+              : 'Push alerts aren\'t available in this browser.'}
+        </p>
       </div>
 
       <div className="section-title">

@@ -29,7 +29,7 @@ export default function Profile() {
   const { likeCount, likedByMe, toggleLike, loadLikes } = usePostLikes(user);
   const comments = usePostComments(user);
 
-  const postSelect = 'id, author_id, content, created_at, archived, image_url, profiles!posts_author_id_fkey(id, full_name, role, year_level, avatar_url)';
+  const postSelect = 'id, author_id, content, created_at, archived, image_url, images, profiles!posts_author_id_fkey(id, full_name, role, year_level, avatar_url)';
 
   const loadAuthor = useCallback(async () => {
     const { data, error } = await supabase.from('profiles').select('*').eq('id', id).maybeSingle();

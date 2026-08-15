@@ -37,11 +37,14 @@ export default function usePostActions({ user, toast, refresh }) {
     if (!window.confirm('Delete this post permanently? Likes on it are removed too.')) return;
     const { error } = await supabase.from('posts').delete().eq('id', post.id).eq('author_id', user.id);
     if (error) return toast.error('Could not delete', error.message);
-    // Clean up the uploaded image so the bucket doesn't fill with orphans.
-    if (post.image_url) {
-      const path = post.image_url.split('/storage/v1/object/public/post-images/')[1];
-      if (path) await supabase.storage.from('post-images').remove([path]);
-    }
+    // Clean up uploaded images so the bucket doesn't fill with orphans.
+    const paths = [
+      ...(Array.isArray(post.images) ? post.images : []),
+      ...(post.image_url ? [post.image_url] : []),
+    ]
+      .map((u) => u.split('/storage/v1/object/public/post-images/')[1])
+      .filter(Boolean);
+    if (paths.length > 0) await supabase.storage.from('post-images').remove(paths);
     toast.ok('Deleted', 'Post removed permanently.');
     refresh();
   }, [user, toast, refresh]);

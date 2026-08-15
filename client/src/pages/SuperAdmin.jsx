@@ -95,7 +95,7 @@ export default function SuperAdmin() {
     setLoadingPosts(true);
     const { data, error } = await supabase
       .from('posts')
-      .select('id, content, created_at, archived, author_id, image_url, profiles!posts_author_id_fkey(id, full_name, role, avatar_url, student_id)')
+      .select('id, content, created_at, archived, author_id, image_url, images, profiles!posts_author_id_fkey(id, full_name, role, avatar_url, student_id)')
       .order('created_at', { ascending: false })
       .limit(300);
     if (error) toast.error('Posts error', error.message);
@@ -168,11 +168,14 @@ export default function SuperAdmin() {
     if (!window.confirm('Delete this post permanently?')) return;
     const { error } = await supabase.from('posts').delete().eq('id', p.id);
     if (error) return toast.error('Delete failed', error.message);
-    // Clean up the uploaded image so the bucket doesn't fill with orphans.
-    if (p.image_url) {
-      const path = p.image_url.split('/storage/v1/object/public/post-images/')[1];
-      if (path) await supabase.storage.from('post-images').remove([path]);
-    }
+    // Clean up uploaded images so the bucket doesn't fill with orphans.
+    const paths = [
+      ...(Array.isArray(p.images) ? p.images : []),
+      ...(p.image_url ? [p.image_url] : []),
+    ]
+      .map((u) => u.split('/storage/v1/object/public/post-images/')[1])
+      .filter(Boolean);
+    if (paths.length > 0) await supabase.storage.from('post-images').remove(paths);
     toast.ok('Post deleted', 'Removed from the community feed.');
     setPosts((prev) => prev.filter((x) => x.id !== p.id));
   };
