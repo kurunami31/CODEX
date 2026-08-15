@@ -1,9 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Avatar from './Avatar';
-import { formatEventDate, timeAgo } from '../lib/format';
+import CommentItem, { pickCommentImage } from './CommentItem';
+import { COMMENT_IMAGE_TYPES } from '../lib/usePostComments';
+import { useToast } from '../context/ToastContext';
+import { formatEventDate } from '../lib/format';
 import { roleLabel } from '../lib/roles';
-import { HeartIcon, ShareIcon, PencilIcon, TrashIcon, ArchiveIcon, MenuDotsIcon, CommentIcon, XIcon } from './icons/Icons';
+import { HeartIcon, ShareIcon, PencilIcon, TrashIcon, ArchiveIcon, MenuDotsIcon, CommentIcon, ImageIcon, XIcon } from './icons/Icons';
 
 const LIMIT = 2000;
 const COMMENT_LIMIT = 500;
@@ -11,18 +14,22 @@ const COMMENT_LIMIT = 500;
 export default function PostCard({
   post, liked, likeCount, onLike, onShare, mine, manage,
   editing, editDraft, onEditStart, onEditCancel, onEditChange, onEditSave, saving, onArchive, onDelete,
-  commentCount = 0, commentsOpen = false, onCommentsToggle, comments = null, onAddComment, onDeleteComment,
+  commentCount = 0, commentsOpen = false, onCommentsToggle, comments = null, onAddComment, onEditComment, onDeleteComment,
   commentsBusy = false, currentUserId, canModerate = false,
 }) {
   const author = post.profiles;
   const when = formatEventDate(post.created_at);
   const navigate = useNavigate();
+  const toast = useToast();
   const [menuOpen, setMenuOpen] = useState(false);
   const [commentDraft, setCommentDraft] = useState('');
+  const [commentImageFile, setCommentImageFile] = useState(null);
+  const [commentImagePreview, setCommentImagePreview] = useState('');
   const [lightbox, setLightbox] = useState(false);
   const menuRef = useRef(null);
   const menuBtnRef = useRef(null);
   const commentInputRef = useRef(null);
+  const commentFileRef = useRef(null);
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -65,10 +72,26 @@ export default function PostCard({
   };
 
   const submitComment = async () => {
-    if (!commentDraft.trim() || commentsBusy || !onAddComment) return;
-    const { error } = await onAddComment(post.id, commentDraft);
-    if (!error) setCommentDraft('');
-    else commentInputRef.current?.focus();
+    if ((!commentDraft.trim() && !commentImageFile) || commentsBusy || !onAddComment) return;
+    const { error } = await onAddComment(post.id, commentDraft, commentImageFile);
+    if (!error) {
+      setCommentDraft('');
+      if (commentImagePreview) URL.revokeObjectURL(commentImagePreview);
+      setCommentImageFile(null);
+      setCommentImagePreview('');
+    } else {
+      commentInputRef.current?.focus();
+    }
+  };
+
+  const attachCommentImage = (file) => {
+    const res = pickCommentImage(file);
+    if (res.error) {
+      toast.error('Image', res.error);
+      return;
+    }
+    setCommentImageFile(res.file);
+    if (res.file) setCommentImagePreview(URL.createObjectURL(res.file));
   };
 
   return (
@@ -172,51 +195,80 @@ export default function PostCard({
           ) : comments.length === 0 ? (
             <div className="post-comments-empty">No comments yet — start the convo.</div>
           ) : (
-            comments.map((c) => (
-              <div className="comment" key={c.id}>
-                <Avatar name={c.profiles?.full_name} seed={c.author_id} size={30} url={c.profiles?.avatar_url} />
-                <div className="comment-body">
-                  <div className="comment-meta">
-                    <b>{c.profiles?.full_name || 'Member'}</b>
-                    <span>{timeAgo(c.created_at)}</span>
-                    {(c.author_id === currentUserId || canModerate) && (
-                      <button
-                        type="button"
-                        className="comment-del"
-                        onClick={() => onDeleteComment?.(post.id, c.id)}
-                        aria-label="Delete comment"
-                        title="Delete comment"
-                      >
-                        <XIcon width={12} height={12} />
-                      </button>
-                    )}
-                  </div>
-                  <p>{c.content}</p>
-                </div>
-              </div>
-            ))
+            comments
+              .filter((c) => !c.parent_id)
+              .map((c) => (
+                <CommentItem
+                  key={c.id}
+                  comment={c}
+                  currentUserId={currentUserId}
+                  canModerate={canModerate}
+                  busy={commentsBusy}
+                  onReply={(com, text, img) => onAddComment(post.id, text, img, com.parent_id || com.id)}
+                  onEdit={(com, text, img) => onEditComment?.(post.id, com.id, text, img)}
+                  onDelete={(com) => onDeleteComment?.(post.id, com.id)}
+                  replies={comments.filter((r) => r.parent_id === c.id)}
+                />
+              ))
           )}
           {onAddComment && (
-            <div className="comment-form">
-              <input
-                ref={commentInputRef}
-                className="input"
-                placeholder="Write a comment…"
-                value={commentDraft}
-                maxLength={COMMENT_LIMIT}
-                onChange={(e) => setCommentDraft(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') submitComment();
-                }}
-              />
-              <button
-                className="btn btn-accent btn-sm"
-                onClick={submitComment}
-                disabled={!commentDraft.trim() || commentsBusy}
-              >
-                {commentsBusy ? '…' : 'Post'}
-              </button>
-            </div>
+            <>
+              <div className="comment-form">
+                <input
+                  ref={commentInputRef}
+                  className="input"
+                  placeholder="Write a comment…"
+                  value={commentDraft}
+                  maxLength={COMMENT_LIMIT}
+                  onChange={(e) => setCommentDraft(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') submitComment();
+                  }}
+                />
+                <button
+                  type="button"
+                  className="btn btn-ghost btn-sm"
+                  onClick={() => commentFileRef.current?.click()}
+                  title="Attach an image"
+                >
+                  <ImageIcon width={14} height={14} /> Photo
+                </button>
+                <input
+                  ref={commentFileRef}
+                  type="file"
+                  accept={COMMENT_IMAGE_TYPES.join(',')}
+                  style={{ display: 'none' }}
+                  onChange={(e) => {
+                    attachCommentImage(e.target.files?.[0]);
+                    e.target.value = '';
+                  }}
+                />
+                <button
+                  className="btn btn-accent btn-sm"
+                  onClick={submitComment}
+                  disabled={(!commentDraft.trim() && !commentImageFile) || commentsBusy}
+                >
+                  {commentsBusy ? '…' : 'Post'}
+                </button>
+              </div>
+              {commentImagePreview && (
+                <div className="comment-form-image">
+                  <img src={commentImagePreview} alt="Preview" />
+                  <button
+                    type="button"
+                    className="icon-btn composer-image-x"
+                    onClick={() => {
+                      URL.revokeObjectURL(commentImagePreview);
+                      setCommentImagePreview('');
+                      setCommentImageFile(null);
+                    }}
+                    aria-label="Remove image"
+                  >
+                    <XIcon width={14} height={14} />
+                  </button>
+                </div>
+              )}
+            </>
           )}
         </div>
       )}

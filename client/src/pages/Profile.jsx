@@ -103,7 +103,8 @@ export default function Profile() {
         onLike={() => toggleLike(post.id)}
         onShare={() => sharePost(post)}
         onCommentsToggle={() => comments.toggle(post.id)}
-        onAddComment={(pid, text) => comments.addComment(pid, text)}
+        onAddComment={(pid, text, imageFile, parentId) => comments.addComment(pid, text, imageFile, parentId)}
+        onEditComment={(pid, cid, text, imageFile) => comments.updateComment(pid, cid, text, imageFile)}
         onDeleteComment={(pid, cid) => comments.deleteComment(pid, cid)}
         onEditStart={() => actions.startEdit(post)}
         onEditCancel={actions.cancelEdit}

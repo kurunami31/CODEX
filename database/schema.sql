@@ -469,7 +469,10 @@ create table if not exists public.post_comments (
   post_id     uuid not null references public.posts(id) on delete cascade,
   author_id   uuid not null references public.profiles(id) on delete cascade,
   content     text not null check (char_length(content) between 1 and 500),
-  created_at  timestamptz not null default now()
+  created_at  timestamptz not null default now(),
+  image_url   text,
+  parent_id   uuid references public.post_comments(id) on delete cascade,
+  updated_at  timestamptz default now()
 );
 
 -- posts: comments disappear with the post; commenters with the account
@@ -482,17 +485,27 @@ alter table public.post_comments
   add constraint post_comments_author_id_fkey foreign key (author_id)
     references public.profiles(id) on delete cascade;
 
+-- Replies vanish when the parent comment goes away.
+alter table public.post_comments
+  drop constraint if exists post_comments_parent_id_fkey,
+  add constraint post_comments_parent_id_fkey foreign key (parent_id)
+    references public.post_comments(id) on delete cascade;
+
 alter table public.post_comments enable row level security;
 revoke all on table public.post_comments from anon;
 
 drop policy if exists "post_comments_select_all" on public.post_comments;
 drop policy if exists "post_comments_insert_own" on public.post_comments;
+drop policy if exists "post_comments_update_own" on public.post_comments;
 drop policy if exists "post_comments_delete_own" on public.post_comments;
 drop policy if exists "post_comments_superadmin_delete" on public.post_comments;
 create policy "post_comments_select_all" on public.post_comments
   for select to authenticated using (true);
 create policy "post_comments_insert_own" on public.post_comments
   for insert to authenticated with check (author_id = auth.uid());
+create policy "post_comments_update_own" on public.post_comments
+  for update to authenticated using (author_id = auth.uid())
+  with check (author_id = auth.uid());
 create policy "post_comments_delete_own" on public.post_comments
   for delete to authenticated using (author_id = auth.uid());
 create policy "post_comments_superadmin_delete" on public.post_comments

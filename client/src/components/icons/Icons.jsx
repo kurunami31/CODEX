@@ -439,6 +439,15 @@ export function CommentIcon(props) {
   );
 }
 
+export function ReplyIcon(props) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M9.5 9.5 4.5 14l5 4.5" />
+      <path d="M4.5 14H16a3.5 3.5 0 0 0 3.5-3.5V6" />
+    </svg>
+  );
+}
+
 export function WrenchIcon(props) {
   return (
     <svg {...base} {...props}>
