@@ -13,6 +13,13 @@ const COOLDOWN_MS = 10 * 60 * 1000;
 const COOLDOWN_CAP_MS = 60 * 60 * 1000;
 const fmtCountdown = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 
+const PITCH_POINTS = [
+  { icon: IdIcon, text: 'One QR ID for every CODEBYTERS event' },
+  { icon: RssIcon, text: 'Daily learning fuel from Hacker News & GitHub' },
+  { icon: CalendarIcon, text: 'Org announcements & event schedules' },
+  { icon: BotIcon, text: 'CODEX AI — tutor, helper, study buddy' },
+];
+
 export default function Auth() {
   const { login, register } = useAuth();
   const toast = useToast();
@@ -54,12 +61,18 @@ export default function Auth() {
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
-  const handleSubmit = async (e) => {
+  const switchTab = (next) => {
+    if (tab === next || busy) return;
+    setTab(next);
+    setError('');
+  };
+
+  const handleSubmit = async (e, mode) => {
     e.preventDefault();
     setError('');
     setBusy(true);
     try {
-      if (tab === 'login') {
+      if (mode === 'login') {
         const { error } = await login(form.email.trim(), form.password);
         if (error) throw error;
         toast.ok('Welcome back', 'Session established. Opening the terminal…');
@@ -101,6 +114,45 @@ export default function Auth() {
     }
   };
 
+  const passwordField = (idPrefix) => (
+    <div className="field">
+      <label htmlFor={`${idPrefix}-password`}>Password</label>
+      <div className="pwd-wrap">
+        <input id={`${idPrefix}-password`} className="input pwd-input" type={showPwd ? 'text' : 'password'} placeholder="••••••••••" value={form.password} onChange={set('password')} autoComplete={tab === 'login' ? 'current-password' : 'new-password'} required minLength={6} />
+        <button
+          type="button"
+          className="pwd-toggle"
+          onClick={() => setShowPwd((s) => !s)}
+          aria-label={showPwd ? 'Hide password' : 'Show password'}
+          title={showPwd ? 'Hide password' : 'Show password'}
+        >
+          {showPwd ? <EyeOffIcon width={18} height={18} /> : <EyeIcon width={18} height={18} />}
+        </button>
+      </div>
+    </div>
+  );
+
+  const feedback = (mode) => (
+    <>
+      {cooldownLeft > 0 && tab === mode && (
+        <div className="rate-note">
+          <span style={{ flexShrink: 0 }}>!</span>
+          <span>
+            Supabase is rate-limiting this network — {mode === 'login' ? 'logins' : 'sign-ups'} are paused.
+            Try again in <b>{fmtCountdown(cooldownLeft)}</b>, or use mobile data / a different network.
+          </span>
+        </div>
+      )}
+
+      {error && tab === mode && (
+        <div className="err-box">
+          <span style={{ flexShrink: 0 }}>!</span>
+          <span>{error}</span>
+        </div>
+      )}
+    </>
+  );
+
   if (needsVerify) {
     return (
       <div className="ver-mask grid-bg">
@@ -121,149 +173,150 @@ export default function Auth() {
   }
 
   return (
-    <div className="auth-wrap">
-      <aside className="auth-left">
-        <div className="blob" style={{ width: 380, height: 380, top: -100, left: -100, background: 'rgba(14,208,182,0.2)' }} />
-        <div className="brand">
-          <img src="/assets/codebyterts-logo.gif" alt="CODEBYTERS logo" />
-          <span className="brand-name">CODEBYTERS</span>
+    <div className="auth-wrap grid-bg">
+      <main className="auth-slider-stage">
+        <div className="auth-logo-row">
+          <img src="/assets/codebyterts-logo.gif" alt="CODEBYTERS" />
+          <span>CODEX</span>
         </div>
 
-        <div className="auth-pitch grid-bg-dark">
-          <div className="ocr-label ocr-label--light" style={{ marginBottom: 14 }}>community · identity · knowledge</div>
-          <h2>Your student life,<br />digitized.</h2>
-          <p>
-            Sign in to unlock the full CODEX experience — your digital ID, org event
-            attendance, member feed, and the AI assistant that never sleeps.
-          </p>
-          <ul className="auth-points">
-            <li>
-              <span className="pt"><IdIcon width={14} height={14} /></span>
-              One QR ID for every CODEBYTERS event
-            </li>
-            <li>
-              <span className="pt"><RssIcon width={14} height={14} /></span>
-              Daily learning fuel from Hacker News &amp; GitHub
-            </li>
-            <li>
-              <span className="pt"><CalendarIcon width={14} height={14} /></span>
-              Org announcements &amp; event schedules
-            </li>
-            <li>
-              <span className="pt"><BotIcon width={14} height={14} /></span>
-              CODEX AI — tutor, helper, study buddy
-            </li>
-          </ul>
-        </div>
+        <div className={`auth-slider${tab === 'signup' ? ' auth-slider--signup' : ''}`}>
+          <div className="auth-slider-forms">
+            <section className="auth-slider-panel auth-slider-panel--login">
+              <h1 className="auth-slide-title">Log in</h1>
+              <p className="auth-slide-sub">Good to see you again — pick up where you left off.</p>
+              <form className="auth-slide-form" onSubmit={(e) => handleSubmit(e, 'login')}>
+                <div className="field">
+                  <label htmlFor="login-email">DOrSU email</label>
+                  <input id="login-email" className="input" type="email" placeholder="you@student.codex.org" value={form.email} onChange={set('email')} autoComplete="email" required />
+                </div>
+                {passwordField('login')}
+                {feedback('login')}
+                <button type="submit" className="btn btn-accent btn-lg auth-submit" disabled={busy || cooldownLeft > 0}>
+                  {busy ? 'Authenticating…' : cooldownLeft > 0 ? `Try again in ${fmtCountdown(cooldownLeft)}` : 'Log in'}
+                </button>
+              </form>
+            </section>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, position: 'relative', zIndex: 2 }}>
-          <img src="/assets/dorsu-logo.png" alt="DOrSU" style={{ width: 40, height: 40, objectFit: 'contain' }} />
-          <div className="ocr-label ocr-label--light" style={{ fontSize: 9, lineHeight: 1.8 }}>
-            davao oriental state university<br />bachelor of science in information technology
-          </div>
-        </div>
-      </aside>
-
-      <main className="auth-right grid-bg">
-        <div className="auth-card">
-          <div className="logo-row">
-            <img src="/assets/codebyterts-logo.gif" alt="CODEBYTERS" />
-            <span>CODEX</span>
-          </div>
-
-          <div className="auth-tabs">
-            <button className={`auth-tab${tab === 'login' ? ' auth-tab--on' : ''}`} onClick={() => { setTab('login'); setError(''); }}>Log in</button>
-            <button className={`auth-tab${tab === 'signup' ? ' auth-tab--on' : ''}`} onClick={() => { setTab('signup'); setError(''); }}>Create account</button>
-          </div>
-
-          {tab === 'signup' && (
-            <div className="auth-tips">
-              <b>Sign-up tips</b>
-              <ul>
-                <li>Use a real student ID — each ID can only register once.</li>
-                <li>If asked to confirm your email, click the link we send (check spam).</li>
-                <li>Campus Wi-Fi shares one sign-up limit — wait if the form asks you to.</li>
-              </ul>
-            </div>
-          )}
-
-          <form className="panel" style={{ padding: 26 }} onSubmit={handleSubmit}>
-            <div className="auth-form">
-              {tab === 'signup' && (
-                <>
+            <section className="auth-slider-panel auth-slider-panel--signup">
+              <h1 className="auth-slide-title">Create account</h1>
+              <p className="auth-slide-sub">Join the community and get your digital ID.</p>
+              <form className="auth-slide-form" onSubmit={(e) => handleSubmit(e, 'signup')}>
+                <div className="field">
+                  <label htmlFor="signup-fullName">Full name</label>
+                  <input id="signup-fullName" className="input" placeholder="Juan Dela Cruz" value={form.fullName} onChange={set('fullName')} autoComplete="name" />
+                </div>
+                <div className="auth-grid2">
                   <div className="field">
-                    <label htmlFor="fullName">Full name</label>
-                    <input id="fullName" className="input" placeholder="Juan Dela Cruz" value={form.fullName} onChange={set('fullName')} autoComplete="name" />
-                  </div>
-                  <div className="auth-grid2">
-                    <div className="field">
-                      <label htmlFor="studentId">Student ID</label>
-                      <input id="studentId" className="input" placeholder="2024-1001" value={form.studentId} onChange={set('studentId')} autoComplete="off" />
-                    </div>
-                    <div className="field">
-                      <label htmlFor="section">Section</label>
-                      <input id="section" className="input" placeholder="A / B / C" value={form.section} onChange={set('section')} autoComplete="off" />
-                    </div>
+                    <label htmlFor="signup-studentId">Student ID</label>
+                    <input id="signup-studentId" className="input" placeholder="2024-1001" value={form.studentId} onChange={set('studentId')} autoComplete="off" />
                   </div>
                   <div className="field">
-                    <label htmlFor="yearLevel">Year level</label>
-                    <select id="yearLevel" className="select" value={form.yearLevel} onChange={set('yearLevel')}>
-                      {YEARS.map((y) => <option key={y}>{y}</option>)}
-                    </select>
+                    <label htmlFor="signup-section">Section</label>
+                    <input id="signup-section" className="input" placeholder="A / B / C" value={form.section} onChange={set('section')} autoComplete="off" />
                   </div>
-                </>
-              )}
-              <div className="field">
-                <label htmlFor="email">DOrSU email</label>
-                <input id="email" className="input" type="email" placeholder="you@student.codex.org" value={form.email} onChange={set('email')} autoComplete="email" required />
-              </div>
-              <div className="field">
-                <label htmlFor="password">Password</label>
-                <div className="pwd-wrap">
-                  <input id="password" className="input pwd-input" type={showPwd ? 'text' : 'password'} placeholder="••••••••••" value={form.password} onChange={set('password')} autoComplete={tab === 'login' ? 'current-password' : 'new-password'} required minLength={6} />
-                  <button
-                    type="button"
-                    className="pwd-toggle"
-                    onClick={() => setShowPwd((s) => !s)}
-                    aria-label={showPwd ? 'Hide password' : 'Show password'}
-                    title={showPwd ? 'Hide password' : 'Show password'}
-                  >
-                    {showPwd ? <EyeOffIcon width={18} height={18} /> : <EyeIcon width={18} height={18} />}
+                </div>
+                <div className="field">
+                  <label htmlFor="signup-yearLevel">Year level</label>
+                  <select id="signup-yearLevel" className="select" value={form.yearLevel} onChange={set('yearLevel')}>
+                    {YEARS.map((y) => <option key={y}>{y}</option>)}
+                  </select>
+                </div>
+                <div className="field">
+                  <label htmlFor="signup-email">DOrSU email</label>
+                  <input id="signup-email" className="input" type="email" placeholder="you@student.codex.org" value={form.email} onChange={set('email')} autoComplete="email" required />
+                </div>
+                {passwordField('signup')}
+                {feedback('signup')}
+                <button type="submit" className="btn btn-accent btn-lg auth-submit" disabled={busy || cooldownLeft > 0}>
+                  {busy ? 'Creating account…' : cooldownLeft > 0 ? `Try again in ${fmtCountdown(cooldownLeft)}` : 'Join CODEBYTERS'}
+                </button>
+              </form>
+            </section>
+          </div>
+
+          <div className="auth-slider-overlay">
+            <div className="auth-slider-overlay-inner">
+              <section className="auth-overlay-panel auth-overlay-panel--signup scanlines">
+                <div className="blob" style={{ width: 300, height: 300, top: -90, left: -80, background: 'rgba(14,208,182,0.2)' }} />
+                <div className="auth-overlay-brand">
+                  <img src="/assets/codebyterts-logo.gif" alt="CODEBYTERS logo" />
+                  <span>CODEBYTERS</span>
+                </div>
+
+                <div className="auth-overlay-body">
+                  <div className="ocr-label ocr-label--light" style={{ marginBottom: 14 }}>community · identity · knowledge</div>
+                  <h2>New to the org?<br />Create your account.</h2>
+                  <p>
+                    Join the CODEBYTERS community — unlock your digital ID, org event
+                    attendance, member feed, and the AI assistant that never sleeps.
+                  </p>
+                  <ul className="auth-points">
+                    {PITCH_POINTS.map(({ icon: Icon, text }) => (
+                      <li key={text}>
+                        <span className="pt"><Icon width={14} height={14} /></span>
+                        {text}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                <div className="auth-overlay-foot">
+                  <button className="btn btn-ghost-light" onClick={() => switchTab('signup')}>
+                    Sign up <span aria-hidden>→</span>
                   </button>
+                  <div className="auth-overlay-dorsu">
+                    <img src="/assets/dorsu-logo.png" alt="DOrSU" />
+                    <span className="ocr-label ocr-label--light" style={{ fontSize: 9, lineHeight: 1.8 }}>
+                      davao oriental state university<br />bachelor of science in information technology
+                    </span>
+                  </div>
                 </div>
-              </div>
+              </section>
 
-              {cooldownLeft > 0 && (
-                <div className="rate-note">
-                  <span style={{ flexShrink: 0 }}>!</span>
-                  <span>
-                    Supabase is rate-limiting this network — {tab === 'login' ? 'logins' : 'sign-ups'} are paused.
-                    Try again in <b>{fmtCountdown(cooldownLeft)}</b>, or use mobile data / a different network.
-                  </span>
+              <section className="auth-overlay-panel auth-overlay-panel--login scanlines">
+                <div className="blob" style={{ width: 300, height: 300, top: -90, left: -80, background: 'rgba(14,208,182,0.2)' }} />
+                <div className="auth-overlay-brand">
+                  <img src="/assets/codebyterts-logo.gif" alt="CODEBYTERS logo" />
+                  <span>CODEBYTERS</span>
                 </div>
-              )}
 
-              {error && (
-                <div className="err-box">
-                  <span style={{ flexShrink: 0 }}>!</span>
-                  <span>{error}</span>
+                <div className="auth-overlay-body">
+                  <div className="ocr-label ocr-label--light" style={{ marginBottom: 14 }}>community · identity · knowledge</div>
+                  <h2>Welcome back.<br />Your ID missed you.</h2>
+                  <p>
+                    Sign in to unlock the full CODEX experience — your digital ID, org event
+                    attendance, member feed, and the AI assistant that never sleeps.
+                  </p>
+                  <ul className="auth-points">
+                    {PITCH_POINTS.map(({ icon: Icon, text }) => (
+                      <li key={text}>
+                        <span className="pt"><Icon width={14} height={14} /></span>
+                        {text}
+                      </li>
+                    ))}
+                  </ul>
                 </div>
-              )}
 
-              <button type="submit" className="btn btn-accent btn-lg auth-submit" disabled={busy || cooldownLeft > 0}>
-                {busy
-                  ? (tab === 'login' ? 'Authenticating…' : 'Creating account…')
-                  : cooldownLeft > 0
-                    ? `Try again in ${fmtCountdown(cooldownLeft)}`
-                    : tab === 'login' ? 'Log in' : 'Join CODEBYTERS'}
-              </button>
+                <div className="auth-overlay-foot">
+                  <button className="btn btn-ghost-light" onClick={() => switchTab('login')}>
+                    <span aria-hidden>←</span> Log in
+                  </button>
+                  <div className="auth-overlay-dorsu">
+                    <img src="/assets/dorsu-logo.png" alt="DOrSU" />
+                    <span className="ocr-label ocr-label--light" style={{ fontSize: 9, lineHeight: 1.8 }}>
+                      davao oriental state university<br />bachelor of science in information technology
+                    </span>
+                  </div>
+                </div>
+              </section>
             </div>
-          </form>
-
-          <div className="auth-note">
-            <img src="/assets/dorsu-logo.png" alt="DOrSU" />
-            Reserved for the students of <b>Davao Oriental State University</b> · BSIT program
           </div>
+        </div>
+
+        <div className="auth-note">
+          <img src="/assets/dorsu-logo.png" alt="DOrSU" />
+          Reserved for the students of <b>Davao Oriental State University</b> · BSIT program
         </div>
       </main>
     </div>
