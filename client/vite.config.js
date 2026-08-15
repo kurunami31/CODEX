@@ -7,10 +7,22 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      // NOTE: no `includeAssets` — it precaches the same public files as
-      // workbox.globPatterns below, which makes Workbox throw
-      // "add-to-cache-list-conflicting-entries" and the service worker
-      // fails to install. globPatterns already covers every asset type.
+      // Custom worker (injectManifest): src/sw.js is bundled into dist/sw.js
+      // and carries BOTH the PWA precache/runtime caching AND the push
+      // notification handlers. Push and PWA share one service worker — a
+      // separate push-sw.js at the same scope would replace this one.
+      strategies: 'injectManifest',
+      srcDir: 'src',
+      filename: 'sw.js',
+      injectManifest: {
+        swSrc: 'src/sw.js',
+        swDest: 'dist/sw.js',
+        globPatterns: ['**/*.{js,css,html,woff2,ttf,png,jpg,gif}'],
+        // The 3.4 MB loading animation is too big for the offline precache
+        // (2 MiB cap) and only plays on first visit — serve it via HTTP cache.
+        globIgnores: ['**/assets/loading.gif'],
+        maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
+      },
       manifest: {
         name: 'CODEX · CODEBYTERS Community',
         short_name: 'CODEX',
@@ -25,37 +37,6 @@ export default defineConfig({
           { src: 'pwa-192x192.png', sizes: '192x192', type: 'image/png' },
           { src: 'pwa-512x512.png', sizes: '512x512', type: 'image/png' },
           { src: 'pwa-maskable-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
-        ],
-      },
-      workbox: {
-        globPatterns: ['**/*.{js,css,html,woff2,ttf,png,jpg,gif}'],
-        // The 3.4 MB loading animation is too big for the offline precache
-        // (2 MiB cap) and only plays on first visit — serve it via HTTP cache.
-        globIgnores: ['**/assets/loading.gif'],
-        navigateFallback: '/index.html',
-        runtimeCaching: [
-          {
-            // Supabase REST: network-first so the profile/ID data works offline
-            // once it has been loaded at least once.
-            urlPattern: /^https:\/\/[a-z0-9]+\.supabase\.co\/rest\/v1\/.*/i,
-            handler: 'NetworkFirst',
-            options: {
-              cacheName: 'supabase-rest',
-              networkTimeoutSeconds: 5,
-              expiration: { maxEntries: 200, maxAgeSeconds: 60 * 60 * 24 * 14 },
-              cacheableResponse: { statuses: [0, 200] },
-            },
-          },
-          {
-            // Supabase storage images (avatars, post images): cache-first.
-            urlPattern: /^https:\/\/[a-z0-9]+\.supabase\.co\/storage\/v1\/object\/public\/.*/i,
-            handler: 'CacheFirst',
-            options: {
-              cacheName: 'supabase-storage',
-              expiration: { maxEntries: 300, maxAgeSeconds: 60 * 60 * 24 * 30 },
-              cacheableResponse: { statuses: [0, 200] },
-            },
-          },
         ],
       },
     }),

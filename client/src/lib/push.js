@@ -1,6 +1,8 @@
 import { supabase } from './supabase';
 
-const SW_PATH = '/push-sw.js';
+// The app's own service worker (sw.js) carries the push handler — registering
+// a second worker at the same scope would replace it. Subscribe via sw.js.
+const SW_SCOPE = '/';
 
 function urlBase64ToUint8Array(base64String) {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
@@ -29,7 +31,9 @@ export function isSupported() {
 }
 
 async function getRegistration() {
-  return navigator.serviceWorker.register(SW_PATH);
+  const existing = await navigator.serviceWorker.getRegistration(SW_SCOPE);
+  if (existing) return existing;
+  return navigator.serviceWorker.register('/sw.js');
 }
 
 // Returns true if the device subscribed and we stored it.
@@ -62,7 +66,7 @@ export async function enablePush(userId) {
 export async function disablePush() {
   if (!isSupported()) return;
   try {
-    const reg = await navigator.serviceWorker.getRegistration(SW_PATH);
+    const reg = await navigator.serviceWorker.getRegistration(SW_SCOPE);
     const sub = await reg?.pushManager.getSubscription();
     if (sub) {
       const { error } = await supabase
@@ -80,7 +84,7 @@ export async function disablePush() {
 export async function hasLocalSubscription() {
   if (!isSupported()) return false;
   try {
-    const reg = await navigator.serviceWorker.getRegistration(SW_PATH);
+    const reg = await navigator.serviceWorker.getRegistration(SW_SCOPE);
     const sub = await reg?.pushManager.getSubscription();
     return Boolean(sub);
   } catch {
