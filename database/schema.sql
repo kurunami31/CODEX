@@ -804,6 +804,26 @@ create table if not exists public.election_candidates (
   unique (election_id, user_id, position)
 );
 
+-- Upgrade path: the first version of election_votes allowed only ONE vote
+-- per voter per election (PK on election_id+voter_id, no position column),
+-- so a ballot with multiple offices was impossible. Any database that still
+-- has that shape is rebuilt as the per-position ballot below. The feature is
+-- brand new, so there are no production votes worth preserving.
+do $$
+begin
+  if exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'election_votes'
+      and column_name = 'election_id'
+  ) and not exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'election_votes'
+      and column_name = 'position'
+  ) then
+    drop table public.election_votes;
+  end if;
+end $$;
+
 -- One row per (voter, position) so a member casts one vote for each
 -- office (president, vp, secretary…) — the unique constraint rejects a
 -- second vote in the same position while still allowing one per office.
@@ -824,6 +844,7 @@ revoke all on table public.elections, public.election_candidates, public.electio
 
 drop policy if exists "elections_select_all" on public.elections;
 drop policy if exists "elections_admin_write" on public.elections;
+drop policy if exists "elections_admin_update" on public.elections;
 drop policy if exists "election_candidates_select_all" on public.election_candidates;
 drop policy if exists "election_candidates_admin_write" on public.election_candidates;
 drop policy if exists "election_candidates_admin_delete" on public.election_candidates;
@@ -849,14 +870,19 @@ create policy "election_candidates_admin_delete" on public.election_candidates
   using ((select role from public.profiles where id = auth.uid()) in ('admin','superadmin'));
 create policy "election_votes_select_own" on public.election_votes
   for select to authenticated using (voter_id = auth.uid());
+-- IMPORTANT: the new-row columns MUST be qualified as election_votes.* —
+-- unqualified election_id/position would resolve to the subquery's
+-- election_candidates columns instead (innermost scope wins), silently
+-- letting members vote for candidates outside this election.
 create policy "election_votes_insert_own" on public.election_votes
   for insert to authenticated
   with check (voter_id = auth.uid()
     and exists (
       select 1 from public.elections e
       join public.election_candidates c on c.election_id = e.id
-      where e.id = election_id and e.open and c.id = candidate_id
-        and c.position = position
+      where e.id = election_votes.election_id and e.open
+        and c.id = election_votes.candidate_id
+        and c.position = election_votes.position
     ));
 
 -- Tally RPC: staff only. Returns candidate vote counts per position.

@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import Avatar from '../components/Avatar';
 import {
-  GavelIcon, PlusIcon, XIcon, CheckIcon, AlertIcon, LockIcon, UnlockIcon,
+  GavelIcon, PlusIcon, XIcon, CheckIcon, LockIcon, UnlockIcon,
   UsersIcon, TrophyIcon, SearchIcon,
 } from '../components/icons/Icons';
 
@@ -53,12 +53,6 @@ export default function Elections() {
   useEffect(() => {
     load();
   }, [load]);
-
-  const candidateById = useMemo(() => {
-    const map = new Map();
-    for (const c of candidates) map.set(c.id, c);
-    return map;
-  }, [candidates]);
 
   const byElection = useMemo(() => {
     const map = {};
