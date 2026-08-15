@@ -151,9 +151,9 @@ export default function Profile() {
       </button>
 
       <div className="profile-head panel grid-bg" style={{ border: '1px solid rgba(14,208,182,0.35)' }}>
-        <Avatar name={author?.full_name} seed={author?.id} size={84} url={author?.avatar_url} />
+        <Avatar name={author?.full_name} seed={author?.id} size={96} ring url={author?.avatar_url} />
         <div className="profile-meta">
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          <div className="profile-role-row" style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
             <h1 className="profile-name">{author?.full_name || '…'}</h1>
             <span className={`role-pill role-pill--${author?.role || 'student'}`}>{roleLabel(author?.role)}</span>
             {author?.membership_paid ? (

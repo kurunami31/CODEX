@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import Avatar from '../components/Avatar';
+import CropModal from '../components/CropModal';
 import { roleLabel } from '../lib/roles';
 import { useFontScale, TEXT_SCALES } from '../context/FontScaleContext';
 import { enablePush, disablePush, hasLocalSubscription, isSupported } from '../lib/push';
@@ -19,6 +20,7 @@ export default function ProfileSettings() {
   const [busy, setBusy] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [preview, setPreview] = useState('');
+  const [cropFile, setCropFile] = useState(null);
   const [error, setError] = useState('');
   const [form, setForm] = useState(() => ({
     fullName: profile?.full_name || '',
@@ -119,8 +121,13 @@ export default function ProfileSettings() {
       return toast.error('Unsupported format', 'Use PNG, JPG, WEBP or GIF. (HEIC and other phone formats aren\u2019t accepted yet.)');
     }
     if (file.size > MAX_AVATAR_BYTES) return toast.error('File too large', 'Keep it under 3 MB.');
+    setCropFile(file); // open the crop tool first
+  };
+
+  const handleCropped = (file) => {
     const url = URL.createObjectURL(file);
     setPreview(url);
+    setCropFile(null);
     uploadAvatar(file, url);
   };
 
@@ -278,6 +285,50 @@ export default function ProfileSettings() {
       </div>
 
       <div className="section-title">
+        <IdIcon width={14} height={14} /> digital id preview
+      </div>
+      <div className="panel" style={{ padding: 18 }}>
+        <p className="ocr-label" style={{ margin: '0 0 14px' }}>
+          this is how your photo appears on your official ID — updates live as you change it
+        </p>
+        <div className="idcard-mini-wrap">
+          <div className="idcard idcard--mini">
+            <div className="idcard-head">
+              <img src="/assets/dorsu-logo.png" alt="DOrSU" />
+              <div className="idcard-org">
+                <b>CODEBYTERS</b>
+                <span>bsit · dorsu</span>
+              </div>
+            </div>
+            <div className="idcard-strip">official student identity · bsit</div>
+            <div className="idcard-main">
+              <div className="idcard-photo">
+                {preview || profile.avatar_url ? (
+                  <img src={preview || profile.avatar_url} alt={`ID photo of ${profile.full_name}`} />
+                ) : (
+                  <Avatar name={profile.full_name} seed={user.id} size={44} />
+                )}
+              </div>
+              <div className="idcard-info">
+                <div className="lbl">name</div>
+                <div className="idcard-name">{profile.full_name}</div>
+                <div className="lbl">details</div>
+                <div className="idcard-details">
+                  YEAR : {profile.year_level}<br />
+                  SEC  : {profile.section}<br />
+                  ID   : {profile.student_id}
+                </div>
+              </div>
+            </div>
+            <div className="idcard-foot">
+              <span>davao oriental state university</span>
+              <span className="code">preview</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="section-title">
         <WalletIcon width={14} height={14} /> membership dues
       </div>
       <div className="panel" style={{ padding: 18, display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -400,6 +451,14 @@ export default function ProfileSettings() {
           contact an officer if something is wrong.
         </p>
       </div>
+
+      {cropFile && (
+        <CropModal
+          file={cropFile}
+          onCancel={() => setCropFile(null)}
+          onConfirm={handleCropped}
+        />
+      )}
     </div>
   );
 }

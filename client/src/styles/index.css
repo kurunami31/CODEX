@@ -1143,10 +1143,12 @@ html[data-theme='dark'] .bottomnav a:hover { color: var(--accent); }
 /* ── profile page ──────────────────────────────────────── */
 .profile-back { margin-bottom: 12px; }
 .profile-head {
-  display: flex; gap: 22px; align-items: flex-start; flex-wrap: wrap;
-  padding: 26px; margin-bottom: 20px;
+  display: flex; flex-direction: column; align-items: center; text-align: center;
+  gap: 18px; padding: 26px; margin-bottom: 20px;
 }
 .profile-meta { flex: 1; min-width: 240px; }
+.profile-role-row { justify-content: center; }
+.profile-stats { justify-content: center; }
 .profile-name {
   margin: 0; font-family: var(--f-id); font-weight: 700;
   font-size: clamp(22px, 4vw, 28px); color: var(--ink);
@@ -1886,3 +1888,64 @@ html[data-theme='dark'] .tally-track { background: #0e2c3b; border-color: #14384
   .cert-frame { width: 100%; }
   @page { size: landscape; margin: 0.4in; }
 }
+
+/* ── crop modal ─────────────────────────────────────────── */
+.crop-modal-body { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+.crop-stage {
+  position: relative; width: min(300px, 100%); aspect-ratio: 1;
+  border-radius: var(--r-md); overflow: hidden;
+  background: #000; border: 1px solid var(--line-strong);
+  cursor: grab; touch-action: none; user-select: none;
+  box-shadow: var(--sh-md);
+}
+.crop-stage:active { cursor: grabbing; }
+.crop-stage::before {
+  content: ''; position: absolute; inset: 0; z-index: 2; pointer-events: none;
+  background:
+    linear-gradient(rgba(255, 255, 255, 0.22) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.22) 1px, transparent 1px);
+  background-size: 33.33% 33.33%;
+}
+.crop-img {
+  position: absolute; top: 0; left: 0; max-width: none;
+  pointer-events: none; user-select: none; -webkit-user-drag: none;
+  will-change: transform;
+}
+.crop-tools { display: flex; align-items: center; gap: 14px; width: 100%; }
+.crop-preview {
+  flex-shrink: 0; width: 96px; height: 96px; border-radius: 50%;
+  background-repeat: no-repeat;
+  border: 3px solid var(--accent); box-shadow: var(--sh-md);
+  background-color: var(--bg-2);
+}
+.crop-range {
+  width: 100%; accent-color: var(--accent); cursor: pointer;
+}
+
+/* ── mini digital id (settings preview) ─────────────────── */
+.idcard-mini-wrap { display: flex; justify-content: center; }
+.idcard--mini {
+  width: 280px; border-radius: 14px; box-shadow: var(--sh-md);
+}
+.idcard--mini::before { animation: none; }
+.idcard--mini .idcard-head { padding: 8px 12px 5px; }
+.idcard--mini .idcard-head img { width: 22px; height: 22px; }
+.idcard--mini .idcard-org b { font-size: calc(0.5625rem * var(--text-scale)); }
+.idcard--mini .idcard-org span { font-size: calc(0.5rem * var(--text-scale)); }
+.idcard--mini .idcard-strip { font-size: calc(0.53125rem * var(--text-scale)); padding: 3px 0; }
+.idcard--mini .idcard-main { padding: 8px 12px 6px; gap: 10px; }
+.idcard--mini .idcard-photo { width: 52px; border-radius: 8px; border-width: 1.5px; }
+.idcard--mini .idcard-info .lbl { font-size: calc(0.4375rem * var(--text-scale)); margin-top: 4px; }
+.idcard--mini .idcard-name { font-size: 14px; }
+.idcard--mini .idcard-details { font-size: 9px; }
+.idcard--mini .idcard-foot { padding: 3px 12px 7px; }
+.idcard--mini .idcard-foot span { font-size: calc(0.5rem * var(--text-scale)); }
+
+/* keep the mini id preview looking like the real (white) card in dark mode */
+html[data-theme='dark'] .idcard--mini .idcard-name { color: #0b2b3a; }
+html[data-theme='dark'] .idcard--mini .idcard-details { color: #33454e; }
+html[data-theme='dark'] .idcard--mini .idcard-org b { color: #0aa88f; }
+html[data-theme='dark'] .idcard--mini .idcard-org span { color: #5a6b74; }
+html[data-theme='dark'] .idcard--mini .idcard-foot span { color: #5a6b74; }
+html[data-theme='dark'] .idcard--mini .idcard-strip { background: linear-gradient(90deg, #0aa88f, #0ed0b6); }
+html[data-theme='dark'] .idcard--mini .idcard-photo { border-color: #0ed0b6; }
