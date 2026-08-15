@@ -199,7 +199,7 @@ export default function ProfileSettings() {
           <Avatar
             name={profile.full_name}
             seed={user.id}
-            size={72}
+            size={110}
             ring
             url={preview || profile.avatar_url}
           />
