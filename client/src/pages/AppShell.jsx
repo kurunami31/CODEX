@@ -1,12 +1,13 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { supabase } from '../lib/supabase';
 import { timeAgo } from '../lib/format';
+import { hasLocalSubscription } from '../lib/push';
 import Avatar from '../components/Avatar';
 import { isStaff as checkStaff, isAdmin as checkAdmin, roleLabel } from '../lib/roles';
-import { HomeIcon, RssIcon, CalendarIcon, IdIcon, ShieldIcon, LogOutIcon, SearchIcon, CameraIcon, GearIcon, SunIcon, MoonIcon, CrownIcon, MenuIcon, XIcon, TrophyIcon, CertificateIcon, GavelIcon } from '../components/icons/Icons';
+import { HomeIcon, RssIcon, CalendarIcon, IdIcon, ShieldIcon, LogOutIcon, SearchIcon, CameraIcon, GearIcon, SunIcon, MoonIcon, CrownIcon, MenuIcon, XIcon, TrophyIcon, CertificateIcon, GavelIcon, BellIcon } from '../components/icons/Icons';
 
 const TITLES = {
   '/app/feed': 'feed',
@@ -32,6 +33,61 @@ export default function AppShell() {
   const [searching, setSearching] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const searchRef = useRef(null);
+  const notifRef = useRef(null);
+  const [notifOpen, setNotifOpen] = useState(false);
+  const [notifItems, setNotifItems] = useState([]);
+  const [unread, setUnread] = useState(0);
+  const [pushOn, setPushOn] = useState(false);
+
+  const loadNotifs = useCallback(async () => {
+    if (!user) return;
+    const [items, count] = await Promise.all([
+      supabase.from('notifications').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(10),
+      supabase.from('notifications').select('id', { count: 'exact', head: true }).eq('user_id', user.id).eq('read', false),
+    ]);
+    if (!items.error) setNotifItems(items.data || []);
+    if (!count.error) setUnread(count.count || 0);
+  }, [user]);
+
+  // Load on mount, then poll quietly so the badge stays fresh.
+  useEffect(() => {
+    loadNotifs();
+    const t = setInterval(loadNotifs, 30_000);
+    return () => clearInterval(t);
+  }, [loadNotifs]);
+
+  // close the dropdown on outside click
+  useEffect(() => {
+    const onClick = (e) => {
+      if (notifRef.current && !notifRef.current.contains(e.target)) setNotifOpen(false);
+    };
+    document.addEventListener('mousedown', onClick);
+    return () => document.removeEventListener('mousedown', onClick);
+  }, []);
+
+  const toggleNotifs = async () => {
+    const next = !notifOpen;
+    setNotifOpen(next);
+    if (next) {
+      loadNotifs();
+      hasLocalSubscription().then((on) => setPushOn(on));
+    }
+  };
+
+  const markAllRead = async () => {
+    if (unread === 0) return;
+    const { error } = await supabase.from('notifications').update({ read: true }).eq('user_id', user.id).eq('read', false);
+    if (!error) loadNotifs();
+  };
+
+  const openNotification = async (item) => {
+    setNotifOpen(false);
+    if (!item.read) {
+      const { error } = await supabase.from('notifications').update({ read: true }).eq('id', item.id);
+      if (!error) loadNotifs();
+    }
+    goto(item.url || '/app/feed');
+  };
 
   const staff = checkStaff(profile?.role);
   const admin = checkAdmin(profile?.role);
@@ -276,6 +332,60 @@ export default function AppShell() {
                     )}
                   </>
                 )}
+              </div>
+            )}
+          </div>
+          <div className="notif-wrap" ref={notifRef}>
+            <button
+              className={`icon-btn notif-btn${notifOpen ? ' notif-btn--open' : ''}`}
+              onClick={toggleNotifs}
+              aria-label="Notifications"
+              aria-haspopup="true"
+              aria-expanded={notifOpen}
+            >
+              <BellIcon width={16} height={16} />
+              {unread > 0 && <span className="notif-badge">{unread > 9 ? '9+' : unread}</span>}
+            </button>
+            {notifOpen && (
+              <div className="notif-panel">
+                <div className="notif-head">
+                  <b>notifications</b>
+                  <button className="btn btn-ghost btn-sm" onClick={markAllRead} disabled={unread === 0}>
+                    Mark all read
+                  </button>
+                </div>
+                {notifItems.length === 0 ? (
+                  <div className="notif-empty">You're all caught up — no alerts yet.</div>
+                ) : (
+                  <div className="notif-list">
+                    {notifItems.map((n) => (
+                      <button
+                        key={n.id}
+                        className={`notif-item${n.read ? '' : ' notif-item--unread'}`}
+                        onClick={() => openNotification(n)}
+                      >
+                        <span className={`notif-dot${n.read ? ' notif-dot--read' : ''}`} aria-hidden="true" />
+                        <span className="notif-item-body">
+                          <b>{n.title}</b>
+                          {n.body && <span>{n.body}</span>}
+                          <span className="ocr-label">{timeAgo(n.created_at)}</span>
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                <div className="notif-foot">
+                  <span className="ocr-label">push alerts: {pushOn ? 'on for this device' : 'off'}</span>
+                  <button
+                    className="btn btn-ghost btn-sm"
+                    onClick={() => {
+                      setNotifOpen(false);
+                      goto('/app/settings');
+                    }}
+                  >
+                    <GearIcon width={13} height={13} /> settings
+                  </button>
+                </div>
               </div>
             )}
           </div>

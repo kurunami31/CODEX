@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { formatEventDate, isUpcoming, timeAgo } from '../lib/format';
 import { roleLabel } from '../lib/roles';
+import { sendPush } from '../lib/notify';
 import Avatar from '../components/Avatar';
 import IdCardModal from '../components/IdCardModal';
 import {
@@ -521,6 +522,8 @@ function CreateEventModal({ onClose, onCreated }) {
     setBusy(false);
     if (err) return setError(err.message);
     toast.ok('Event created', 'It is now scannable at the venue.');
+    // Ping every subscribed member about the new event (no-op if push isn't configured).
+    sendPush({ to: 'all', title: 'New event', body: form.title.trim(), url: '/app/events' });
     onCreated();
   };
 

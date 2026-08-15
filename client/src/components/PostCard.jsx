@@ -5,6 +5,7 @@ import CommentItem, { pickCommentImage } from './CommentItem';
 import { COMMENT_IMAGE_TYPES } from '../lib/usePostComments';
 import { useToast } from '../context/ToastContext';
 import { formatEventDate } from '../lib/format';
+import { sendPush } from '../lib/notify';
 import { roleLabel } from '../lib/roles';
 import { HeartIcon, ShareIcon, PencilIcon, TrashIcon, ArchiveIcon, MenuDotsIcon, CommentIcon, ImageIcon, XIcon } from './icons/Icons';
 
@@ -88,6 +89,15 @@ export default function PostCard({
     if ((!commentDraft.trim() && !commentImageFile) || commentsBusy || !onAddComment) return;
     const { error } = await onAddComment(post.id, commentDraft, commentImageFile);
     if (!error) {
+      // Ping the post author (skip self-comments). No-op if push isn't configured.
+      if (post.author_id && post.author_id !== currentUserId) {
+        sendPush({
+          to: post.author_id,
+          title: 'New comment on your post',
+          body: commentDraft.trim() || 'Someone replied with a photo',
+          url: '/app/feed',
+        });
+      }
       setCommentDraft('');
       if (commentImagePreview) URL.revokeObjectURL(commentImagePreview);
       setCommentImageFile(null);

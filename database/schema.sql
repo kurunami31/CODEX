@@ -926,6 +926,80 @@ $$;
 
 grant execute on function public.election_tally(uuid) to authenticated;
 
+-- ── In-app notifications: powers the topbar bell (works without VAPID) ──
+create table if not exists public.notifications (
+  id         uuid primary key default gen_random_uuid(),
+  user_id    uuid not null references public.profiles(id) on delete cascade,
+  title      text not null,
+  body       text,
+  url        text,
+  read       boolean not null default false,
+  created_at timestamptz not null default now()
+);
+create index if not exists notifications_user_created_idx
+  on public.notifications (user_id, created_at desc);
+
+alter table public.notifications enable row level security;
+revoke all on table public.notifications from anon;
+
+drop policy if exists "notifications_select_own" on public.notifications;
+drop policy if exists "notifications_update_own" on public.notifications;
+create policy "notifications_select_own" on public.notifications
+  for select to authenticated using (user_id = auth.uid());
+create policy "notifications_update_own" on public.notifications
+  for update to authenticated using (user_id = auth.uid())
+  with check (user_id = auth.uid());
+
+-- Trigger: a new event lands a notification on every member's bell
+-- (except the officer who created it). Runs as definer so it bypasses
+-- RLS and can insert for all users.
+create or replace function public.notify_new_event()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  insert into public.notifications (user_id, title, body, url)
+  select id, 'New event', new.title, '/app/events'
+  from public.profiles
+  where id <> new.created_by;
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_events_notify on public.events;
+create trigger trg_events_notify
+  after insert on public.events
+  for each row execute function public.notify_new_event();
+
+-- Trigger: a new comment notifies the post author (skip self-comments).
+create or replace function public.notify_post_comment()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_author uuid;
+begin
+  select author_id into v_author from public.posts where id = new.post_id;
+  if v_author is not null and v_author <> new.author_id then
+    insert into public.notifications (user_id, title, body, url)
+    values (v_author, 'New comment',
+      case when char_length(new.content) > 0 then left(new.content, 120)
+           else 'Someone commented with a photo' end,
+      '/app/feed');
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_comments_notify on public.post_comments;
+create trigger trg_comments_notify
+  after insert on public.post_comments
+  for each row execute function public.notify_post_comment();
+
 -- ── Push notifications: one row per device subscription ──
 create table if not exists public.push_subscriptions (
   id         uuid primary key default gen_random_uuid(),
