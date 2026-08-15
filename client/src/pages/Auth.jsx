@@ -175,6 +175,9 @@ export default function Auth() {
   return (
     <div className="auth-wrap grid-bg">
       <main className="auth-slider-stage">
+        <div className="blob" style={{ width: 380, height: 380, top: -130, left: -110, background: 'rgba(14, 208, 182, 0.32)' }} />
+        <div className="blob" style={{ width: 340, height: 340, bottom: -110, right: -100, background: 'rgba(26, 93, 120, 0.7)' }} />
+        <div className="blob" style={{ width: 260, height: 260, top: 40, right: -80, background: 'rgba(14, 208, 182, 0.2)' }} />
         <div className="auth-logo-row">
           <img src="/assets/codebyterts-logo.gif" alt="CODEBYTERS" />
           <span>CODEX</span>
@@ -277,6 +280,7 @@ export default function Auth() {
                       </span>
                     </div>
                   </div>
+                  <img className="auth-bot" src="/assets/bot.gif" alt="CODEBYTERS mascot" />
                 </div>
               </section>
 
@@ -316,6 +320,7 @@ export default function Auth() {
                       </span>
                     </div>
                   </div>
+                  <img className="auth-bot" src="/assets/bot.gif" alt="CODEBYTERS mascot" />
                 </div>
               </section>
             </div>
