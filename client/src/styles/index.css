@@ -2001,3 +2001,9 @@ html[data-theme='dark'] .idcard--mini .idcard-photo { border-color: #0ed0b6; }
   display: flex; align-items: center; justify-content: space-between; gap: 8px;
   padding: 10px 14px; border-top: 1px solid var(--line); background: var(--bg);
 }
+
+/* ── election roster editor ──────────────────────────────── */
+.roster-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 8px; }
+.roster-row { display: flex; gap: 8px; align-items: center; }
+.roster-row .input { flex: 1; }
+.roster-row .roster-num { flex: 0 0 72px; }

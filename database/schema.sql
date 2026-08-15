@@ -786,17 +786,28 @@ grant execute on function public.mark_attendance(uuid, text) to authenticated;
 
 -- ── Elections: digital voting for org officers ──
 -- `archived` hides a finished election from members while keeping its
--- results for officers (unarchive to bring it back).
+-- results for officers (unarchive to bring it back). `starts_at`/`ends_at`
+-- define an optional voting window that auto-opens/closes the election;
+-- `positions` is the roster [{name, min, max}] of contested offices;
+-- `publish_results` lets officers show the tally to members after close.
 create table if not exists public.elections (
-  id          uuid primary key default gen_random_uuid(),
-  title       text not null,
-  description text,
-  open        boolean not null default false,
-  archived    boolean not null default false,
-  created_by  uuid references auth.users(id) on delete set null,
-  created_at  timestamptz not null default now()
+  id              uuid primary key default gen_random_uuid(),
+  title           text not null,
+  description     text,
+  open            boolean not null default false,
+  archived        boolean not null default false,
+  starts_at       timestamptz,
+  ends_at         timestamptz,
+  positions       jsonb,
+  publish_results boolean not null default false,
+  created_by      uuid references auth.users(id) on delete set null,
+  created_at      timestamptz not null default now()
 );
 alter table public.elections add column if not exists archived boolean not null default false;
+alter table public.elections add column if not exists starts_at timestamptz;
+alter table public.elections add column if not exists ends_at timestamptz;
+alter table public.elections add column if not exists positions jsonb;
+alter table public.elections add column if not exists publish_results boolean not null default false;
 
 create table if not exists public.election_candidates (
   id          uuid primary key default gen_random_uuid(),
@@ -804,9 +815,11 @@ create table if not exists public.election_candidates (
   user_id     uuid not null references public.profiles(id) on delete cascade,
   position    text not null,
   platform    text,
+  winner      boolean not null default false,
   created_at  timestamptz not null default now(),
   unique (election_id, user_id, position)
 );
+alter table public.election_candidates add column if not exists winner boolean not null default false;
 
 -- Upgrade path: the first version of election_votes allowed only ONE vote
 -- per voter per election (PK on election_id+voter_id, no position column),
@@ -882,16 +895,190 @@ create policy "election_votes_select_own" on public.election_votes
 -- unqualified election_id/position would resolve to the subquery's
 -- election_candidates columns instead (innermost scope wins), silently
 -- letting members vote for candidates outside this election.
+-- Voting is gated on the election being open (manually OR inside the
+-- voting window) and on eligibility: dues-paid members or staff.
 create policy "election_votes_insert_own" on public.election_votes
   for insert to authenticated
-  with check (voter_id = auth.uid()
+  with check (
+    voter_id = auth.uid()
+    and exists (
+      select 1 from public.profiles p
+      where p.id = election_votes.voter_id
+        and (p.membership_paid or p.role in ('admin','moderator','superadmin'))
+    )
     and exists (
       select 1 from public.elections e
       join public.election_candidates c on c.election_id = e.id
-      where e.id = election_votes.election_id and e.open
+      where e.id = election_votes.election_id
+        and not e.archived
+        and (e.open or (
+          e.starts_at is not null and e.ends_at is not null
+          and now() between e.starts_at and e.ends_at
+        ))
         and c.id = election_votes.candidate_id
         and c.position = election_votes.position
-    ));
+    )
+  );
+
+-- Candidate guardrails: a candidate's position must be on the election
+-- roster (when one is defined) and within its max limit.
+create or replace function public.election_candidate_limits()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_roster jsonb;
+  v_min    int;
+  v_max    int;
+  v_count  int;
+begin
+  select e.positions into v_roster from public.elections e where e.id = new.election_id;
+  if v_roster is not null and jsonb_array_length(v_roster) > 0 then
+    if not exists (
+      select 1 from jsonb_array_elements(v_roster) p
+      where p->>'name' = new.position
+    ) then
+      raise exception 'Position "%" is not on this election''s roster', new.position;
+    end if;
+    select (p->>'min')::int, (p->>'max')::int into v_min, v_max
+    from jsonb_array_elements(v_roster) p where p->>'name' = new.position;
+    if v_max is not null then
+      select count(*) into v_count
+      from public.election_candidates c
+      where c.election_id = new.election_id and c.position = new.position;
+      if v_count >= v_max then
+        raise exception 'Position "%" has reached its maximum of % candidates', new.position, v_max;
+      end if;
+    end if;
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_candidate_limits on public.election_candidates;
+create trigger trg_candidate_limits
+  before insert on public.election_candidates
+  for each row execute function public.election_candidate_limits();
+
+-- Opening an election requires each roster position to have its minimum
+-- number of candidates (default minimum 1 when not specified).
+create or replace function public.election_open_min_check()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_missing text;
+begin
+  if new.open and not old.open and new.positions is not null
+     and jsonb_array_length(new.positions) > 0 then
+    select string_agg(p->>'name', ', ') into v_missing
+    from jsonb_array_elements(new.positions) p
+    where (select count(*) from public.election_candidates c
+           where c.election_id = new.id and c.position = p->>'name')
+          < coalesce((p->>'min')::int, 1);
+    if v_missing is not null then
+      raise exception 'Cannot open: % still need(s) more candidates', v_missing;
+    end if;
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_election_open_min on public.elections;
+create trigger trg_election_open_min
+  before update on public.elections
+  for each row execute function public.election_open_min_check();
+
+-- On close, compute the winner per position: the candidate with strictly
+-- more votes than every other candidate in that position (ties = no winner).
+create or replace function public.election_compute_winners()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if old.open and not new.open then
+    update public.election_candidates set winner = false
+    where election_id = new.id;
+    update public.election_candidates c set winner = true
+    where c.election_id = new.id
+      and exists (
+        select 1
+        from (
+          select v.candidate_id, count(*) as cnt
+          from public.election_votes v
+          where v.election_id = new.id
+          group by v.candidate_id
+        ) votes
+        where votes.candidate_id = c.id
+          and votes.cnt > 0
+          and not exists (
+            select 1
+            from public.election_votes v2
+            join public.election_candidates c2 on c2.id = v2.candidate_id
+            where v2.election_id = new.id
+              and c2.position = c.position
+              and c2.id <> c.id
+            group by c2.id
+            having count(*) >= votes.cnt
+          )
+      );
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_election_winners on public.elections;
+create trigger trg_election_winners
+  before update on public.elections
+  for each row execute function public.election_compute_winners();
+
+-- Member-visible results: only after the election is closed AND results
+-- are published (staff may always view).
+create or replace function public.election_results(p_election_id uuid)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_role text := public.get_my_role();
+  v_rows jsonb;
+begin
+  if v_role not in ('admin','moderator','superadmin') then
+    if not exists (
+      select 1 from public.elections e
+      where e.id = p_election_id and not e.open
+        and e.publish_results and not e.archived
+    ) then
+      raise exception 'Results are not published yet';
+    end if;
+  end if;
+
+  select coalesce(jsonb_agg(row_to_jsonb(t) order by t.position, t.votes desc), '[]'::jsonb)
+  into v_rows
+  from (
+    select c.id as candidate_id, c.position, c.user_id, p.full_name, p.section,
+           c.winner, count(v.voter_id)::int as votes
+    from public.election_candidates c
+    join public.profiles p on p.id = c.user_id
+    left join public.election_votes v on v.candidate_id = c.id
+    where c.election_id = p_election_id
+    group by c.id, c.position, c.user_id, p.full_name, p.section, c.winner
+  ) t;
+
+  return v_rows;
+end;
+$$;
+
+grant execute on function public.election_results(uuid) to authenticated;
+
+-- Tally RPC: staff only. Returns candidate vote counts per position.
 
 -- Tally RPC: staff only. Returns candidate vote counts per position.
 create or replace function public.election_tally(p_election_id uuid)
