@@ -178,15 +178,13 @@ export default function Auth() {
         <div className="blob" style={{ width: 380, height: 380, top: -130, left: -110, background: 'rgba(14, 208, 182, 0.32)' }} />
         <div className="blob" style={{ width: 340, height: 340, bottom: -110, right: -100, background: 'rgba(26, 93, 120, 0.7)' }} />
         <div className="blob" style={{ width: 260, height: 260, top: 40, right: -80, background: 'rgba(14, 208, 182, 0.2)' }} />
-        <div className="auth-logo-row">
-          <img src="/assets/codebyterts-logo.gif" alt="CODEBYTERS" />
-          <span>CODEX</span>
-        </div>
+        <div className="auth-title">CODEX</div>
 
         <div className={`auth-slider${tab === 'signup' ? ' auth-slider--signup' : ''}`}>
           <div className="auth-slider-forms">
             <section className="auth-slider-panel auth-slider-panel--login">
               <div className="auth-slide-inner">
+                <img className="auth-form-bot" src="/assets/bot.gif" alt="CODEBYTERS mascot" />
                 <h1 className="auth-slide-title">Log in</h1>
                 <p className="auth-slide-sub">Good to see you again — pick up where you left off.</p>
                 <form className="auth-slide-form" onSubmit={(e) => handleSubmit(e, 'login')}>
@@ -205,6 +203,7 @@ export default function Auth() {
 
             <section className="auth-slider-panel auth-slider-panel--signup">
               <div className="auth-slide-inner">
+                <img className="auth-form-bot" src="/assets/bot.gif" alt="CODEBYTERS mascot" />
                 <h1 className="auth-slide-title">Create account</h1>
                 <p className="auth-slide-sub">Join the community and get your digital ID.</p>
                 <form className="auth-slide-form" onSubmit={(e) => handleSubmit(e, 'signup')}>
@@ -280,7 +279,6 @@ export default function Auth() {
                       </span>
                     </div>
                   </div>
-                  <img className="auth-bot" src="/assets/bot.gif" alt="CODEBYTERS mascot" />
                 </div>
               </section>
 
@@ -320,7 +318,6 @@ export default function Auth() {
                       </span>
                     </div>
                   </div>
-                  <img className="auth-bot" src="/assets/bot.gif" alt="CODEBYTERS mascot" />
                 </div>
               </section>
             </div>
