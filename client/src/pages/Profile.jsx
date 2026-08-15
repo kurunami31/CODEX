@@ -103,9 +103,22 @@ export default function Profile() {
         onLike={() => toggleLike(post.id)}
         onShare={() => sharePost(post)}
         onCommentsToggle={() => comments.toggle(post.id)}
-        onAddComment={(pid, text, imageFile, parentId) => comments.addComment(pid, text, imageFile, parentId)}
-        onEditComment={(pid, cid, text, imageFile) => comments.updateComment(pid, cid, text, imageFile)}
-        onDeleteComment={(pid, cid) => comments.deleteComment(pid, cid)}
+        threadError={comments.threadError(post.id)}
+        onAddComment={async (pid, text, imageFile, parentId) => {
+          const res = await comments.addComment(pid, text, imageFile, parentId);
+          if (res.error) toast.error('Could not comment', res.error.message);
+          return res;
+        }}
+        onEditComment={async (pid, cid, text, imageFile) => {
+          const res = await comments.updateComment(pid, cid, text, imageFile);
+          if (res.error) toast.error('Could not update comment', res.error.message);
+          return res;
+        }}
+        onDeleteComment={async (pid, cid) => {
+          const err = await comments.deleteComment(pid, cid);
+          if (err) toast.error('Could not delete comment', err.message);
+          return err;
+        }}
         onEditStart={() => actions.startEdit(post)}
         onEditCancel={actions.cancelEdit}
         onEditChange={actions.setEditDraft}

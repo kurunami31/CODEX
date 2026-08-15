@@ -18,6 +18,7 @@ export default function usePostComments(user) {
   const [counts, setCounts] = useState([]); // [{ post_id, count }]
   const [byPost, setByPost] = useState({}); // { [postId]: comment[] }
   const [open, setOpen] = useState({}); // { [postId]: true } once expanded
+  const [errorByPost, setErrorByPost] = useState({}); // { [postId]: error message }
   const [busy, setBusy] = useState(false);
 
   const loadCounts = useCallback(async () => {
@@ -40,15 +41,23 @@ export default function usePostComments(user) {
   }, [counts, byPost]);
 
   const loadThread = useCallback(async (postId) => {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('post_comments')
       .select(COMMENT_SELECT)
       .eq('post_id', postId)
       .order('created_at', { ascending: true });
-    if (data) {
-      setByPost((prev) => ({ ...prev, [postId]: data }));
+    if (error) {
+      // Never leave the section hanging: open it (empty) and surface the
+      // message so a schema/database problem is visible instead of silent.
+      setByPost((prev) => ({ ...prev, [postId]: [] }));
+      setErrorByPost((prev) => ({ ...prev, [postId]: error.message }));
       setOpen((prev) => ({ ...prev, [postId]: true }));
+      return { error };
     }
+    setByPost((prev) => ({ ...prev, [postId]: data }));
+    setErrorByPost((prev) => ({ ...prev, [postId]: null }));
+    setOpen((prev) => ({ ...prev, [postId]: true }));
+    return { error: null };
   }, []);
 
   const toggle = useCallback(
@@ -183,6 +192,7 @@ export default function usePostComments(user) {
   return {
     commentCount,
     comments: (postId) => byPost[postId] || null, // null = not loaded yet
+    threadError: (postId) => errorByPost[postId] || null,
     isOpen: (postId) => Boolean(open[postId]),
     loading: busy,
     loadCounts,

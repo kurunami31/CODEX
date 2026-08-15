@@ -475,6 +475,12 @@ create table if not exists public.post_comments (
   updated_at  timestamptz default now()
 );
 
+-- Existing databases already have this table, so `create table if not exists`
+-- is a no-op for them — add the new columns explicitly (idempotent).
+alter table public.post_comments add column if not exists image_url text;
+alter table public.post_comments add column if not exists parent_id uuid;
+alter table public.post_comments add column if not exists updated_at timestamptz;
+
 -- posts: comments disappear with the post; commenters with the account
 alter table public.post_comments
   drop constraint if exists post_comments_post_id_fkey,

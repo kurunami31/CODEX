@@ -15,7 +15,7 @@ export default function PostCard({
   post, liked, likeCount, onLike, onShare, mine, manage,
   editing, editDraft, onEditStart, onEditCancel, onEditChange, onEditSave, saving, onArchive, onDelete,
   commentCount = 0, commentsOpen = false, onCommentsToggle, comments = null, onAddComment, onEditComment, onDeleteComment,
-  commentsBusy = false, currentUserId, canModerate = false,
+  commentsBusy = false, threadError = null, currentUserId, canModerate = false,
 }) {
   const author = post.profiles;
   const when = formatEventDate(post.created_at);
@@ -192,6 +192,8 @@ export default function PostCard({
         <div className="post-comments">
           {comments === null ? (
             <div className="skeleton" style={{ height: 44 }} />
+          ) : threadError ? (
+            <div className="post-comments-empty">{threadError}</div>
           ) : comments.length === 0 ? (
             <div className="post-comments-empty">No comments yet — start the convo.</div>
           ) : (
