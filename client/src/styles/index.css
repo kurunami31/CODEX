@@ -622,12 +622,13 @@ html[data-theme='dark'] .rate-note { color: #ffc46b; }
   margin: 0 0 6px;
 }
 .auth-slide-sub {
-  color: var(--muted);
+  color: var(--ink-soft);
   font-size: calc(0.90625rem * var(--text-scale));
   line-height: 1.5; margin: 0 0 22px;
 }
 .auth-slide-form { display: flex; flex-direction: column; gap: 15px; }
 .auth-slide-form .btn { flex-shrink: 0; }
+.auth-slider .field label { color: var(--ink-soft); }
 
 .auth-slider-overlay {
   position: absolute; top: 0; left: 50%; width: 50%; height: 100%;
