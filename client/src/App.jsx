@@ -19,6 +19,7 @@ const ScannerPage = lazy(() => import('./pages/ScannerPage'));
 const Leaderboard = lazy(() => import('./pages/Leaderboard'));
 const Certificates = lazy(() => import('./pages/Certificates'));
 const Elections = lazy(() => import('./pages/Elections'));
+const Directory = lazy(() => import('./pages/Directory'));
 const Admin = lazy(() => import('./pages/Admin'));
 const SuperAdmin = lazy(() => import('./pages/SuperAdmin'));
 
@@ -128,6 +129,14 @@ export default function App() {
           <Route path="leaderboard" element={<Lazy><Leaderboard /></Lazy>} />
           <Route path="certificates" element={<Lazy><Certificates /></Lazy>} />
           <Route path="elections" element={<Lazy><Elections /></Lazy>} />
+          <Route
+            path="directory"
+            element={
+              <RequireRole roles={['moderator', 'admin', 'superadmin']}>
+                <Lazy><Directory /></Lazy>
+              </RequireRole>
+            }
+          />
           <Route path="settings" element={<Lazy><ProfileSettings /></Lazy>} />
           <Route path="scanner/:eventId" element={<Lazy><ScannerPage /></Lazy>} />
           <Route

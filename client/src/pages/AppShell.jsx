@@ -15,6 +15,7 @@ const TITLES = {
   '/app/leaderboard': 'leaderboard',
   '/app/certificates': 'certificates',
   '/app/elections': 'elections',
+  '/app/directory': 'member ids',
   '/app/admin': 'control',
   '/app/superadmin': 'root access',
   '/app/settings': 'settings',
@@ -163,6 +164,13 @@ export default function AppShell() {
               >
                 <CameraIcon width={20} height={20} />
                 Scan QR
+              </NavLink>
+              <NavLink
+                to="/app/directory"
+                className={({ isActive }) => `nav-item${isActive ? ' nav-item--on' : ''}`}
+              >
+                <IdIcon width={20} height={20} />
+                Member IDs
               </NavLink>
             </>
           )}
@@ -354,6 +362,10 @@ export default function AppShell() {
               <NavLink to="/app/events" className="nav-item">
                 <CameraIcon width={20} height={20} />
                 Scan QR
+              </NavLink>
+              <NavLink to="/app/directory" className="nav-item">
+                <IdIcon width={20} height={20} />
+                Member IDs
               </NavLink>
             </>
           )}
