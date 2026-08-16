@@ -359,7 +359,7 @@ begin
     raise exception 'Insufficient permissions';
   end if;
 
-  select coalesce(jsonb_agg(row_to_jsonb(t) order by t.full_name), '[]'::jsonb)
+  select coalesce(jsonb_agg(to_jsonb(t) order by t.full_name), '[]'::jsonb)
   into v_rows
   from (
     select p.student_id, p.full_name, p.year_level, p.section, p.course, p.avatar_url,
@@ -452,6 +452,17 @@ revoke all on function public.get_my_role, public.mark_attendance,
         public.confirm_membership
         from anon, public;
 
+-- PostgREST connects as `authenticator`; revoking from PUBLIC above also
+-- stripped its implicit EXECUTE, which hides the functions from the REST
+-- API (404 "function does not exist"). Re-grant explicitly so the RPCs
+-- stay callable through PostgREST while anon/public stay locked out.
+grant execute on function
+  public.get_my_role(), public.mark_attendance(uuid, text),
+  public.event_attendance(uuid), public.delete_event(uuid),
+  public.superadmin_delete_user(uuid), public.confirm_membership(uuid, boolean),
+  public.get_my_profile(), public.get_members(), public.attendance_counts()
+  to authenticator;
+
 -- ────────────────────────────────────────────────
 --  ID PRIVACY: student IDs are visible to the owner,
 --  moderators and admins only.
@@ -486,7 +497,7 @@ as $$
 declare
   v_row jsonb;
 begin
-  select row_to_jsonb(t) into v_row
+  select to_jsonb(t) into v_row
   from (select * from public.profiles where id = auth.uid()) t;
   return coalesce(v_row, '{}'::jsonb);
 end;
@@ -507,7 +518,7 @@ declare
 begin
   if v_role in ('admin','moderator','superadmin') then
     return (
-      select coalesce(jsonb_agg(row_to_jsonb(t) order by t.full_name), '[]'::jsonb)
+      select coalesce(jsonb_agg(to_jsonb(t) order by t.full_name), '[]'::jsonb)
       from (
         select id, student_id, full_name, year_level, section, course, role,
                avatar_url, created_at, membership_paid, membership_paid_at,
@@ -517,7 +528,7 @@ begin
     );
   end if;
   return (
-    select coalesce(jsonb_agg(row_to_jsonb(t) order by t.full_name), '[]'::jsonb)
+    select coalesce(jsonb_agg(to_jsonb(t) order by t.full_name), '[]'::jsonb)
     from (
       select id, full_name, year_level, section, course, role,
              avatar_url, created_at, membership_paid, points
@@ -692,7 +703,7 @@ begin
     raise exception 'Insufficient permissions';
   end if;
 
-  select coalesce(jsonb_agg(row_to_jsonb(t) order by t.event_date), '[]'::jsonb)
+  select coalesce(jsonb_agg(to_jsonb(t) order by t.event_date), '[]'::jsonb)
   into v_rows
   from (
     select e.id as event_id, e.title, e.event_date,
@@ -1139,7 +1150,7 @@ begin
     end if;
   end if;
 
-  select coalesce(jsonb_agg(row_to_jsonb(t) order by t.position, t.votes desc), '[]'::jsonb)
+  select coalesce(jsonb_agg(to_jsonb(t) order by t.position, t.votes desc), '[]'::jsonb)
   into v_rows
   from (
     select c.id as candidate_id, c.position, c.user_id, p.full_name, p.section,
@@ -1174,7 +1185,7 @@ begin
     raise exception 'Insufficient permissions';
   end if;
 
-  select coalesce(jsonb_agg(row_to_jsonb(t) order by t.position, t.votes desc), '[]'::jsonb)
+  select coalesce(jsonb_agg(to_jsonb(t) order by t.position, t.votes desc), '[]'::jsonb)
   into v_rows
   from (
     select c.id as candidate_id, c.position, c.user_id, p.full_name, p.section,
