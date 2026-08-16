@@ -89,9 +89,11 @@ export default function Directory() {
               <tbody>
                 {filtered.map((m) => (
                   <tr key={m.id}>
-                    <td style={{ display: 'flex', alignItems: 'center', gap: 10, whiteSpace: 'nowrap' }}>
-                      <Avatar name={m.full_name} seed={m.student_id || m.id} size={30} url={m.avatar_url} />
-                      <b>{m.full_name || '—'}</b>
+                    <td>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, whiteSpace: 'nowrap' }}>
+                        <Avatar name={m.full_name} seed={m.student_id || m.id} size={30} url={m.avatar_url} />
+                        <b>{m.full_name || '—'}</b>
+                      </div>
                     </td>
                     <td style={{ fontFamily: 'var(--f-ocr)', fontSize: 12 }}>{m.student_id || '—'}</td>
                     <td>{m.year_level} · {m.section}</td>

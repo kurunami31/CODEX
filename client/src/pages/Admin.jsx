@@ -25,6 +25,7 @@ export default function Admin() {
   const [memberSearch, setMemberSearch] = useState('');
   const [viewingId, setViewingId] = useState(null);
   const [confirmingId, setConfirmingId] = useState(null);
+  const [amounts, setAmounts] = useState({});
   const [loading, setLoading] = useState(true);
   const [loadingMembers, setLoadingMembers] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
@@ -66,13 +67,14 @@ export default function Admin() {
     loadMembers();
   }, [loadEvents, loadStats, loadUnpaid, loadMembers]);
 
-  const confirmDues = async (p) => {
+  const confirmDues = async (p, amount) => {
     setConfirmingId(p.id);
-    const { error } = await supabase.rpc('confirm_membership', { p_user_id: p.id, p_paid: true });
+    const { error } = await supabase.rpc('confirm_membership', { p_user_id: p.id, p_paid: true, p_amount: amount });
     setConfirmingId(null);
     if (error) return toast.error('Could not confirm', error.message);
     toast.ok('Payment confirmed', `${p.full_name} is now marked as paid.`);
     loadUnpaid();
+    loadMembers();
   };
 
   const filteredMembers = useMemo(() => {
@@ -215,9 +217,11 @@ export default function Admin() {
               <tbody>
                 {unpaid.map((p) => (
                   <tr key={p.id}>
-                    <td style={{ display: 'flex', alignItems: 'center', gap: 10, whiteSpace: 'nowrap' }}>
-                      <Avatar name={p.full_name} seed={p.student_id} size={28} url={p.avatar_url} />
-                      <b>{p.full_name}</b>
+                    <td>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, whiteSpace: 'nowrap' }}>
+                        <Avatar name={p.full_name} seed={p.student_id} size={28} url={p.avatar_url} />
+                        <b>{p.full_name}</b>
+                      </div>
                     </td>
                     <td style={{ fontFamily: 'var(--f-ocr)', fontSize: 12 }}>{p.student_id}</td>
                     <td>{p.year_level} · {p.section}</td>
@@ -232,14 +236,27 @@ export default function Admin() {
                       )}
                     </td>
                     <td>
-                      <button
-                        className="btn btn-accent btn-sm"
-                        onClick={() => confirmDues(p)}
-                        disabled={confirmingId === p.id}
-                      >
-                        <CheckIcon width={14} height={14} />
-                        {confirmingId === p.id ? 'Confirming…' : 'Confirm payment'}
-                      </button>
+                      <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                        <select
+                          className="input"
+                          style={{ width: 86, padding: '4px 4px', fontSize: 12, minWidth: 0 }}
+                          value={amounts[p.id] ?? 120}
+                          onChange={(e) => setAmounts((a) => ({ ...a, [p.id]: Number(e.target.value) }))}
+                          disabled={confirmingId === p.id}
+                          aria-label={`Payment amount for ${p.full_name}`}
+                        >
+                          <option value={120}>₱120 full</option>
+                          <option value={60}>₱60 half</option>
+                        </select>
+                        <button
+                          className="btn btn-accent btn-sm"
+                          onClick={() => confirmDues(p, amounts[p.id] ?? 120)}
+                          disabled={confirmingId === p.id}
+                        >
+                          <CheckIcon width={14} height={14} />
+                          {confirmingId === p.id ? 'Confirming…' : 'Confirm payment'}
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -284,9 +301,11 @@ export default function Admin() {
               <tbody>
                 {filteredMembers.map((m) => (
                   <tr key={m.id}>
-                    <td style={{ display: 'flex', alignItems: 'center', gap: 10, whiteSpace: 'nowrap' }}>
-                      <Avatar name={m.full_name} seed={m.student_id || m.id} size={30} url={m.avatar_url} />
-                      <b>{m.full_name || '—'}</b>
+                    <td>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, whiteSpace: 'nowrap' }}>
+                        <Avatar name={m.full_name} seed={m.student_id || m.id} size={30} url={m.avatar_url} />
+                        <b>{m.full_name || '—'}</b>
+                      </div>
                     </td>
                     <td style={{ fontFamily: 'var(--f-ocr)', fontSize: 12 }}>{m.student_id || '—'}</td>
                     <td>{m.year_level} · {m.section}</td>
@@ -463,9 +482,11 @@ export default function Admin() {
                   {attendees.map((a, i) => (
                     <tr key={a.student_id}>
                       <td style={{ fontFamily: 'var(--f-ocr)', fontSize: 11, color: 'var(--muted)' }}>{String(i + 1).padStart(2, '0')}</td>
-                      <td style={{ display: 'flex', alignItems: 'center', gap: 10, whiteSpace: 'nowrap' }}>
-                        <Avatar name={a.full_name} seed={a.student_id} size={28} url={a.avatar_url} />
-                        {a.full_name}
+                      <td>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, whiteSpace: 'nowrap' }}>
+                          <Avatar name={a.full_name} seed={a.student_id} size={28} url={a.avatar_url} />
+                          {a.full_name}
+                        </div>
                       </td>
                       <td style={{ fontFamily: 'var(--f-ocr)', fontSize: 12 }}>{a.student_id}</td>
                       <td>{a.year_level} · {a.section}</td>

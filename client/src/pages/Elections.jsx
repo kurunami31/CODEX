@@ -495,10 +495,12 @@ export default function Elections() {
                 {candidates.map((c) => (
                   <tr key={c.id}>
                     <td style={{ fontSize: 13 }}>{elections.find((e) => e.id === c.election_id)?.title || '—'}</td>
-                    <td style={{ display: 'flex', alignItems: 'center', gap: 10, whiteSpace: 'nowrap' }}>
-                      <Avatar name={c.profiles?.full_name} seed={c.profiles?.student_id || c.user_id} size={26} url={c.profiles?.avatar_url} />
-                      <b>{c.profiles?.full_name || 'Member'}</b>
-                      {c.winner && <span className="chip chip--ok"><TrophyIcon width={11} height={11} /> winner</span>}
+                    <td>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, whiteSpace: 'nowrap' }}>
+                        <Avatar name={c.profiles?.full_name} seed={c.profiles?.student_id || c.user_id} size={26} url={c.profiles?.avatar_url} />
+                        <b>{c.profiles?.full_name || 'Member'}</b>
+                        {c.winner && <span className="chip chip--ok"><TrophyIcon width={11} height={11} /> winner</span>}
+                      </div>
                     </td>
                     <td>{c.position}</td>
                     <td>

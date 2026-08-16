@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import ExcelJS from 'exceljs';
 import { supabaseFor, supabaseAdmin } from '../lib/supabase.js';
 
 const router = Router();
@@ -171,6 +172,129 @@ router.post('/maintenance', async (req, res) => {
   if (error) return res.status(500).json({ error: error.message || 'Could not save maintenance mode.' });
   res.set('Cache-Control', 'no-store');
   res.json({ ok: true, enabled, message: message || null, updatedAt: now });
+});
+
+// GET /api/membership/report — superadmin downloads the membership fee
+// report as a styled .xlsx workbook (summary sheet + one row per member).
+// Student IDs and receipts come from the owner-run RPC behind the ID
+// lockdown; the caller's own token is used so RLS semantics apply.
+router.get('/membership/report', async (req, res) => {
+  const caller = await requireSuperAdmin(req, res);
+  if (!caller) return;
+
+  const sb = supabaseFor(bearer(req));
+  const { data, error } = await sb.rpc('get_membership_report');
+  if (error) {
+    return res.status(400).json({ error: error.message || 'Could not load the membership report.' });
+  }
+  const rows = Array.isArray(data) ? data : [];
+
+  const paid = rows.filter((r) => r.membership_paid);
+  const unpaid = rows.filter((r) => !r.membership_paid);
+  const amounts = paid.map((r) => Number(r.membership_paid_amount || 120));
+  const totalCollected = amounts.reduce((s, a) => s + a, 0);
+  const fullCount = amounts.filter((a) => a >= 120).length;
+  const halfCount = amounts.length - fullCount;
+  const rate = rows.length ? Math.round((paid.length / rows.length) * 100) : 0;
+
+  const workbook = new ExcelJS.Workbook();
+  workbook.creator = 'CODEX';
+  workbook.created = new Date();
+
+  const sum = workbook.addWorksheet('Summary');
+  sum.columns = [{ width: 32 }, { width: 22 }];
+  sum.mergeCells('A1:B1');
+  sum.getCell('A1').value = 'MEMBERSHIP FEE REPORT';
+  sum.getCell('A1').font = { bold: true, size: 16 };
+  sum.mergeCells('A2:B2');
+  sum.getCell('A2').value = `CODEX · CODEBYTERS — generated ${new Date().toLocaleString('en-PH', { dateStyle: 'long', timeStyle: 'short' })}`;
+  sum.getCell('A2').font = { italic: true, color: { argb: 'FF6B7280' } };
+  sum.mergeCells('A3:B3');
+  sum.getCell('A3').value = 'Fee: ₱120.00 full or ₱60.00 half per semester';
+  sum.getCell('A3').font = { italic: true, color: { argb: 'FF6B7280' } };
+
+  const sumHeader = sum.addRow(['Metric', 'Value']);
+  sumHeader.eachCell((c) => {
+    c.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1F2937' } };
+    c.alignment = { vertical: 'middle' };
+  });
+  const metrics = [
+    ['Total members', rows.length],
+    ['Dues paid', paid.length],
+    ['Unpaid', unpaid.length],
+    ['Collection rate', `${rate}%`],
+    ['Total collected', totalCollected],
+    ['Full payments (₱120)', fullCount],
+    ['Half payments (₱60)', halfCount],
+  ];
+  metrics.forEach(([label, value], i) => {
+    const r = sum.addRow([label, value]);
+    r.getCell(2).numFmt = i === 4 ? '"₱"#,##0.00' : undefined;
+    if (i % 2 === 1) {
+      r.eachCell((c) => { c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF3F4F6' } }; });
+    }
+  });
+
+  const ws = workbook.addWorksheet('Membership Fees');
+  ws.columns = [
+    { header: '#', key: 'i', width: 5 },
+    { header: 'Student ID', key: 'student_id', width: 14 },
+    { header: 'Full Name', key: 'full_name', width: 26 },
+    { header: 'Year Level', key: 'year_level', width: 11 },
+    { header: 'Section', key: 'section', width: 10 },
+    { header: 'Course', key: 'course', width: 9 },
+    { header: 'Status', key: 'status', width: 10 },
+    { header: 'Paid At', key: 'paid_at', width: 18 },
+    { header: 'Amount', key: 'amount', width: 11 },
+    { header: 'Confirmed By', key: 'confirmed_by', width: 22 },
+    { header: 'Receipt Link', key: 'receipt_url', width: 36 },
+    { header: 'Registered At', key: 'created_at', width: 18 },
+  ];
+  ws.views = [{ state: 'frozen', ySplit: 1 }];
+
+  const head = ws.addRow(ws.columns.map((c) => c.header));
+  head.eachCell((c) => {
+    c.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1F2937' } };
+    c.alignment = { vertical: 'middle' };
+  });
+
+  rows.forEach((r, idx) => {
+    const row = ws.addRow([
+      idx + 1,
+      r.student_id || '',
+      r.full_name || '',
+      r.year_level || '',
+      r.section || '',
+      r.course || '',
+      r.membership_paid ? 'PAID' : 'UNPAID',
+      r.membership_paid_at ? new Date(r.membership_paid_at) : null,
+      r.membership_paid ? Number(r.membership_paid_amount || 120) : null,
+      r.confirmed_by_name || '—',
+      r.receipt_url || '',
+      r.created_at ? new Date(r.created_at) : null,
+    ]);
+    const status = row.getCell(7);
+    status.font = { bold: true };
+    status.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: r.membership_paid ? 'FFD1FAE5' : 'FFFEE2E2' },
+    };
+    status.font = { bold: true, color: { argb: r.membership_paid ? 'FF065F46' : 'FF991B1B' } };
+    row.getCell(9).numFmt = '"₱"#,##0.00';
+    row.getCell(8).numFmt = 'yyyy-mm-dd hh:mm';
+    row.getCell(12).numFmt = 'yyyy-mm-dd hh:mm';
+  });
+
+  if (rows.length) ws.autoFilter = { from: 'A1', to: `L${rows.length + 1}` };
+
+  const stamp = new Date().toISOString().slice(0, 10);
+  res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+  res.setHeader('Content-Disposition', `attachment; filename="membership-report-${stamp}.xlsx"`);
+  await workbook.xlsx.write(res);
+  res.end();
 });
 
 export default router;

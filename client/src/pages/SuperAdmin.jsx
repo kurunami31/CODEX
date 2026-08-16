@@ -8,7 +8,7 @@ import { roleLabel } from '../lib/roles';
 import Avatar from '../components/Avatar';
 import {
   CrownIcon, UsersIcon, RssIcon, QrIcon, PlusIcon, XIcon, PencilIcon, TrashIcon,
-  SearchIcon, AlertIcon, CheckIcon, WalletIcon, WrenchIcon,
+  SearchIcon, AlertIcon, CheckIcon, WalletIcon, WrenchIcon, DownloadIcon,
 } from '../components/icons/Icons';
 
 const YEARS = ['1st Year', '2nd Year', '3rd Year', '4th Year'];
@@ -42,6 +42,8 @@ export default function SuperAdmin() {
   const [showCreate, setShowCreate] = useState(false);
   const [editing, setEditing] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [amounts, setAmounts] = useState({});
   const firstRun = useRef(true);
 
   const [maint, setMaint] = useState({ enabled: false, message: '' });
@@ -154,14 +156,52 @@ export default function SuperAdmin() {
     loadStudents();
   };
 
-  const setMembership = async (s, paid) => {
+  const setMembership = async (s, paid, amount = 120) => {
     if (!paid && !window.confirm(`Revoke ${s.full_name || s.email}'s confirmed membership?`)) return;
     setBusy(true);
-    const { error } = await supabase.rpc('confirm_membership', { p_user_id: s.id, p_paid: paid });
+    const { error } = await supabase.rpc('confirm_membership', { p_user_id: s.id, p_paid: paid, p_amount: amount });
     setBusy(false);
     if (error) return toast.error('Membership error', error.message);
     toast.ok(paid ? 'Dues confirmed' : 'Dues revoked', `${s.full_name || 'Member'} is now marked as ${paid ? 'paid' : 'unpaid'}.`);
     loadStudents();
+  };
+
+  const exportReport = async () => {
+    if (exporting) return;
+    setExporting(true);
+    try {
+      const res = await apiFetch('/api/membership/report', { method: 'GET' });
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        throw new Error(j.error || 'Could not build the report.');
+      }
+      const blob = await res.blob();
+      const filename = `membership-report-${new Date().toISOString().slice(0, 10)}.xlsx`;
+      const url = URL.createObjectURL(blob);
+      try {
+        if ('download' in HTMLAnchorElement.prototype) {
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = filename;
+          a.setAttribute('download', filename);
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          toast.ok('Report downloaded', `${filename} saved — check your downloads.`);
+        } else {
+          // Very old in-app browsers: open the file so the user can save it.
+          const win = window.open(url, '_blank');
+          if (win) toast.info('Save the report', 'Save the file from the new tab.');
+          else toast.error('Could not save', 'Your browser blocked the save — allow pop-ups and try again.');
+        }
+      } finally {
+        setTimeout(() => URL.revokeObjectURL(url), 60_000);
+      }
+    } catch (err) {
+      toast.error('Export failed', err.message);
+    } finally {
+      setExporting(false);
+    }
   };
 
   const deletePost = async (p) => {
@@ -227,6 +267,9 @@ export default function SuperAdmin() {
             <PlusIcon width={16} height={16} /> Add student
           </button>
         )}
+        <button className="btn btn-outline" onClick={exportReport} disabled={exporting}>
+          <DownloadIcon width={16} height={16} /> {exporting ? 'Building…' : 'Export report'}
+        </button>
       </div>
 
       <div className="panel" style={{ padding: '18px 20px', display: 'flex', gap: 12, flexWrap: 'wrap' }}>
@@ -349,9 +392,11 @@ export default function SuperAdmin() {
               <tbody>
                 {filteredStudents.map((s) => (
                   <tr key={s.id}>
-                    <td style={{ display: 'flex', alignItems: 'center', gap: 10, whiteSpace: 'nowrap' }}>
-                      <Avatar name={s.full_name} seed={s.student_id || s.id} size={30} url={s.avatar_url} />
-                      <b>{s.full_name || '—'}</b>
+                    <td>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, whiteSpace: 'nowrap' }}>
+                        <Avatar name={s.full_name} seed={s.student_id || s.id} size={30} url={s.avatar_url} />
+                        <b>{s.full_name || '—'}</b>
+                      </div>
                     </td>
                     <td>
                       <span style={{ fontSize: 13 }}>{s.email}</span>
@@ -384,16 +429,29 @@ export default function SuperAdmin() {
                             <XIcon width={14} height={14} />
                           </button>
                         ) : (
-                          <button
-                            className="icon-btn"
-                            style={{ color: 'var(--ok)' }}
-                            title="Confirm membership fee"
-                            aria-label={`Confirm ${s.full_name || s.email} membership`}
-                            onClick={() => setMembership(s, true)}
-                            disabled={busy}
-                          >
-                            <CheckIcon width={14} height={14} />
-                          </button>
+                          <>
+                            <select
+                              className="input"
+                              style={{ width: 74, padding: '4px 4px', fontSize: 11, minWidth: 0 }}
+                              value={amounts[s.id] ?? 120}
+                              onChange={(e) => setAmounts((a) => ({ ...a, [s.id]: Number(e.target.value) }))}
+                              disabled={busy}
+                              aria-label={`Payment amount for ${s.full_name || s.email}`}
+                            >
+                              <option value={120}>₱120</option>
+                              <option value={60}>₱60</option>
+                            </select>
+                            <button
+                              className="icon-btn"
+                              style={{ color: 'var(--ok)' }}
+                              title="Confirm membership fee"
+                              aria-label={`Confirm ${s.full_name || s.email} membership`}
+                              onClick={() => setMembership(s, true, amounts[s.id] ?? 120)}
+                              disabled={busy}
+                            >
+                              <CheckIcon width={14} height={14} />
+                            </button>
+                          </>
                         )}
                         <button className="icon-btn" title="Edit member" aria-label={`Edit ${s.full_name || s.email}`} onClick={() => setEditing(s)}>
                           <PencilIcon width={14} height={14} />
@@ -484,9 +542,11 @@ export default function SuperAdmin() {
               <tbody>
                 {filteredAttendance.map((a) => (
                   <tr key={a.id}>
-                    <td style={{ display: 'flex', alignItems: 'center', gap: 10, whiteSpace: 'nowrap' }}>
-                      <Avatar name={a.profiles?.full_name} seed={a.student_id} size={30} url={a.profiles?.avatar_url} />
-                      {a.profiles?.full_name || 'deleted member'}
+                    <td>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, whiteSpace: 'nowrap' }}>
+                        <Avatar name={a.profiles?.full_name} seed={a.student_id} size={30} url={a.profiles?.avatar_url} />
+                        {a.profiles?.full_name || 'deleted member'}
+                      </div>
                     </td>
                     <td style={{ fontFamily: 'var(--f-ocr)', fontSize: 12 }}>{a.student_id}</td>
                     <td style={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.events?.title || 'deleted event'}</td>

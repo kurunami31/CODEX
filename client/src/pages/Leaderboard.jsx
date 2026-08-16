@@ -102,9 +102,11 @@ export default function Leaderboard() {
                     {rest.map((p, i) => (
                       <tr key={p.id} className={p.id === user?.id ? 'row-me' : ''}>
                         <td style={{ fontFamily: 'var(--f-ocr)', fontSize: 12, color: 'var(--muted)' }}>#{i + 4}</td>
-                        <td style={{ display: 'flex', alignItems: 'center', gap: 10, whiteSpace: 'nowrap' }}>
-                          <Avatar name={p.full_name} seed={p.student_id || p.id} size={28} url={p.avatar_url} />
-                          <b>{p.full_name || '—'}</b>
+                        <td>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 10, whiteSpace: 'nowrap' }}>
+                            <Avatar name={p.full_name} seed={p.student_id || p.id} size={28} url={p.avatar_url} />
+                            <b>{p.full_name || '—'}</b>
+                          </div>
                         </td>
                         <td style={{ fontFamily: 'var(--f-ocr)', fontSize: 12 }}>{p.student_id || '—'}</td>
                         <td>{p.year_level} · {p.section}</td>

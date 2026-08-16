@@ -41,6 +41,9 @@ alter table public.profiles add column if not exists membership_paid boolean not
 alter table public.profiles add column if not exists membership_paid_at timestamptz;
 alter table public.profiles add column if not exists membership_confirmed_by uuid
   references auth.users(id) on delete set null;
+-- Amount actually collected: full (120) or half (60) per sem. NULL while
+-- unpaid; defaults to the full fee when confirming without an amount.
+alter table public.profiles add column if not exists membership_paid_amount numeric(10,2);
 
 -- ────────────────────────────────────────────────
 --  EVENTS (posted by admins)
@@ -465,9 +468,13 @@ grant execute on function public.superadmin_delete_user(uuid) to authenticated;
 
 -- ────────────────────────────────────────────────
 --  RPC: confirm / revoke a member's dues (admins / superadmins)
---  Sets membership_paid plus audit columns (when + who).
+--  Sets membership_paid plus audit columns (when + who) and the amount
+--  actually collected (full ₱120 or half ₱60 — defaults to the full fee).
+--  The old two-argument signature is dropped so callers cannot keep
+--  confirming without recording an amount.
 -- ────────────────────────────────────────────────
-create or replace function public.confirm_membership(p_user_id uuid, p_paid boolean)
+drop function if exists public.confirm_membership(uuid, boolean);
+create or replace function public.confirm_membership(p_user_id uuid, p_paid boolean, p_amount numeric default 120)
 returns void
 language plpgsql
 security definer
@@ -477,10 +484,14 @@ begin
   if coalesce((select role from public.profiles where id = auth.uid()), '') not in ('admin','superadmin') then
     raise exception 'Insufficient permissions: only admins can confirm membership payments';
   end if;
+  if p_paid and (p_amount is null or p_amount <= 0) then
+    raise exception 'Payment amount must be greater than zero';
+  end if;
   update public.profiles
      set membership_paid = p_paid,
          membership_paid_at = case when p_paid then now() else null end,
-         membership_confirmed_by = case when p_paid then auth.uid() else null end
+         membership_confirmed_by = case when p_paid then auth.uid() else null end,
+         membership_paid_amount = case when p_paid then coalesce(p_amount, 120) else null end
    where id = p_user_id;
   if not found then
     raise exception 'Member not found';
@@ -488,12 +499,45 @@ begin
 end;
 $$;
 
-grant execute on function public.confirm_membership(uuid, boolean) to authenticated;
+grant execute on function public.confirm_membership(uuid, boolean, numeric) to authenticated;
+
+-- ────────────────────────────────────────────────
+--  RPC: membership fee report (superadmins only)
+--  Every member row plus payment details and the confirmer's name, for
+--  the Excel export endpoint. Runs as the table owner so it can read
+--  student IDs and receipts behind the ID lockdown.
+-- ────────────────────────────────────────────────
+create or replace function public.get_membership_report()
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_role text := public.get_my_role();
+begin
+  if coalesce(v_role, '') <> 'superadmin' then
+    raise exception 'Insufficient permissions';
+  end if;
+  return (
+    select coalesce(jsonb_agg(to_jsonb(t) order by t.full_name), '[]'::jsonb)
+    from (
+      select p.student_id, p.full_name, p.year_level, p.section, p.course, p.role,
+             p.membership_paid, p.membership_paid_at, p.membership_paid_amount,
+             c.full_name as confirmed_by_name, p.receipt_url, p.created_at
+      from public.profiles p
+      left join public.profiles c on c.id = p.membership_confirmed_by
+    ) t
+  );
+end;
+$$;
+
+grant execute on function public.get_membership_report() to authenticated;
 
 -- Defense in depth: lock the RPCs down to authenticated users only.
 revoke all on function public.get_my_role, public.mark_attendance,
         public.event_attendance, public.delete_event, public.superadmin_delete_user,
-        public.confirm_membership
+        public.confirm_membership, public.get_membership_report
         from anon, public;
 
 -- PostgREST connects as `authenticator`; revoking from PUBLIC above also
@@ -503,9 +547,9 @@ revoke all on function public.get_my_role, public.mark_attendance,
 grant execute on function
   public.get_my_role(), public.mark_attendance(uuid, text),
   public.event_attendance(uuid), public.delete_event(uuid),
-  public.superadmin_delete_user(uuid), public.confirm_membership(uuid, boolean),
+  public.superadmin_delete_user(uuid), public.confirm_membership(uuid, boolean, numeric),
   public.get_my_profile(), public.get_members(), public.attendance_counts(),
-  public.get_attendance()
+  public.get_attendance(), public.get_membership_report()
   to authenticator;
 
 -- ────────────────────────────────────────────────
@@ -521,7 +565,7 @@ grant execute on function
 revoke select on public.profiles from authenticated;
 grant select (id, full_name, year_level, section, course, role,
               avatar_url, created_at, membership_paid, membership_paid_at,
-              points, receipt_url)
+              membership_paid_amount, points, receipt_url)
   on public.profiles to authenticated;
 
 -- Logged-out visitors may only count members (the welcome page shows a

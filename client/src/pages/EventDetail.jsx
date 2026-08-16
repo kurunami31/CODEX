@@ -271,10 +271,12 @@ export default function EventDetail() {
                 <tbody>
                   {attendees.map((a) => (
                     <tr key={a.student_id}>
-                      <td style={{ display: 'flex', alignItems: 'center', gap: 10, whiteSpace: 'nowrap' }}>
+<td>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, whiteSpace: 'nowrap' }}>
                         <Avatar name={a.full_name} seed={a.student_id} size={30} url={a.avatar_url} />
                         {a.full_name}
-                      </td>
+                      </div>
+                    </td>
                       <td style={{ fontFamily: 'var(--f-ocr)', fontSize: 12 }}>{a.student_id}</td>
                       <td>{a.year_level} · {a.section}</td>
                       <td>{timeAgo(a.scanned_at)}</td>
