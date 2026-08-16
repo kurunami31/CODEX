@@ -1517,8 +1517,9 @@ table.codex-table { width: 100%; border-collapse: collapse; font-size: calc(0.87
   .topbar { padding-left: 14px; padding-right: 14px; }
   .search-wrap--desktop { display: none; }
   .search-wrap--mobile { display: block; }
-  .notif-panel { width: min(300px, calc(100vw - 44px)); }
-  .notif-list { max-height: min(38vh, 260px); }
+  .notif-panel { width: min(280px, calc(100vw - 64px)); }
+  .notif-list { max-height: 220px; overflow-y: auto; }
+  .notif-item { padding: 9px 12px; }
   .page { padding: 16px 14px calc(96px + var(--safe-b)); }
   .auth-left { display: none; }
   .auth-wrap { background: var(--deep); align-items: center; padding: 24px 16px calc(24px + var(--safe-b)); }

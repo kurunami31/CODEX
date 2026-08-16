@@ -4,7 +4,7 @@ import { supabase, apiFetch } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import Avatar from '../components/Avatar';
-import { drawIdCard } from '../lib/drawIdCard';
+import { drawIdCard, ID_CARD_W, ID_CARD_H, ID_CARD_SCALE } from '../lib/drawIdCard';
 import { IdIcon, QrIcon, DownloadIcon, CheckIcon, AlertIcon, ClockIcon, CalendarIcon } from '../components/icons/Icons';
 
 export default function MyId() {
@@ -47,8 +47,8 @@ export default function MyId() {
       // make sure display fonts (Nulshock / OCR A) are loaded before drawing
       await document.fonts.ready;
       const canvas = document.createElement('canvas');
-      canvas.width = 856;
-      canvas.height = 540;
+      canvas.width = ID_CARD_W * ID_CARD_SCALE;
+      canvas.height = ID_CARD_H * ID_CARD_SCALE;
       const ctx = canvas.getContext('2d');
       const cardProfile = myStudentId ? { ...profile, student_id: myStudentId } : profile;
       await drawIdCard(ctx, { profile: cardProfile, avatarUrl: profile?.avatar_url, qr });
@@ -139,8 +139,8 @@ export default function MyId() {
 
   const renderQr = useCallback(async (payload, sig) => {
     const url = await QRCode.toDataURL(JSON.stringify({ payload, sig }), {
-      width: 480,
-      margin: 1,
+      width: 1024,
+      margin: 2,
       color: { dark: '#0b2b3a', light: '#ffffff' },
       errorCorrectionLevel: 'H',
     });

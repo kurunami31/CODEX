@@ -22,9 +22,13 @@ function fillAvatarTile(ctx, x, y, w, h, seed) {
   ctx.fillRect(x, y, w, h);
 }
 
-// canvas is 2× the visual card (428×270 → 856×540)
-const W = 856;
-const H = 540;
+// Logical card layout is 2× the visual card (428×270 → 856×540).
+// The export canvas is drawn at ID_CARD_SCALE× that — 4× → 3424×2160 (HD).
+export const ID_CARD_W = 856;
+export const ID_CARD_H = 540;
+export const ID_CARD_SCALE = 4;
+const W = ID_CARD_W;
+const H = ID_CARD_H;
 
 const OCR = "'OCR A Extended', 'Courier New', monospace";
 const FID = "'Nulshock', 'Arial Black', sans-serif";
@@ -68,6 +72,8 @@ function loadImage(src, timeout = 12000) {
 }
 
 export async function drawIdCard(ctx, { profile, avatarUrl, qr }) {
+  // everything below draws in logical 856×540 units; scale up for the HD export
+  ctx.setTransform(ID_CARD_SCALE, 0, 0, ID_CARD_SCALE, 0, 0);
   ctx.clearRect(0, 0, W, H);
 
   // background + frame
