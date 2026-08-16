@@ -191,23 +191,26 @@ router.get('/membership/report', async (req, res) => {
 
   const paid = rows.filter((r) => r.membership_paid);
   const unpaid = rows.filter((r) => !r.membership_paid);
+  const confirmed = rows.filter((r) => r.email_confirmed);
+  const unconfirmed = rows.filter((r) => !r.email_confirmed);
   const amounts = paid.map((r) => Number(r.membership_paid_amount || 120));
   const totalCollected = amounts.reduce((s, a) => s + a, 0);
   const fullCount = amounts.filter((a) => a >= 120).length;
   const halfCount = amounts.length - fullCount;
   const rate = rows.length ? Math.round((paid.length / rows.length) * 100) : 0;
+  const exportedAt = new Date();
 
   const workbook = new ExcelJS.Workbook();
   workbook.creator = 'CODEX';
-  workbook.created = new Date();
+  workbook.created = exportedAt;
 
   const sum = workbook.addWorksheet('Summary');
-  sum.columns = [{ width: 32 }, { width: 22 }];
+  sum.columns = [{ width: 32 }, { width: 42 }];
   sum.mergeCells('A1:B1');
   sum.getCell('A1').value = 'MEMBERSHIP FEE REPORT';
   sum.getCell('A1').font = { bold: true, size: 16 };
   sum.mergeCells('A2:B2');
-  sum.getCell('A2').value = `CODEX · CODEBYTERS — generated ${new Date().toLocaleString('en-PH', { dateStyle: 'long', timeStyle: 'short' })}`;
+  sum.getCell('A2').value = 'CODEX · CODEBYTERS';
   sum.getCell('A2').font = { italic: true, color: { argb: 'FF6B7280' } };
   sum.mergeCells('A3:B3');
   sum.getCell('A3').value = 'Fee: ₱120.00 full or ₱60.00 half per semester';
@@ -220,7 +223,10 @@ router.get('/membership/report', async (req, res) => {
     c.alignment = { vertical: 'middle' };
   });
   const metrics = [
+    ['Report generated', `${exportedAt.toLocaleString('en-PH', { dateStyle: 'full', timeStyle: 'long', timeZone: 'Asia/Manila' })} (PHT)`],
     ['Total members', rows.length],
+    ['Email confirmed', confirmed.length],
+    ['Email NOT confirmed', unconfirmed.length],
     ['Dues paid', paid.length],
     ['Unpaid', unpaid.length],
     ['Collection rate', `${rate}%`],
@@ -230,7 +236,7 @@ router.get('/membership/report', async (req, res) => {
   ];
   metrics.forEach(([label, value], i) => {
     const r = sum.addRow([label, value]);
-    r.getCell(2).numFmt = i === 4 ? '"₱"#,##0.00' : undefined;
+    r.getCell(2).numFmt = i === 7 ? '"₱"#,##0.00' : undefined;
     if (i % 2 === 1) {
       r.eachCell((c) => { c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF3F4F6' } }; });
     }
@@ -248,6 +254,9 @@ router.get('/membership/report', async (req, res) => {
     { key: 'paid_at', width: 18 },
     { key: 'amount', width: 11 },
     { key: 'confirmed_by', width: 22 },
+    { key: 'email_confirmed', width: 12 },
+    { key: 'email_confirmed_at', width: 18 },
+    { key: 'last_sign_in', width: 18 },
     { key: 'receipt_url', width: 36 },
     { key: 'created_at', width: 18 },
   ];
@@ -272,6 +281,9 @@ router.get('/membership/report', async (req, res) => {
       r.membership_paid_at ? new Date(r.membership_paid_at) : null,
       r.membership_paid ? Number(r.membership_paid_amount || 120) : null,
       r.confirmed_by_name || '—',
+      r.email_confirmed ? 'CONFIRMED' : 'UNCONFIRMED',
+      r.email_confirmed_at ? new Date(r.email_confirmed_at) : null,
+      r.last_sign_in_at ? new Date(r.last_sign_in_at) : null,
       r.receipt_url || '',
       r.created_at ? new Date(r.created_at) : null,
     ]);
@@ -283,14 +295,24 @@ router.get('/membership/report', async (req, res) => {
       fgColor: { argb: r.membership_paid ? 'FFD1FAE5' : 'FFFEE2E2' },
     };
     status.font = { bold: true, color: { argb: r.membership_paid ? 'FF065F46' : 'FF991B1B' } };
+    const emailStatus = row.getCell(11);
+    emailStatus.font = { bold: true };
+    emailStatus.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: r.email_confirmed ? 'FFD1FAE5' : 'FFFEE2E2' },
+    };
+    emailStatus.font = { bold: true, color: { argb: r.email_confirmed ? 'FF065F46' : 'FF991B1B' } };
     row.getCell(9).numFmt = '"₱"#,##0.00';
     row.getCell(8).numFmt = 'yyyy-mm-dd hh:mm';
     row.getCell(12).numFmt = 'yyyy-mm-dd hh:mm';
+    row.getCell(13).numFmt = 'yyyy-mm-dd hh:mm';
+    row.getCell(15).numFmt = 'yyyy-mm-dd hh:mm';
   });
 
-  if (rows.length) ws.autoFilter = { from: 'A1', to: `L${rows.length + 1}` };
+  if (rows.length) ws.autoFilter = { from: 'A1', to: `O${rows.length + 1}` };
 
-  const stamp = new Date().toISOString().slice(0, 10);
+  const stamp = exportedAt.toISOString().slice(0, 10);
   res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
   res.setHeader('Content-Disposition', `attachment; filename="membership-report-${stamp}.xlsx"`);
   await workbook.xlsx.write(res);

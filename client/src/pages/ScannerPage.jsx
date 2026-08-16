@@ -72,13 +72,16 @@ export default function ScannerPage() {
         (decoded) => handleScan(decoded),
         () => { /* decode misses are expected while aiming */ }
       );
-      // html5-qrcode mirrors the preview (inline scaleX(-1)); clear it so
-      // the feed matches reality. (CSS !important also covers this, but
-      // the library sets it on the element directly.)
+      // The browser mirrors FRONT-facing camera streams by default
+      // (selfie style) — on a PC the scanner uses the laptop webcam
+      // (front-facing), so the preview looks flipped/inverse. Rear
+      // cameras are never mirrored. Undo the flip only when the
+      // resolved track is front-facing.
       const video = document.querySelector('#qr-reader video');
-      if (video) {
-        video.style.transform = '';
-        video.style.webkitTransform = '';
+      const track = video?.srcObject?.getVideoTracks?.()[0];
+      if (video && track?.getSettings?.().facingMode === 'user') {
+        video.style.transform = 'scaleX(-1)';
+        video.style.webkitTransform = 'scaleX(-1)';
       }
       setScannerState('scanning');
     } catch (err) {

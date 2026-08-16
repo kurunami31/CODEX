@@ -524,9 +524,12 @@ begin
     from (
       select p.student_id, p.full_name, p.year_level, p.section, p.course, p.role,
              p.membership_paid, p.membership_paid_at, p.membership_paid_amount,
-             c.full_name as confirmed_by_name, p.receipt_url, p.created_at
+             c.full_name as confirmed_by_name, p.receipt_url, p.created_at,
+             (u.email_confirmed_at is not null) as email_confirmed,
+             u.email_confirmed_at, u.last_sign_in_at
       from public.profiles p
       left join public.profiles c on c.id = p.membership_confirmed_by
+      left join auth.users u on u.id = p.id
     ) t
   );
 end;
