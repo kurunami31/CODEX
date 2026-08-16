@@ -7,6 +7,11 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
+      // Registered manually in main.jsx so we can pass
+      // updateViaCache: 'none' — iOS Safari otherwise happily serves the
+      // OLD service worker script from cache, which keeps the stale app
+      // shell alive forever (white screen after deploys).
+      injectRegister: false,
       // Custom worker (injectManifest): src/sw.js is bundled into dist/sw.js
       // and carries BOTH the PWA precache/runtime caching AND the push
       // notification handlers. Push and PWA share one service worker — a
