@@ -8,15 +8,12 @@ import { NetworkFirst } from 'workbox-strategies';
 import { ExpirationPlugin } from 'workbox-expiration';
 
 // ── PWA: precache the build + SPA navigation fallback ─────
-precacheAndRoute(self.__WB_MANIFEST);
-cleanupOutdatedCaches();
-
-// Navigations are network-first (not served from the precache): a
-// cache-first app shell can outlive its own hashed bundles — cleanup
-// purges the old JS/CSS while a stale index.html still references them,
-// which makes a refresh white-screen on a 404'd module. Network-first
-// keeps the shell aligned with the current deployment and still falls
-// back to the cached page when offline.
+// IMPORTANT: the navigation route must be registered BEFORE
+// precacheAndRoute — workbox matches routes in registration order and the
+// precache route also handles navigations. If it came first, every page
+// load would be served cache-first from the stale precached shell (old
+// index.html + old bundles), the network would never be consulted, and
+// deployments would only appear after a full service-worker update cycle.
 registerRoute(
   ({ request }) => request.mode === 'navigate',
   new NetworkFirst({
@@ -28,6 +25,9 @@ registerRoute(
     ],
   })
 );
+
+precacheAndRoute(self.__WB_MANIFEST);
+cleanupOutdatedCaches();
 
 // Supabase REST: network-first so profile/ID data works offline once loaded.
 registerRoute(
