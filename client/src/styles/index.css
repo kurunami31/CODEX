@@ -573,7 +573,7 @@ html[data-theme='dark'] .rate-note { color: #ffc46b; }
 .auth-slider-stage { position: relative; width: min(920px, 100%); }
 .auth-title-row {
   display: flex; align-items: center; justify-content: center;
-  gap: 12px; margin: 0 0 24px;
+  gap: 12px; margin: 0 0 18px;
 }
 .auth-title {
   font-family: var(--f-display);
@@ -588,8 +588,8 @@ html[data-theme='dark'] .rate-note { color: #ffc46b; }
 .auth-slider {
   position: relative; overflow: hidden;
   width: 100%;
-  height: clamp(360px, calc(100vh - 140px), 680px);
-  height: clamp(360px, calc(100dvh - 140px), 680px);
+  height: clamp(360px, calc(100vh - 190px), 680px);
+  height: clamp(360px, calc(100dvh - 190px), 680px);
   border-radius: var(--r-xl);
   background: rgba(255, 255, 255, 0.08);
   -webkit-backdrop-filter: blur(22px) saturate(1.35);
@@ -618,10 +618,10 @@ html[data-theme='dark'] .rate-note { color: #ffc46b; }
   position: relative;
   min-height: 100%;
   display: flex; flex-direction: column; justify-content: center;
-  padding: 32px 38px;
+  padding: 26px 34px;
 }
 .auth-form-bot {
-  width: 92px; height: auto;
+  width: 84px; height: auto;
   pointer-events: none;
   animation: floaty 4.5s ease-in-out infinite;
   filter: drop-shadow(0 10px 16px rgba(11, 43, 58, 0.28));
@@ -630,15 +630,17 @@ html[data-theme='dark'] .rate-note { color: #ffc46b; }
   font-family: var(--f-display); font-weight: normal;
   color: var(--primary);
   font-size: calc(1.375rem * var(--text-scale));
-  margin: 0 0 6px;
+  margin: 0 0 4px;
 }
 .auth-slide-sub {
   color: var(--ink-soft);
   font-size: calc(0.90625rem * var(--text-scale));
-  line-height: 1.5; margin: 0 0 22px;
+  line-height: 1.5; margin: 0 0 14px;
 }
-.auth-slide-form { display: flex; flex-direction: column; gap: 15px; }
+.auth-slide-form { display: flex; flex-direction: column; gap: 12px; }
 .auth-slide-form .btn { flex-shrink: 0; }
+.auth-slider .field { gap: 5px; }
+.auth-slide-form .input, .auth-slide-form .select { padding: 10px 13px; }
 .auth-slider .field label { color: var(--ink-soft); }
 .auth-slide-switch {
   display: none; border: 0; background: transparent; cursor: pointer;

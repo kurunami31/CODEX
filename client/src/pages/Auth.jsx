@@ -211,9 +211,17 @@ export default function Auth() {
                 <h1 className="auth-slide-title">Create account</h1>
                 <p className="auth-slide-sub">Join the community and get your digital ID.</p>
                 <form className="auth-slide-form" onSubmit={(e) => handleSubmit(e, 'signup')}>
-                  <div className="field">
-                    <label htmlFor="signup-fullName">Full name</label>
-                    <input id="signup-fullName" className="input" placeholder="Juan Dela Cruz" value={form.fullName} onChange={set('fullName')} autoComplete="name" />
+                  <div className="auth-grid2">
+                    <div className="field">
+                      <label htmlFor="signup-fullName">Full name</label>
+                      <input id="signup-fullName" className="input" placeholder="Juan Dela Cruz" value={form.fullName} onChange={set('fullName')} autoComplete="name" />
+                    </div>
+                    <div className="field">
+                      <label htmlFor="signup-yearLevel">Year level</label>
+                      <select id="signup-yearLevel" className="select" value={form.yearLevel} onChange={set('yearLevel')}>
+                        {YEARS.map((y) => <option key={y}>{y}</option>)}
+                      </select>
+                    </div>
                   </div>
                   <div className="auth-grid2">
                     <div className="field">
@@ -225,17 +233,13 @@ export default function Auth() {
                       <input id="signup-section" className="input" placeholder="A / B / C" value={form.section} onChange={set('section')} autoComplete="off" />
                     </div>
                   </div>
-                  <div className="field">
-                    <label htmlFor="signup-yearLevel">Year level</label>
-                    <select id="signup-yearLevel" className="select" value={form.yearLevel} onChange={set('yearLevel')}>
-                      {YEARS.map((y) => <option key={y}>{y}</option>)}
-                    </select>
+                  <div className="auth-grid2">
+                    <div className="field">
+                      <label htmlFor="signup-email">DOrSU email</label>
+                      <input id="signup-email" className="input" type="email" placeholder="you@student.codex.org" value={form.email} onChange={set('email')} autoComplete="email" required />
+                    </div>
+                    {passwordField('signup')}
                   </div>
-                  <div className="field">
-                    <label htmlFor="signup-email">DOrSU email</label>
-                    <input id="signup-email" className="input" type="email" placeholder="you@student.codex.org" value={form.email} onChange={set('email')} autoComplete="email" required />
-                  </div>
-                  {passwordField('signup')}
                   {feedback('signup')}
                   <button type="submit" className="btn btn-accent btn-lg auth-submit" disabled={busy || cooldownLeft > 0}>
                     {busy ? 'Creating account…' : cooldownLeft > 0 ? `Try again in ${fmtCountdown(cooldownLeft)}` : 'Join CODEBYTERS'}
