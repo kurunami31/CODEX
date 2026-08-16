@@ -33,6 +33,7 @@ export default function AppShell() {
   const [searching, setSearching] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const searchRef = useRef(null);
+  const searchRefM = useRef(null);
   const notifRef = useRef(null);
   const [notifOpen, setNotifOpen] = useState(false);
   const [notifItems, setNotifItems] = useState([]);
@@ -144,7 +145,7 @@ export default function AppShell() {
   // close the dropdown on outside click
   useEffect(() => {
     const onClick = (e) => {
-      if (searchRef.current && !searchRef.current.contains(e.target)) setSearchOpen(false);
+      if (searchRef.current && !searchRef.current.contains(e.target) && searchRefM.current && !searchRefM.current.contains(e.target)) setSearchOpen(false);
     };
     document.addEventListener('mousedown', onClick);
     return () => document.removeEventListener('mousedown', onClick);
@@ -156,6 +157,84 @@ export default function AppShell() {
     setSearchOpen(false);
     navigate(to);
   };
+
+  const renderSearchPanel = (mobile) => (
+    <>
+      {mobile && (
+        <div className="search-box">
+          <SearchIcon width={16} height={16} />
+          <input
+            placeholder="Search posts, events, members…"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onFocus={() => { if (results) setSearchOpen(true); }}
+            autoFocus
+          />
+          {searching && <span className="spinner-mini" />}
+        </div>
+      )}
+      <div className={mobile ? 'search-results' : undefined}>
+        {results && (results.posts.length === 0 && results.events.length === 0 && results.members.length === 0 ? (
+          <div className="search-empty">No matches for “{query.trim()}”</div>
+        ) : (
+          <>
+            {results.posts.length > 0 && (
+              <>
+                <div className="search-group">posts</div>
+                {results.posts.map((p) => (
+                  <button key={p.id} className="search-item" onClick={() => goto('/app/feed')}>
+                    <span className="ico"><RssIcon width={15} height={15} /></span>
+                    <span style={{ flex: 1, minWidth: 0 }}>
+                      <b>{p.content}</b>
+                      <span>{p.profiles?.full_name || 'Member'} · {timeAgo(p.created_at)}</span>
+                    </span>
+                  </button>
+                ))}
+              </>
+            )}
+            {results.events.length > 0 && (
+              <>
+                <div className="search-group">events</div>
+                {results.events.map((e) => (
+                  <button key={e.id} className="search-item" onClick={() => goto(`/app/events/${e.id}`)}>
+                    <span className="ico"><CalendarIcon width={15} height={15} /></span>
+                    <span style={{ flex: 1, minWidth: 0 }}>
+                      <b>{e.title}</b>
+                      <span>{e.location || 'TBA'}</span>
+                    </span>
+                  </button>
+                ))}
+              </>
+            )}
+            {results.members.length > 0 && (
+              <>
+                <div className="search-group">members</div>
+                {results.members.map((m) => (
+                  admin ? (
+                    <button key={m.id} className="search-item" onClick={() => goto('/app/admin')}>
+                      <Avatar name={m.full_name} seed={m.student_id || m.id} size={30} url={m.avatar_url} />
+                      <span style={{ flex: 1, minWidth: 0 }}>
+                        <b>{m.full_name || 'Member'}</b>
+                        <span>{m.year_level} · {m.section}{m.student_id ? ` · ${m.student_id}` : ''}</span>
+                      </span>
+                    </button>
+                  ) : (
+                    <div key={m.id} className="search-item search-item--plain">
+                      <Avatar name={m.full_name} seed={m.student_id || m.id} size={30} url={m.avatar_url} />
+                      <span style={{ flex: 1, minWidth: 0 }}>
+                        <b>{m.full_name || 'Member'}</b>
+                        <span>{m.year_level} · {m.section}{m.student_id ? ` · ${m.student_id}` : ''}</span>
+                      </span>
+                    </div>
+                  )
+                ))}
+              </>
+            )}
+          </>
+        ))}
+      </div>
+    </>
+  );
 
   const title = TITLES[location.pathname] || 'codex';
 
@@ -263,7 +342,7 @@ export default function AppShell() {
             {title}
             <span className="cursor-blink" style={{ color: 'var(--accent)', fontFamily: 'var(--f-ocr)' }} />
           </span>
-          <div className="search-wrap" ref={searchRef}>
+          <div className="search-wrap search-wrap--desktop" ref={searchRef}>
             <div className="search-box">
               <SearchIcon width={16} height={16} />
               <input
@@ -274,68 +353,19 @@ export default function AppShell() {
               />
               {searching && <span className="spinner-mini" />}
             </div>
-            {searchOpen && results && (
-              <div className="search-panel">
-                {results.posts.length === 0 && results.events.length === 0 && results.members.length === 0 ? (
-                  <div className="search-empty">No matches for “{query.trim()}”</div>
-                ) : (
-                  <>
-                    {results.posts.length > 0 && (
-                      <>
-                        <div className="search-group">posts</div>
-                        {results.posts.map((p) => (
-                          <button key={p.id} className="search-item" onClick={() => goto('/app/feed')}>
-                            <span className="ico"><RssIcon width={15} height={15} /></span>
-                            <span style={{ flex: 1, minWidth: 0 }}>
-                              <b>{p.content}</b>
-                              <span>{p.profiles?.full_name || 'Member'} · {timeAgo(p.created_at)}</span>
-                            </span>
-                          </button>
-                        ))}
-                      </>
-                    )}
-                    {results.events.length > 0 && (
-                      <>
-                        <div className="search-group">events</div>
-                        {results.events.map((e) => (
-                          <button key={e.id} className="search-item" onClick={() => goto(`/app/events/${e.id}`)}>
-                            <span className="ico"><CalendarIcon width={15} height={15} /></span>
-                            <span style={{ flex: 1, minWidth: 0 }}>
-                              <b>{e.title}</b>
-                              <span>{e.location || 'TBA'}</span>
-                            </span>
-                          </button>
-                        ))}
-                      </>
-                    )}
-                    {results.members.length > 0 && (
-                      <>
-                        <div className="search-group">members</div>
-                        {results.members.map((m) => (
-                          admin ? (
-                            <button key={m.id} className="search-item" onClick={() => goto('/app/admin')}>
-                              <Avatar name={m.full_name} seed={m.student_id || m.id} size={30} url={m.avatar_url} />
-                              <span style={{ flex: 1, minWidth: 0 }}>
-                                <b>{m.full_name || 'Member'}</b>
-                                <span>{m.year_level} · {m.section}{m.student_id ? ` · ${m.student_id}` : ''}</span>
-                              </span>
-                            </button>
-                          ) : (
-                            <div key={m.id} className="search-item search-item--plain">
-                              <Avatar name={m.full_name} seed={m.student_id || m.id} size={30} url={m.avatar_url} />
-                              <span style={{ flex: 1, minWidth: 0 }}>
-                                <b>{m.full_name || 'Member'}</b>
-                                <span>{m.year_level} · {m.section}{m.student_id ? ` · ${m.student_id}` : ''}</span>
-                              </span>
-                            </div>
-                          )
-                        ))}
-                      </>
-                    )}
-                  </>
-                )}
-              </div>
-            )}
+            {searchOpen && results && renderSearchPanel(false)}
+          </div>
+          <div className="search-wrap search-wrap--mobile" ref={searchRefM}>
+            <button
+              className={`icon-btn search-toggle${searchOpen ? ' notif-btn--open' : ''}`}
+              onClick={() => setSearchOpen((o) => !o)}
+              aria-label="Search"
+              aria-haspopup="true"
+              aria-expanded={searchOpen}
+            >
+              <SearchIcon width={16} height={16} />
+            </button>
+            {searchOpen && renderSearchPanel(true)}
           </div>
           <div className="notif-wrap" ref={notifRef}>
             <button
