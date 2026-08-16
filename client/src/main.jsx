@@ -8,6 +8,20 @@ import { ThemeProvider } from './context/ThemeContext';
 import { FontScaleProvider } from './context/FontScaleContext';
 import './styles/index.css';
 
+// iOS Safari ignores user-scalable=no / maximum-scale in the viewport
+// meta, so pages can still be pinched. Block the two-finger gesture at
+// the touch-event level instead — single-finger scrolling is untouched.
+document.addEventListener(
+  'touchmove',
+  (e) => {
+    if (e.touches.length > 1) e.preventDefault();
+  },
+  { passive: false }
+);
+document.addEventListener('gesturestart', (e) => e.preventDefault());
+document.addEventListener('gesturechange', (e) => e.preventDefault());
+document.addEventListener('gestureend', (e) => e.preventDefault());
+
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <BrowserRouter>
