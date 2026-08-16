@@ -2,16 +2,32 @@
 // (injectManifest strategy). Carries BOTH the PWA precache/runtime caching
 // AND the push-notification handlers, so the PWA and push share one worker
 // (two workers can't coexist at the same scope).
-import { precacheAndRoute, cleanupOutdatedCaches, createHandlerBoundToURL } from 'workbox-precaching';
-import { registerRoute, NavigationRoute } from 'workbox-routing';
-import { NetworkFirst, CacheFirst } from 'workbox-strategies';
+import { precacheAndRoute, cleanupOutdatedCaches } from 'workbox-precaching';
+import { registerRoute } from 'workbox-routing';
+import { NetworkFirst } from 'workbox-strategies';
 import { ExpirationPlugin } from 'workbox-expiration';
 
 // ── PWA: precache the build + SPA navigation fallback ─────
 precacheAndRoute(self.__WB_MANIFEST);
 cleanupOutdatedCaches();
 
-registerRoute(new NavigationRoute(createHandlerBoundToURL('/index.html')));
+// Navigations are network-first (not served from the precache): a
+// cache-first app shell can outlive its own hashed bundles — cleanup
+// purges the old JS/CSS while a stale index.html still references them,
+// which makes a refresh white-screen on a 404'd module. Network-first
+// keeps the shell aligned with the current deployment and still falls
+// back to the cached page when offline.
+registerRoute(
+  ({ request }) => request.mode === 'navigate',
+  new NetworkFirst({
+    cacheName: 'pages',
+    networkTimeoutSeconds: 3,
+    plugins: [
+      { cacheableResponse: { statuses: [0, 200] } },
+      new ExpirationPlugin({ maxEntries: 5, maxAgeSeconds: 60 * 60 * 24 }),
+    ],
+  })
+);
 
 // Supabase REST: network-first so profile/ID data works offline once loaded.
 registerRoute(
