@@ -1378,6 +1378,10 @@ html[data-theme='dark'] .bottomnav a:hover { color: var(--accent); }
   box-shadow: 0 0 60px -14px var(--accent-glow), inset 0 0 40px rgba(0, 0, 0, 0.35);
 }
 .scan-window video { width: 100%; display: block; }
+/* html5-qrcode mirrors the preview with an inline scaleX(-1) so it looks
+   like a selfie cam — undo it so the feed matches reality (a mirror image
+   makes people/screens feel wrong when aiming at them). */
+#qr-reader video { transform: none !important; -webkit-transform: none !important; }
 .scan-frame { position: absolute; inset: 0; pointer-events: none; }
 .scan-frame .corner { position: absolute; width: 34px; height: 34px; border: 3px solid var(--accent); }
 .scan-frame .c-tl { top: 14px; left: 14px; border-right: 0; border-bottom: 0; border-top-left-radius: 10px; }

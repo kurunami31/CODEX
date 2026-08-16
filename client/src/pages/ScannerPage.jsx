@@ -72,6 +72,14 @@ export default function ScannerPage() {
         (decoded) => handleScan(decoded),
         () => { /* decode misses are expected while aiming */ }
       );
+      // html5-qrcode mirrors the preview (inline scaleX(-1)); clear it so
+      // the feed matches reality. (CSS !important also covers this, but
+      // the library sets it on the element directly.)
+      const video = document.querySelector('#qr-reader video');
+      if (video) {
+        video.style.transform = '';
+        video.style.webkitTransform = '';
+      }
       setScannerState('scanning');
     } catch (err) {
       const msg = String(err?.message || '');
