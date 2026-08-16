@@ -21,7 +21,7 @@ registerRoute(
   ({ request }) => request.mode === 'navigate',
   new NetworkFirst({
     cacheName: 'pages',
-    networkTimeoutSeconds: 3,
+    networkTimeoutSeconds: 8,
     plugins: [
       { cacheableResponse: { statuses: [0, 200] } },
       new ExpirationPlugin({ maxEntries: 5, maxAgeSeconds: 60 * 60 * 24 }),
