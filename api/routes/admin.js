@@ -204,23 +204,32 @@ router.get('/membership/report', async (req, res) => {
   workbook.creator = 'CODEX';
   workbook.created = exportedAt;
 
+  const thin = { style: 'thin', color: { argb: 'FFE5E7EB' } };
+  const border = { top: thin, left: thin, bottom: thin, right: thin };
+
   const sum = workbook.addWorksheet('Summary');
-  sum.columns = [{ width: 32 }, { width: 42 }];
+  sum.columns = [{ width: 34 }, { width: 44 }];
   sum.mergeCells('A1:B1');
   sum.getCell('A1').value = 'MEMBERSHIP FEE REPORT';
   sum.getCell('A1').font = { bold: true, size: 16 };
+  sum.getCell('A1').alignment = { horizontal: 'center', vertical: 'middle' };
+  sum.getRow(1).height = 28;
   sum.mergeCells('A2:B2');
   sum.getCell('A2').value = 'CODEX · CODEBYTERS';
   sum.getCell('A2').font = { italic: true, color: { argb: 'FF6B7280' } };
+  sum.getCell('A2').alignment = { horizontal: 'center', vertical: 'middle' };
   sum.mergeCells('A3:B3');
   sum.getCell('A3').value = 'Fee: ₱120.00 full or ₱60.00 half per semester';
   sum.getCell('A3').font = { italic: true, color: { argb: 'FF6B7280' } };
+  sum.getCell('A3').alignment = { horizontal: 'center', vertical: 'middle' };
 
   const sumHeader = sum.addRow(['Metric', 'Value']);
+  sumHeader.height = 24;
   sumHeader.eachCell((c) => {
     c.font = { bold: true, color: { argb: 'FFFFFFFF' } };
     c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1F2937' } };
-    c.alignment = { vertical: 'middle' };
+    c.alignment = { vertical: 'middle', horizontal: 'center' };
+    c.border = border;
   });
   const metrics = [
     ['Report generated', `${exportedAt.toLocaleString('en-PH', { dateStyle: 'full', timeStyle: 'long', timeZone: 'Asia/Manila' })} (PHT)`],
@@ -237,9 +246,13 @@ router.get('/membership/report', async (req, res) => {
   metrics.forEach(([label, value], i) => {
     const r = sum.addRow([label, value]);
     r.getCell(2).numFmt = i === 7 ? '"₱"#,##0.00' : undefined;
-    if (i % 2 === 1) {
-      r.eachCell((c) => { c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF3F4F6' } }; });
-    }
+    r.eachCell((c) => {
+      c.alignment = { vertical: 'middle', horizontal: c.col === 2 ? 'right' : 'left' };
+      c.border = border;
+      if (i % 2 === 1) {
+        c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF3F4F6' } };
+      }
+    });
   });
 
   const ws = workbook.addWorksheet('Membership Fees');
@@ -263,11 +276,33 @@ router.get('/membership/report', async (req, res) => {
   ws.views = [{ state: 'frozen', ySplit: 1 }];
 
   const head = ws.addRow(ws.columns.map((c) => c.header));
+  head.height = 24;
   head.eachCell((c) => {
     c.font = { bold: true, color: { argb: 'FFFFFFFF' } };
     c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1F2937' } };
-    c.alignment = { vertical: 'middle' };
+    c.alignment = { vertical: 'middle', horizontal: 'center' };
+    c.border = border;
   });
+
+  // Per-column horizontal alignment so every cell lines up cleanly:
+  // centered for short/coded values, right for amounts, left for text.
+  const ALIGN = [
+    'center', // i (#)
+    'center', // student_id
+    'left',   // full_name
+    'center', // year_level
+    'center', // section
+    'center', // course
+    'center', // status (PAID/UNPAID)
+    'center', // paid_at
+    'right',  // amount (₱)
+    'left',   // confirmed_by
+    'center', // email_confirmed
+    'center', // email_confirmed_at
+    'center', // last_sign_in
+    'left',   // receipt_url
+    'center', // created_at
+  ];
 
   rows.forEach((r, idx) => {
     const row = ws.addRow([
@@ -287,6 +322,10 @@ router.get('/membership/report', async (req, res) => {
       r.receipt_url || '',
       r.created_at ? new Date(r.created_at) : null,
     ]);
+    row.eachCell((c) => {
+      c.alignment = { vertical: 'middle', horizontal: ALIGN[c.col - 1] };
+      c.border = border;
+    });
     const status = row.getCell(7);
     status.font = { bold: true };
     status.fill = {
