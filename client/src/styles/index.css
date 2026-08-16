@@ -586,7 +586,7 @@ html[data-theme='dark'] .rate-note { color: #ffc46b; }
 .auth-slider {
   position: relative; overflow: hidden;
   width: 100%;
-  height: clamp(600px, 76vh, 700px);
+  height: clamp(560px, 72vh, 680px);
   border-radius: var(--r-xl);
   background: rgba(255, 255, 255, 0.08);
   -webkit-backdrop-filter: blur(22px) saturate(1.35);
@@ -2004,18 +2004,23 @@ html[data-theme='dark'] .idcard--mini .idcard-photo { border-color: #0ed0b6; }
   .notif-item { padding: 9px 12px; }
   .page { padding: 16px 14px calc(96px + var(--safe-b)); }
   .auth-left { display: none; }
-  .auth-wrap { background: var(--deep); align-items: center; padding: 24px 16px calc(24px + var(--safe-b)); }
+  .auth-wrap { background: var(--deep); flex-direction: column; justify-content: center; align-items: center; height: 100vh; height: 100dvh; overflow: hidden; padding: 12px 16px calc(12px + var(--safe-b)); }
   .auth-right { padding: 30px 18px; }
 .auth-card { width: min(440px, 100%); }
-  .auth-title-row { margin: 0 0 14px; }
+  .auth-title-row { margin: 0 0 6px; }
   .auth-title { font-size: clamp(2rem, 10vw, 2.75rem); }
   /* the marketing overlay stacks below the form on phones and makes the
      page absurdly long — drop it and offer the tab switch inline instead */
   .auth-slider-overlay { display: none; }
   .auth-slide-switch { display: block; text-align: center; }
-  .auth-slide-inner { padding: 26px 22px; }
-  .auth-form-bot { width: 76px; }
-  .auth-slider { height: auto; display: flex; flex-direction: column; }
+  .auth-slider-stage { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+  .auth-slide-inner { padding: 18px 22px; }
+  .auth-form-bot { width: 64px; }
+  .auth-slide-form { gap: 11px; }
+  .auth-slide-sub { margin: 0 0 12px; }
+  .auth-slider .field { gap: 5px; }
+  .auth-slide-form .input, .auth-slide-form .select { padding: 9px 12px; }
+  .auth-slider { flex: 1; min-height: 0; display: flex; flex-direction: column; }
   /* only the active form is in the row, so each tab sizes to its own
      height instead of the tallest panel forcing blank space */
   .auth-slider.auth-slider--signup .auth-slider-panel--login,
@@ -2024,14 +2029,14 @@ html[data-theme='dark'] .idcard--mini .idcard-photo { border-color: #0ed0b6; }
     opacity: 0; transform: translateY(14px);
     pointer-events: none;
   }
-  .auth-slider-forms { position: static; inset: auto; width: 100%; display: flex; }
+  .auth-slider-forms { position: static; inset: auto; width: 100%; flex: 1; min-height: 0; display: flex; }
   .auth-slider.auth-slider--signup .auth-slider-forms { transform: none; }
-  .auth-slider-panel { position: static; width: 100%; height: auto; overflow-y: visible; opacity: 1; z-index: auto; transition: opacity 0.35s ease, transform 0.35s ease; will-change: opacity, transform; }
+  .auth-slider-panel { position: static; width: 100%; flex: 1; min-height: 0; overflow-y: auto; opacity: 1; z-index: auto; transition: opacity 0.35s ease, transform 0.35s ease; will-change: opacity, transform; }
   .auth-slider:not(.auth-slider--signup) .auth-slider-panel--login { transform: translateY(0); opacity: 1; }
   .auth-slider.auth-slider--signup .auth-slider-panel--login { transform: translateY(-14px); opacity: 0; }
   .auth-slider.auth-slider--signup .auth-slider-panel--signup { transform: translateY(0); opacity: 1; }
-  .auth-form-bot { width: 64px; }
-  .auth-slide-inner { padding: 26px 22px; }
+  .auth-slider.auth-slider--signup .auth-slider-panel--signup .auth-slide-inner,
+  .auth-slider:not(.auth-slider--signup) .auth-slider-panel--login .auth-slide-inner { padding: 18px 22px; }
   .auth-slider-overlay { position: static; width: 100%; height: auto; overflow: visible; transform: none !important; }
   .auth-slider-overlay-inner { width: 100%; height: auto; transform: none !important; display: block; }
   .auth-overlay-panel { width: 100%; height: auto; overflow-y: visible; display: none; }
