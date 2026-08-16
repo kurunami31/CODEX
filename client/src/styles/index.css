@@ -1512,90 +1512,6 @@ table.codex-table { width: 100%; border-collapse: collapse; font-size: calc(0.87
   .menu-toggle { display: inline-flex; }
 }
 
-@media (max-width: 860px) {
-  .sidebar { display: none; }
-  .bottomnav { display: flex; }
-  .topbar { padding-left: 14px; padding-right: 14px; gap: 10px; }
-  .search-wrap--desktop { display: none; }
-  .search-wrap--mobile { display: block; position: relative; flex: 1 1 150px; max-width: 230px; margin-left: auto; }
-  .search-box--mobile { flex: 1; max-width: none; margin: 0; height: 32px; padding: 0 10px; gap: 6px; border-radius: 10px; }
-  .search-box--mobile input { font-size: calc(0.8125rem * var(--text-scale)); }
-  .notif-panel { width: min(280px, calc(100vw - 64px)); }
-  .notif-list { max-height: 220px; overflow-y: auto; }
-  .notif-item { padding: 9px 12px; }
-  .page { padding: 16px 14px calc(96px + var(--safe-b)); }
-  .auth-left { display: none; }
-  .auth-wrap { background: var(--deep); align-items: center; padding: 24px 16px calc(24px + var(--safe-b)); }
-  .auth-right { padding: 30px 18px; }
-.auth-card { width: min(440px, 100%); }
-  .auth-title { font-size: clamp(2rem, 10vw, 2.75rem); margin: 0 0 14px; }
-  /* the marketing overlay stacks below the form on phones and makes the
-     page absurdly long — drop it and offer the tab switch inline instead */
-  .auth-slider-overlay { display: none; }
-  .auth-slide-switch { display: block; text-align: center; }
-  .auth-slide-inner { padding: 26px 22px; }
-  .auth-form-bot { width: 76px; }
-  .auth-slider { height: auto; display: flex; flex-direction: column; }
-  /* only the active form is in the row, so each tab sizes to its own
-     height instead of the tallest panel forcing blank space */
-  .auth-slider.auth-slider--signup .auth-slider-panel--login,
-  .auth-slider:not(.auth-slider--signup) .auth-slider-panel--signup { display: none; }
-  .auth-slider-forms { position: static; inset: auto; width: 100%; display: flex; }
-  .auth-slider.auth-slider--signup .auth-slider-forms { transform: none; }
-  .auth-slider-panel { position: static; width: 100%; height: auto; overflow-y: visible; transition: none; opacity: 1; z-index: auto; }
-  .auth-slider.auth-slider--signup .auth-slider-panel--login,
-  .auth-slider.auth-slider--signup .auth-slider-panel--signup { transform: none; opacity: 1; z-index: auto; }
-  .auth-form-bot { top: auto; bottom: 12px; right: 14px; width: 64px; }
-  .auth-slide-inner { padding: 26px 22px; }
-  .auth-slider-overlay { position: static; width: 100%; height: auto; overflow: visible; transform: none !important; }
-  .auth-slider-overlay-inner { width: 100%; height: auto; transform: none !important; display: block; }
-  .auth-overlay-panel { width: 100%; height: auto; overflow-y: visible; display: none; }
-  .auth-overlay-inner { min-height: 0; padding: 26px 22px; }
-  .auth-slider:not(.auth-slider--signup) .auth-overlay-panel--signup { display: block; }
-  .auth-slider.auth-slider--signup .auth-overlay-panel--login { display: block; }
-  .auth-overlay-body { margin: 16px 0; justify-content: flex-start; }
-  .auth-overlay-body .auth-points { display: none; }
-  .event-card { flex-direction: column; }
-  .date-block { width: auto; display: flex; align-items: center; gap: 10px; padding: 8px 14px; }
-  .event-actions { flex-direction: row; }
-  .chat-panel { right: 12px; left: auto; width: min(330px, calc(100vw - 36px)); height: min(460px, calc(100vh - 240px)); bottom: calc(88px + var(--safe-b)); }
-  @supports (height: 100dvh) { .chat-panel { height: min(460px, calc(100dvh - 240px)); } }
-  .chat-fab { right: 14px; bottom: calc(88px + var(--safe-b)); }
-  .chat-msgs { padding: 12px; }
-  .chat-input { padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px)); }
-  .chat-suggests { padding: 0 12px 8px; }
-  .scan-result { max-height: 70vh; overflow-y: auto; }
-  .welcome-org { font-size: calc(clamp(9px, 2.4vw, 11px) * var(--text-scale)); max-width: 48vw; }
-}
-
-@media (max-width: 600px) {
-  .profile-head { padding: 18px; }
-  .profile-head .avatar { width: 64px !important; height: 64px !important; font-size: 24px !important; }
-  .events-head { flex-direction: column; align-items: stretch; }
-  .modal-back { padding: 12px; align-items: flex-end; }
-  .modal { border-radius: var(--r-xl) var(--r-xl) 0 0; max-height: 92vh; }
-  .modal-head { padding: 16px 18px 0; }
-  .modal-body { padding: 16px 18px 20px; }
-  .toolbar-row > .btn { width: 100%; justify-content: center; }
-  .seg-tabs { width: 100%; }
-  .seg-tab { flex: 1; justify-content: center; }
-  .feed-tabs { flex-wrap: wrap; }
-  .super-row { flex-wrap: wrap; }
-  .chat-suggests button { flex: 1; min-width: 40%; }
-}
-
-@media (max-width: 480px) {
-  .auth-grid2 { grid-template-columns: 1fr; }
-  .auth-slide-inner, .auth-overlay-inner { padding: 24px 18px; }
-  .welcome-cta .btn { width: 100%; }
-  .welcome-nav { flex-wrap: wrap; gap: 8px; }
-  .welcome-org { max-width: none; text-align: left; }
-  .topbar .page-title { font-size: calc(0.9375rem * var(--text-scale)); }
-  .post-card { padding: 14px 14px; }
-  .bottomnav a { padding: 9px 2px; }
-  .gallery-item { width: 100%; }
-}
-
 /* ── welcome page · mobile polish ───────────────────────── */
 @supports (min-height: 100svh) { .welcome { min-height: 100svh; } }
 
@@ -2061,3 +1977,91 @@ html[data-theme='dark'] .idcard--mini .idcard-photo { border-color: #0ed0b6; }
 .roster-row { display: flex; gap: 8px; align-items: center; }
 .roster-row .input { flex: 1; }
 .roster-row .roster-num { flex: 0 0 72px; }
+
+
+/* -- mobile overrides kept at the END so they always win the cascade -- */
+
+
+@media (max-width: 860px) {
+  .sidebar { display: none; }
+  .bottomnav { display: flex; }
+  .topbar { padding-left: 14px; padding-right: 14px; gap: 10px; }
+  .search-wrap--desktop { display: none; }
+  .search-wrap--mobile { display: block; position: relative; flex: 1 1 150px; max-width: 230px; margin-left: auto; }
+  .search-box--mobile { flex: 1; max-width: none; margin: 0; height: 32px; padding: 0 10px; gap: 6px; border-radius: 10px; }
+  .search-box--mobile input { font-size: calc(0.8125rem * var(--text-scale)); }
+  .notif-panel { width: min(280px, calc(100vw - 64px)); }
+  .notif-list { max-height: 220px; overflow-y: auto; }
+  .notif-item { padding: 9px 12px; }
+  .page { padding: 16px 14px calc(96px + var(--safe-b)); }
+  .auth-left { display: none; }
+  .auth-wrap { background: var(--deep); align-items: center; padding: 24px 16px calc(24px + var(--safe-b)); }
+  .auth-right { padding: 30px 18px; }
+.auth-card { width: min(440px, 100%); }
+  .auth-title { font-size: clamp(2rem, 10vw, 2.75rem); margin: 0 0 14px; }
+  /* the marketing overlay stacks below the form on phones and makes the
+     page absurdly long — drop it and offer the tab switch inline instead */
+  .auth-slider-overlay { display: none; }
+  .auth-slide-switch { display: block; text-align: center; }
+  .auth-slide-inner { padding: 26px 22px; }
+  .auth-form-bot { width: 76px; }
+  .auth-slider { height: auto; display: flex; flex-direction: column; }
+  /* only the active form is in the row, so each tab sizes to its own
+     height instead of the tallest panel forcing blank space */
+  .auth-slider.auth-slider--signup .auth-slider-panel--login,
+  .auth-slider:not(.auth-slider--signup) .auth-slider-panel--signup { display: none; }
+  .auth-slider-forms { position: static; inset: auto; width: 100%; display: flex; }
+  .auth-slider.auth-slider--signup .auth-slider-forms { transform: none; }
+  .auth-slider-panel { position: static; width: 100%; height: auto; overflow-y: visible; transition: none; opacity: 1; z-index: auto; }
+  .auth-slider.auth-slider--signup .auth-slider-panel--login,
+  .auth-slider.auth-slider--signup .auth-slider-panel--signup { transform: none; opacity: 1; z-index: auto; }
+  .auth-form-bot { top: auto; bottom: 12px; right: 14px; width: 64px; }
+  .auth-slide-inner { padding: 26px 22px; }
+  .auth-slider-overlay { position: static; width: 100%; height: auto; overflow: visible; transform: none !important; }
+  .auth-slider-overlay-inner { width: 100%; height: auto; transform: none !important; display: block; }
+  .auth-overlay-panel { width: 100%; height: auto; overflow-y: visible; display: none; }
+  .auth-overlay-inner { min-height: 0; padding: 26px 22px; }
+  .auth-slider:not(.auth-slider--signup) .auth-overlay-panel--signup { display: block; }
+  .auth-slider.auth-slider--signup .auth-overlay-panel--login { display: block; }
+  .auth-overlay-body { margin: 16px 0; justify-content: flex-start; }
+  .auth-overlay-body .auth-points { display: none; }
+  .event-card { flex-direction: column; }
+  .date-block { width: auto; display: flex; align-items: center; gap: 10px; padding: 8px 14px; }
+  .event-actions { flex-direction: row; }
+  .chat-panel { right: 12px; left: auto; width: min(330px, calc(100vw - 36px)); height: min(460px, calc(100vh - 240px)); bottom: calc(88px + var(--safe-b)); }
+  @supports (height: 100dvh) { .chat-panel { height: min(460px, calc(100dvh - 240px)); } }
+  .chat-fab { right: 14px; bottom: calc(88px + var(--safe-b)); }
+  .chat-msgs { padding: 12px; }
+  .chat-input { padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px)); }
+  .chat-suggests { padding: 0 12px 8px; }
+  .scan-result { max-height: 70vh; overflow-y: auto; }
+  .welcome-org { font-size: calc(clamp(9px, 2.4vw, 11px) * var(--text-scale)); max-width: 48vw; }
+}
+
+@media (max-width: 600px) {
+  .profile-head { padding: 18px; }
+  .profile-head .avatar { width: 64px !important; height: 64px !important; font-size: 24px !important; }
+  .events-head { flex-direction: column; align-items: stretch; }
+  .modal-back { padding: 12px; align-items: flex-end; }
+  .modal { border-radius: var(--r-xl) var(--r-xl) 0 0; max-height: 92vh; }
+  .modal-head { padding: 16px 18px 0; }
+  .modal-body { padding: 16px 18px 20px; }
+  .toolbar-row > .btn { width: 100%; justify-content: center; }
+  .seg-tabs { width: 100%; }
+  .seg-tab { flex: 1; justify-content: center; }
+  .feed-tabs { flex-wrap: wrap; }
+  .super-row { flex-wrap: wrap; }
+  .chat-suggests button { flex: 1; min-width: 40%; }
+}
+
+@media (max-width: 480px) {
+  .auth-grid2 { grid-template-columns: 1fr; }
+  .auth-slide-inner, .auth-overlay-inner { padding: 24px 18px; }
+  .welcome-cta .btn { width: 100%; }
+  .welcome-nav { flex-wrap: wrap; gap: 8px; }
+  .welcome-org { max-width: none; text-align: left; }
+  .topbar .page-title { font-size: calc(0.9375rem * var(--text-scale)); }
+  .post-card { padding: 14px 14px; }
+  .bottomnav a { padding: 9px 2px; }
+  .gallery-item { width: 100%; }
+}
