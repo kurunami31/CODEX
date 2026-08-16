@@ -20,14 +20,10 @@ router.post('/id/sign', async (req, res) => {
   const { data: { user }, error: authError } = await sb.auth.getUser();
   if (authError || !user) return res.status(401).json({ error: 'Invalid session.' });
 
-  const { data: profile, error } = await sb
-    .from('profiles')
-    .select('student_id, full_name, course')
-    .eq('id', user.id)
-    .maybeSingle();
+  const { data: profile, error } = await sb.rpc('get_my_profile');
 
   if (error) return res.status(500).json({ error: 'Could not load your profile.' });
-  if (!profile) return res.status(404).json({ error: 'Profile not found. Did you complete sign-up?' });
+  if (!profile || !profile.student_id) return res.status(404).json({ error: 'Profile not found. Did you complete sign-up?' });
 
   const { payload, sig } = signIdentity({
     sid: profile.student_id,
@@ -50,14 +46,10 @@ router.post('/id/presence', async (req, res) => {
   const { data: { user }, error: authError } = await sb.auth.getUser();
   if (authError || !user) return res.status(401).json({ error: 'Invalid session.' });
 
-  const { data: profile, error } = await sb
-    .from('profiles')
-    .select('student_id, full_name, course')
-    .eq('id', user.id)
-    .maybeSingle();
+  const { data: profile, error } = await sb.rpc('get_my_profile');
 
   if (error) return res.status(500).json({ error: 'Could not load your profile.' });
-  if (!profile) return res.status(404).json({ error: 'Profile not found. Did you complete sign-up?' });
+  if (!profile || !profile.student_id) return res.status(404).json({ error: 'Profile not found. Did you complete sign-up?' });
 
   const { payload, sig } = signIdentity({
     sid: profile.student_id,
@@ -95,7 +87,7 @@ router.post('/attendance/scan', async (req, res) => {
 
   // The attendance RPC itself enforces moderator/admin; check here too so
   // we fail fast and keep invalid scans out of the RPC layer.
-  const { data: profile } = await sb.from('profiles').select('role, student_id').eq('id', user.id).maybeSingle();
+  const { data: profile } = await sb.rpc('get_my_profile');
   if (!profile || !['admin', 'moderator', 'superadmin'].includes(profile.role)) {
     return res.status(403).json({ error: 'Only moderators and admins can record attendance.' });
   }
