@@ -10,7 +10,7 @@ import usePostLikes from '../lib/usePostLikes';
 import usePostComments from '../lib/usePostComments';
 import { postsSelect } from '../lib/columns';
 import { formatEventDate } from '../lib/format';
-import { roleLabel } from '../lib/roles';
+import { roleLabel, isStaff as checkStaff } from '../lib/roles';
 import { ChevronLeftIcon, RssIcon, ArchiveIcon, GearIcon, UsersIcon, CheckIcon, WalletIcon } from '../components/icons/Icons';
 
 export default function Profile() {
@@ -31,10 +31,34 @@ export default function Profile() {
   const comments = usePostComments(user);
 
   const loadAuthor = useCallback(async () => {
-    const { data, error } = await supabase.from('profiles').select('*').eq('id', id).maybeSingle();
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('id, full_name, year_level, section, course, role, avatar_url, created_at, membership_paid, membership_paid_at')
+      .eq('id', id)
+      .maybeSingle();
     if (error || !data) setNotFound(true);
     setAuthor(data || null);
   }, [id]);
+
+  // Student IDs are hidden from other members — only the owner, moderators
+  // and admins ever see a number here.
+  const viewerIsStaff = checkStaff(profile?.role);
+  const [authorIdNumber, setAuthorIdNumber] = useState(null);
+  useEffect(() => {
+    setAuthorIdNumber(null);
+    (async () => {
+      if (isMe) {
+        const { data } = await supabase.rpc('get_my_profile');
+        if (data?.student_id) setAuthorIdNumber(data.student_id);
+        return;
+      }
+      if (viewerIsStaff) {
+        const { data } = await supabase.rpc('get_members');
+        const found = (data || []).find((m) => m.id === id);
+        if (found?.student_id) setAuthorIdNumber(found.student_id);
+      }
+    })();
+  }, [id, isMe, viewerIsStaff]);
 
   const loadPosts = useCallback(async () => {
     const { data } = await supabase
@@ -170,7 +194,7 @@ export default function Profile() {
           </div>
           <div className="profile-stats">
             <div className="stat"><b>{posts.length + archived.length}</b><span>posts</span></div>
-            <div className="stat"><b>{author?.student_id || '—'}</b><span>student id</span></div>
+            <div className="stat"><b>{authorIdNumber || '—'}</b><span>student id</span></div>
             {author?.created_at && (
               <div className="stat"><b>{formatEventDate(author.created_at).day}</b><span>joined</span></div>
             )}

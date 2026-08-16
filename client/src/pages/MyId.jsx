@@ -35,6 +35,7 @@ export default function MyId() {
     }
   };
   const [myEvents, setMyEvents] = useState([]);
+  const [myStudentId, setMyStudentId] = useState(null);
   const presenceBusyRef = useRef(false);
   const presenceLeftRef = useRef(90);
   const signQrBusyRef = useRef(false);
@@ -49,12 +50,13 @@ export default function MyId() {
       canvas.width = 856;
       canvas.height = 540;
       const ctx = canvas.getContext('2d');
-      await drawIdCard(ctx, { profile, avatarUrl: profile?.avatar_url, qr });
+      const cardProfile = myStudentId ? { ...profile, student_id: myStudentId } : profile;
+      await drawIdCard(ctx, { profile: cardProfile, avatarUrl: profile?.avatar_url, qr });
 
       const isJpeg = format === 'jpeg';
       const ext = isJpeg ? 'jpg' : 'png';
       const mime = isJpeg ? 'image/jpeg' : 'image/png';
-      const filename = `codex-id-${String(profile?.student_id || 'student').replace(/[^a-z0-9-]/gi, '')}.${ext}`;
+      const filename = `codex-id-${String(myStudentId || 'student').replace(/[^a-z0-9-]/gi, '')}.${ext}`;
       const blob = await new Promise((resolve) => canvas.toBlob(resolve, mime, isJpeg ? 0.92 : undefined));
       if (!blob) throw new Error('Could not render the image.');
 
@@ -119,7 +121,7 @@ export default function MyId() {
   // The year-long signed QR is cached in localStorage (keyed per student) so
   // the ID still renders offline / at the venue with weak signal — the payload
   // stays valid for the whole academic year, exactly like the on-screen card.
-  const qrCacheKey = profile ? `codex_id_qr_${profile.student_id}` : null;
+  const qrCacheKey = myStudentId ? `codex_id_qr_${myStudentId}` : null;
 
   const cachedQr = useCallback(() => {
     if (!qrCacheKey) return null;
@@ -196,6 +198,15 @@ export default function MyId() {
   useEffect(() => {
     signQr();
   }, [signQr]);
+
+  // Own student ID — the profiles column is revoked from students, so it
+  // comes back through the get_my_profile() RPC instead of the context.
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase.rpc('get_my_profile');
+      if (data?.student_id) setMyStudentId(data.student_id);
+    })();
+  }, []);
 
   // ── live presence QR (90s) ──────────────────────────────────────
   const signPresence = useCallback(async () => {
@@ -292,7 +303,7 @@ export default function MyId() {
               <div className="idcard-details">
                 YEAR : {profile.year_level}<br />
                 SEC  : {profile.section}<br />
-                ID   : {profile.student_id}
+                ID   : {myStudentId || '—'}
               </div>
             </div>
             <div className="idcard-qr">

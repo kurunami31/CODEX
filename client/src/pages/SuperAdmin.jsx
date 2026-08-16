@@ -97,7 +97,7 @@ export default function SuperAdmin() {
     setLoadingPosts(true);
     const { data, error } = await supabase
       .from('posts')
-      .select(await postsSelect('id, full_name, role, avatar_url, student_id'))
+.select(await postsSelect('id, full_name, role, avatar_url'))
       .order('created_at', { ascending: false })
       .limit(300);
     if (error) toast.error('Posts error', error.message);
@@ -202,7 +202,7 @@ export default function SuperAdmin() {
     const q = search.trim().toLowerCase();
     if (!q) return posts;
     return posts.filter((p) =>
-      [p.content, p.profiles?.full_name, p.profiles?.student_id].some((v) => v && String(v).toLowerCase().includes(q))
+      [p.content, p.profiles?.full_name].some((v) => v && String(v).toLowerCase().includes(q))
     );
   }, [posts, search]);
 

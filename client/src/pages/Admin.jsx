@@ -47,20 +47,13 @@ export default function Admin() {
   }, []);
 
   const loadUnpaid = useCallback(async () => {
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('id, full_name, student_id, year_level, section, created_at, receipt_url')
-      .eq('membership_paid', false)
-      .order('created_at', { ascending: true });
+    const { data, error } = await supabase.rpc('get_members');
     if (error) toast.error('Membership error', error.message);
-    else setUnpaid(data || []);
+    else setUnpaid((data || []).filter((m) => m.membership_paid === false));
   }, [toast]);
 
   const loadMembers = useCallback(async () => {
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('id, full_name, student_id, year_level, section, avatar_url, role, course, membership_paid')
-      .order('full_name', { ascending: true });
+    const { data, error } = await supabase.rpc('get_members');
     if (error) toast.error('Members error', error.message);
     else setMembers(data || []);
     setLoadingMembers(false);

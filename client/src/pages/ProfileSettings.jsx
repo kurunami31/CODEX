@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
@@ -21,19 +21,18 @@ export default function ProfileSettings() {
   const [uploading, setUploading] = useState(false);
   const [preview, setPreview] = useState('');
   const [cropFile, setCropFile] = useState(null);
+  const [receiptBusy, setReceiptBusy] = useState(false);
+  const receiptRef = useRef(null);
+  const [pushOn, setPushOn] = useState(false);
+  const [pushBusy, setPushBusy] = useState(false);
+  const [pushSupported, setPushSupported] = useState(false);
   const [error, setError] = useState('');
   const [form, setForm] = useState(() => ({
     fullName: profile?.full_name || '',
     yearLevel: profile?.year_level || YEAR_LEVELS[0],
     section: profile?.section || '',
   }));
-  const [receiptBusy, setReceiptBusy] = useState(false);
-  const receiptRef = useRef(null);
-  const [pushOn, setPushOn] = useState(false);
-  const [pushBusy, setPushBusy] = useState(false);
-  const [pushSupported, setPushSupported] = useState(false);
-
-  useEffect(() => {
+useEffect(() => {
     let alive = true;
     (async () => {
       const supported = isSupported();
@@ -44,6 +43,17 @@ export default function ProfileSettings() {
       }
     })();
     return () => { alive = false; };
+  }, []);
+
+  // Own student ID — the profiles column is revoked from students, so it
+  // comes back through the get_my_profile() RPC instead of the context.
+  const [myStudentId, setMyStudentId] = useState(null);
+
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase.rpc('get_my_profile');
+      if (data?.student_id) setMyStudentId(data.student_id);
+    })();
   }, []);
 
   if (!profile) return null;
@@ -433,7 +443,7 @@ export default function ProfileSettings() {
       <div className="panel" style={{ padding: 18, display: 'flex', flexDirection: 'column', gap: 12 }}>
         <div className="settings-row">
           <span className="settings-key"><IdIcon width={15} height={15} /> Student ID</span>
-          <span className="settings-val">{profile.student_id}</span>
+          <span className="settings-val">{myStudentId || '—'}</span>
           <span className="chip">locked</span>
         </div>
         <div className="settings-row">

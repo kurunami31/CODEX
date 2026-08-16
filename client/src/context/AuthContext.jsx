@@ -74,18 +74,20 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
+  const profileSelect = 'id, full_name, year_level, section, course, role, avatar_url, created_at, membership_paid, membership_paid_at';
+
   const fetchProfile = useCallback(async (userId) => {
     if (!userId) return setProfile(null);
     const { data, error } = await supabase
       .from('profiles')
-      .select('*')
+      .select(profileSelect)
       .eq('id', userId)
       .maybeSingle();
     // A session with no profile row usually means the user signed up while
     // email confirmation was on — finish their profile from the stash.
     if (!error && !data) {
       await completePendingProfile(userId);
-      const { data: retry } = await supabase.from('profiles').select('*').eq('id', userId).maybeSingle();
+      const { data: retry } = await supabase.from('profiles').select(profileSelect).eq('id', userId).maybeSingle();
       if (retry) {
         setProfile(retry);
         return { data: retry, error: null };

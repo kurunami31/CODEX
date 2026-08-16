@@ -452,6 +452,69 @@ revoke all on function public.get_my_role, public.mark_attendance,
         public.confirm_membership
         from anon, public;
 
+-- ────────────────────────────────────────────────
+--  ID PRIVACY: student IDs are visible to the owner,
+--  moderators and admins only.
+--  The column itself is revoked from `authenticated`, so even a
+--  hand-crafted REST query cannot read it. Staff read IDs through the
+--  security-definer RPCs below (which run as the table owner).
+-- ────────────────────────────────────────────────
+revoke select (student_id) on public.profiles from authenticated;
+
+-- Own full profile (incl. the owner's own student ID)
+create or replace function public.get_my_profile()
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_row jsonb;
+begin
+  select row_to_jsonb(t) into v_row
+  from (select * from public.profiles where id = auth.uid()) t;
+  return coalesce(v_row, '{}'::jsonb);
+end;
+$$;
+
+grant execute on function public.get_my_profile() to authenticated;
+
+-- Member list: students get everything except student_id; staff
+-- (moderators / admins / superadmins) get the full record including IDs.
+create or replace function public.get_members()
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_role text := public.get_my_role();
+begin
+  if v_role in ('admin','moderator','superadmin') then
+    return (
+      select coalesce(jsonb_agg(row_to_jsonb(t) order by t.full_name), '[]'::jsonb)
+      from (
+        select id, student_id, full_name, year_level, section, course, role,
+               avatar_url, created_at, membership_paid, membership_paid_at
+        from public.profiles
+      ) t
+    );
+  end if;
+  return (
+    select coalesce(jsonb_agg(row_to_jsonb(t) order by t.full_name), '[]'::jsonb)
+    from (
+      select id, full_name, year_level, section, course, role,
+             avatar_url, created_at, membership_paid
+      from public.profiles
+    ) t
+  );
+end;
+$$;
+
+grant execute on function public.get_members() to authenticated;
+
+revoke all on function public.get_my_profile, public.get_members from anon, public;
+
 -- Tell PostgREST to reload its schema cache so the RPCs (and any new
 -- tables/policies) become visible through the REST API immediately.
 notify pgrst, 'reload schema';

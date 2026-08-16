@@ -1,9 +1,25 @@
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { ChevronRightIcon, RssIcon, CalendarIcon, IdIcon, BotIcon } from '../components/icons/Icons';
 
 export default function Welcome() {
   const { session } = useAuth();
+  const [memberCount, setMemberCount] = useState(null);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch('/api/status', { headers: { Accept: 'application/json' } });
+        if (res.ok) {
+          const j = await res.json();
+          if (typeof j.members === 'number') setMemberCount(j.members);
+        }
+      } catch {
+        /* count stays hidden if the API is unreachable */
+      }
+    })();
+  }, []);
 
   return (
     <div className="welcome scanlines">
@@ -39,6 +55,7 @@ export default function Welcome() {
           </Link>
         </div>
         <div className="welcome-stats">
+          <div className="stat"><b>{memberCount ?? '—'}</b><span>registered members</span></div>
           <div className="stat"><b>4</b><span>org chapters</span></div>
           <div className="stat"><b>QR</b><span>attendance system</span></div>
           <div className="stat"><b>24/7</b><span>ai assistant</span></div>

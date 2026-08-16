@@ -53,6 +53,10 @@ app.get('/api/status', async (_req, res) => {
       .eq('key', 'maintenance')
       .maybeSingle();
     if (error) throw error;
+    const { count, error: countError } = await supabase
+      .from('profiles')
+      .select('id', { count: 'exact', head: true });
+    if (countError) throw countError;
     const v = data?.value ?? {};
     res.set('Cache-Control', 'no-store');
     res.json({
@@ -61,6 +65,7 @@ app.get('/api/status', async (_req, res) => {
         message: typeof v.message === 'string' && v.message ? v.message : null,
         updatedAt: data?.updated_at || null,
       },
+      members: count ?? 0,
     });
   } catch {
     res.status(500).json({ error: 'Could not read app status.' });
