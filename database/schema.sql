@@ -298,7 +298,7 @@ declare
   v_profile record;
   v_result  jsonb;
 begin
-  if v_role not in ('admin','moderator','superadmin') then
+  if coalesce(v_role, '') not in ('admin','moderator','superadmin') then
     raise exception 'Insufficient permissions: only moderators and admins can mark attendance';
   end if;
 
@@ -355,7 +355,7 @@ declare
   v_role text := public.get_my_role();
   v_rows jsonb;
 begin
-  if v_role not in ('admin','moderator','superadmin') then
+  if coalesce(v_role, '') not in ('admin','moderator','superadmin') then
     raise exception 'Insufficient permissions';
   end if;
 
@@ -393,7 +393,7 @@ declare
   v_role text := public.get_my_role();
   v_rows jsonb;
 begin
-  if v_role <> 'superadmin' then
+  if coalesce(v_role, '') <> 'superadmin' then
     raise exception 'Insufficient permissions';
   end if;
 
@@ -430,7 +430,7 @@ security definer
 set search_path = public
 as $$
 begin
-  if public.get_my_role() not in ('admin','superadmin') then
+  if coalesce(public.get_my_role(), '') not in ('admin','superadmin') then
     raise exception 'Insufficient permissions';
   end if;
   delete from public.events where id = p_event_id;
@@ -744,7 +744,7 @@ declare
   v_role text := public.get_my_role();
   v_rows jsonb;
 begin
-  if v_role not in ('admin','moderator','superadmin') then
+  if coalesce(v_role, '') not in ('admin','moderator','superadmin') then
     raise exception 'Insufficient permissions';
   end if;
 
@@ -872,7 +872,7 @@ declare
   v_profile record;
   v_result  jsonb;
 begin
-  if v_role not in ('admin','moderator','superadmin') then
+  if coalesce(v_role, '') not in ('admin','moderator','superadmin') then
     raise exception 'Insufficient permissions: only moderators and admins can mark attendance';
   end if;
 
@@ -1185,7 +1185,7 @@ declare
   v_role text := public.get_my_role();
   v_rows jsonb;
 begin
-  if v_role not in ('admin','moderator','superadmin') then
+  if coalesce(v_role, '') not in ('admin','moderator','superadmin') then
     if not exists (
       select 1 from public.elections e
       where e.id = p_election_id and not e.open
@@ -1226,7 +1226,7 @@ declare
   v_role text := public.get_my_role();
   v_rows jsonb;
 begin
-  if v_role not in ('admin','moderator','superadmin') then
+  if coalesce(v_role, '') not in ('admin','moderator','superadmin') then
     raise exception 'Insufficient permissions';
   end if;
 
