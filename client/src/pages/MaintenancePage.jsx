@@ -2,7 +2,7 @@ export default function MaintenancePage({ message }) {
   return (
     <div className="loading-screen">
       <div className="loading-frame">
-        <img src="/assets/loading.gif" alt="CODEBYTERS maintenance" />
+        <img src="/assets/loading.gif" alt="CODEBYTERS maintenance" decoding="async" width="640" height="700" />
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'center' }}>
         <div className="loading-title">CODEX</div>

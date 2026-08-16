@@ -34,7 +34,7 @@ function Content({ pct }) {
   return (
     <>
       <div className="loading-frame">
-        <img src="/assets/loading.gif" alt="CODEBYTERS loading" />
+        <img src="/assets/loading.gif" alt="CODEBYTERS loading" decoding="async" width="640" height="700" />
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'center' }}>
         <div className="loading-title">CODEX</div>
