@@ -455,11 +455,17 @@ revoke all on function public.get_my_role, public.mark_attendance,
 -- ────────────────────────────────────────────────
 --  ID PRIVACY: student IDs are visible to the owner,
 --  moderators and admins only.
---  The column itself is revoked from `authenticated`, so even a
---  hand-crafted REST query cannot read it. Staff read IDs through the
---  security-definer RPCs below (which run as the table owner).
+--  Table-level SELECT is removed from `authenticated` and replaced with
+--  column-level grants on every column EXCEPT student_id — so even a
+--  hand-crafted REST query cannot read it (Postgres column revokes
+--  cannot cap a table-level grant, but column grants do restrict).
+--  Staff read IDs through the security-definer RPCs below (which run as
+--  the table owner). INSERT/UPDATE privileges are untouched.
 -- ────────────────────────────────────────────────
-revoke select (student_id) on public.profiles from authenticated;
+revoke select on public.profiles from authenticated;
+grant select (id, full_name, year_level, section, course, role,
+              avatar_url, created_at, membership_paid, membership_paid_at)
+  on public.profiles to authenticated;
 
 -- Own full profile (incl. the owner's own student ID)
 create or replace function public.get_my_profile()
