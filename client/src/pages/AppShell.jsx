@@ -160,19 +160,6 @@ export default function AppShell() {
 
   const renderSearchPanel = (mobile) => (
     <>
-      {mobile && (
-        <div className="search-box">
-          <SearchIcon width={16} height={16} />
-          <input
-            placeholder="Search posts, events, members…"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            onFocus={() => { if (results) setSearchOpen(true); }}
-            autoFocus
-          />
-          {searching && <span className="spinner-mini" />}
-        </div>
-      )}
       <div className={mobile ? 'search-results' : undefined}>
         {results && (results.posts.length === 0 && results.events.length === 0 && results.members.length === 0 ? (
           <div className="search-empty">No matches for “{query.trim()}”</div>
@@ -353,19 +340,21 @@ export default function AppShell() {
               />
               {searching && <span className="spinner-mini" />}
             </div>
-            {searchOpen && results && renderSearchPanel(false)}
+            {searchOpen && results && <div className="search-panel">{renderSearchPanel(false)}</div>}
           </div>
           <div className="search-wrap search-wrap--mobile" ref={searchRefM}>
-            <button
-              className={`icon-btn search-toggle${searchOpen ? ' notif-btn--open' : ''}`}
-              onClick={() => setSearchOpen((o) => !o)}
-              aria-label="Search"
-              aria-haspopup="true"
-              aria-expanded={searchOpen}
-            >
-              <SearchIcon width={16} height={16} />
-            </button>
-            {searchOpen && renderSearchPanel(true)}
+            <div className="search-box search-box--mobile">
+              <SearchIcon width={15} height={15} />
+              <input
+                placeholder="Search…"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                onFocus={() => { if (results) setSearchOpen(true); }}
+                aria-label="Search"
+              />
+              {searching && <span className="spinner-mini" />}
+            </div>
+            {searchOpen && results && <div className="search-panel search-panel--mobile">{renderSearchPanel(true)}</div>}
           </div>
           <div className="notif-wrap" ref={notifRef}>
             <button

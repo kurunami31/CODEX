@@ -1514,9 +1514,11 @@ table.codex-table { width: 100%; border-collapse: collapse; font-size: calc(0.87
 @media (max-width: 860px) {
   .sidebar { display: none; }
   .bottomnav { display: flex; }
-  .topbar { padding-left: 14px; padding-right: 14px; }
+  .topbar { padding-left: 14px; padding-right: 14px; gap: 10px; }
   .search-wrap--desktop { display: none; }
-  .search-wrap--mobile { display: block; }
+  .search-wrap--mobile { display: block; position: relative; flex: 1 1 150px; max-width: 230px; margin-left: auto; }
+  .search-box--mobile { flex: 1; max-width: none; margin: 0; height: 32px; padding: 0 10px; gap: 6px; border-radius: 10px; }
+  .search-box--mobile input { font-size: calc(0.8125rem * var(--text-scale)); }
   .notif-panel { width: min(280px, calc(100vw - 64px)); }
   .notif-list { max-height: 220px; overflow-y: auto; }
   .notif-item { padding: 9px 12px; }
@@ -1542,7 +1544,7 @@ table.codex-table { width: 100%; border-collapse: collapse; font-size: calc(0.87
   .auth-slider-panel { position: static; width: 100%; height: auto; overflow-y: visible; transition: none; opacity: 1; z-index: auto; }
   .auth-slider.auth-slider--signup .auth-slider-panel--login,
   .auth-slider.auth-slider--signup .auth-slider-panel--signup { transform: none; opacity: 1; z-index: auto; }
-  .auth-form-bot { width: 82px; }
+  .auth-form-bot { top: auto; bottom: 12px; right: 14px; width: 64px; }
   .auth-slide-inner { padding: 26px 22px; }
   .auth-slider-overlay { position: static; width: 100%; height: auto; overflow: visible; transform: none !important; }
   .auth-slider-overlay-inner { width: 100%; height: auto; transform: none !important; display: block; }
