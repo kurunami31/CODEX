@@ -197,6 +197,9 @@ export default function Auth() {
                   <button type="submit" className="btn btn-accent btn-lg auth-submit" disabled={busy || cooldownLeft > 0}>
                     {busy ? 'Authenticating…' : cooldownLeft > 0 ? `Try again in ${fmtCountdown(cooldownLeft)}` : 'Log in'}
                   </button>
+                  <button type="button" className="auth-slide-switch" onClick={() => switchTab('signup')}>
+                    No account yet? <b>Create one</b> →
+                  </button>
                 </form>
               </div>
             </section>
@@ -235,6 +238,9 @@ export default function Auth() {
                   {feedback('signup')}
                   <button type="submit" className="btn btn-accent btn-lg auth-submit" disabled={busy || cooldownLeft > 0}>
                     {busy ? 'Creating account…' : cooldownLeft > 0 ? `Try again in ${fmtCountdown(cooldownLeft)}` : 'Join CODEBYTERS'}
+                  </button>
+                  <button type="button" className="auth-slide-switch" onClick={() => switchTab('login')}>
+                    Already have an account? <b>Log in</b>
                   </button>
                 </form>
               </div>
