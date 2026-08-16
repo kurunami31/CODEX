@@ -179,8 +179,8 @@ export default function Auth() {
         <div className="blob" style={{ width: 340, height: 340, bottom: -110, right: -100, background: 'rgba(26, 93, 120, 0.7)' }} />
         <div className="blob" style={{ width: 260, height: 260, top: 40, right: -80, background: 'rgba(14, 208, 182, 0.2)' }} />
         <div className="auth-title-row">
-          <div className="auth-title">CODEX</div>
           <img className="auth-form-bot" src="/assets/bot.gif" alt="CODEBYTERS mascot" />
+          <div className="auth-title">CODEX</div>
         </div>
 
         <div className={`auth-slider${tab === 'signup' ? ' auth-slider--signup' : ''}`}>
