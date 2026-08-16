@@ -377,6 +377,50 @@ $$;
 grant execute on function public.event_attendance(uuid) to authenticated;
 
 -- ────────────────────────────────────────────────
+--  RPC: full attendance log (superadmins only)
+--  The REST path cannot embed-join profiles.student_id — that column has
+--  no SELECT grant under the ID lockdown, so every attendance query with
+--  a member join dies with "permission denied for table profiles". This
+--  runs as the owner (security definer) and enforces the role itself.
+-- ────────────────────────────────────────────────
+create or replace function public.get_attendance()
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_role text := public.get_my_role();
+  v_rows jsonb;
+begin
+  if v_role <> 'superadmin' then
+    raise exception 'Insufficient permissions';
+  end if;
+
+  select coalesce(jsonb_agg(to_jsonb(t) order by t.scanned_at desc), '[]'::jsonb)
+  into v_rows
+  from (
+    select a.id, a.event_id, a.student_id, a.scanned_at, a.scanned_by,
+           (select to_jsonb(p) from (
+              select full_name, year_level, section, avatar_url
+              from public.profiles p
+              where p.student_id = a.student_id
+            ) p) as profiles,
+           (select to_jsonb(e) from (
+              select id, title from public.events e where e.id = a.event_id
+            ) e) as events
+    from public.attendance a
+    order by a.scanned_at desc
+    limit 500
+  ) t;
+
+  return v_rows;
+end;
+$$;
+
+grant execute on function public.get_attendance() to authenticated;
+
+-- ────────────────────────────────────────────────
 --  RPC: delete an event (admins only)
 -- ────────────────────────────────────────────────
 create or replace function public.delete_event(p_event_id uuid)
@@ -460,7 +504,8 @@ grant execute on function
   public.get_my_role(), public.mark_attendance(uuid, text),
   public.event_attendance(uuid), public.delete_event(uuid),
   public.superadmin_delete_user(uuid), public.confirm_membership(uuid, boolean),
-  public.get_my_profile(), public.get_members(), public.attendance_counts()
+  public.get_my_profile(), public.get_members(), public.attendance_counts(),
+  public.get_attendance()
   to authenticator;
 
 -- ────────────────────────────────────────────────

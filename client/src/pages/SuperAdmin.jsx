@@ -107,11 +107,9 @@ export default function SuperAdmin() {
 
   const loadAttendance = useCallback(async () => {
     setLoadingAttendance(true);
-    const { data, error } = await supabase
-      .from('attendance')
-      .select('id, event_id, student_id, scanned_at, scanned_by, profiles!attendance_student_id_fkey(full_name, year_level, section, avatar_url), events!attendance_event_id_fkey(id, title)')
-      .order('scanned_at', { ascending: false })
-      .limit(500);
+    // The REST join through profiles.student_id is blocked by the ID
+    // lockdown, so the superadmin log comes from the owner-run RPC.
+    const { data, error } = await supabase.rpc('get_attendance');
     if (error) toast.error('Attendance error', error.message);
     else setAttendance(data || []);
     setLoadingAttendance(false);
