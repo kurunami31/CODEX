@@ -1,6 +1,9 @@
 import { Router } from 'express';
 import ExcelJS from 'exceljs';
+import pg from 'pg';
 import { supabaseFor, supabaseAdmin } from '../lib/supabase.js';
+
+const { Client } = pg;
 
 const router = Router();
 
@@ -356,6 +359,88 @@ router.get('/membership/report', async (req, res) => {
   res.setHeader('Content-Disposition', `attachment; filename="membership-report-${stamp}.xlsx"`);
   await workbook.xlsx.write(res);
   res.end();
+});
+
+// GET /api/admin/membership-feed?key=… — LIVE CSV feed of the same report.
+// Point Excel (Data → From Web) or Google Sheets (=IMPORTDATA) at this URL
+// and set a refresh interval: every refresh pulls the latest rows from the
+// database, so the sheet auto-updates as members are added and payments are
+// confirmed — no re-downloading the file ever again. Protected by the
+// static REPORT_FEED_KEY (never shipped to the client).
+router.get('/membership-feed', async (req, res) => {
+  const expected = process.env.REPORT_FEED_KEY;
+  if (!expected) {
+    return res.status(503).json({ error: 'Report feed is not configured (REPORT_FEED_KEY missing).' });
+  }
+  if (req.query.key !== expected) {
+    return res.status(401).json({ error: 'Invalid feed key.' });
+  }
+  if (!process.env.DATABASE_URL) {
+    return res.status(503).json({ error: 'DATABASE_URL is not configured on the server.' });
+  }
+
+  const sql = `select p.student_id, p.full_name, p.year_level, p.section, p.course, p.role,
+         p.membership_paid,
+         to_char(p.membership_paid_at at time zone 'Asia/Manila', 'YYYY-MM-DD HH24:MI') as paid_at,
+         p.membership_paid_amount,
+         c.full_name as confirmed_by_name,
+         (u.email_confirmed_at is not null) as email_confirmed,
+         to_char(u.email_confirmed_at at time zone 'Asia/Manila', 'YYYY-MM-DD HH24:MI') as email_confirmed_at,
+         to_char(u.last_sign_in_at at time zone 'Asia/Manila', 'YYYY-MM-DD HH24:MI') as last_sign_in,
+         p.receipt_url,
+         to_char(p.created_at at time zone 'Asia/Manila', 'YYYY-MM-DD HH24:MI') as created_at
+  from public.profiles p
+  left join public.profiles c on c.id = p.membership_confirmed_by
+  left join auth.users u on u.id = p.id
+  order by p.full_name`;
+
+  let rows;
+  try {
+    const client = new Client({ connectionString: process.env.DATABASE_URL });
+    await client.connect();
+    try {
+      ({ rows } = await client.query(sql));
+    } finally {
+      await client.end();
+    }
+  } catch (err) {
+    return res.status(500).json({ error: 'Could not read the report feed.' });
+  }
+
+  const esc = (v) => {
+    if (v === null || v === undefined) return '';
+    const s = String(v);
+    return /[",\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+  const head = [
+    '#', 'Student ID', 'Full Name', 'Year Level', 'Section', 'Course', 'Status',
+    'Paid At', 'Amount', 'Confirmed By', 'Email Confirmed',
+    'Email Confirmed At', 'Last Sign In', 'Receipt URL', 'Created At',
+  ];
+  const lines = [head.join(',')];
+  rows.forEach((r, i) => {
+    lines.push([
+      i + 1,
+      r.student_id,
+      r.full_name,
+      r.year_level,
+      r.section,
+      r.course,
+      r.membership_paid ? 'PAID' : 'UNPAID',
+      r.paid_at,
+      r.membership_paid ? (r.membership_paid_amount ?? 120) : '',
+      r.confirmed_by_name,
+      r.email_confirmed ? 'CONFIRMED' : 'UNCONFIRMED',
+      r.email_confirmed_at,
+      r.last_sign_in,
+      r.receipt_url,
+      r.created_at,
+    ].map(esc).join(','));
+  });
+
+  res.set('Cache-Control', 'no-store');
+  res.type('text/csv; charset=utf-8');
+  res.send(`\uFEFF${lines.join('\r\n')}\r\n`);
 });
 
 export default router;
