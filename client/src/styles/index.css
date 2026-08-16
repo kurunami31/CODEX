@@ -1537,7 +1537,7 @@ table.codex-table { width: 100%; border-collapse: collapse; font-size: calc(0.87
   .auth-slider.auth-slider--signup .auth-slider-panel--login,
   .auth-slider:not(.auth-slider--signup) .auth-slider-panel--signup { display: none; }
   .auth-slider-forms { position: static; inset: auto; width: 100%; display: flex; }
-  .auth-slider.auth-slider--signup .auth-slider-forms { transform: translateX(-100%); }
+  .auth-slider.auth-slider--signup .auth-slider-forms { transform: none; }
   .auth-slider-panel { position: static; width: 100%; height: auto; overflow-y: visible; transition: none; opacity: 1; z-index: auto; }
   .auth-slider.auth-slider--signup .auth-slider-panel--login,
   .auth-slider.auth-slider--signup .auth-slider-panel--signup { transform: none; opacity: 1; z-index: auto; }
