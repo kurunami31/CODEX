@@ -238,18 +238,18 @@ router.get('/membership/report', async (req, res) => {
 
   const ws = workbook.addWorksheet('Membership Fees');
   ws.columns = [
-    { header: '#', key: 'i', width: 5 },
-    { header: 'Student ID', key: 'student_id', width: 14 },
-    { header: 'Full Name', key: 'full_name', width: 26 },
-    { header: 'Year Level', key: 'year_level', width: 11 },
-    { header: 'Section', key: 'section', width: 10 },
-    { header: 'Course', key: 'course', width: 9 },
-    { header: 'Status', key: 'status', width: 10 },
-    { header: 'Paid At', key: 'paid_at', width: 18 },
-    { header: 'Amount', key: 'amount', width: 11 },
-    { header: 'Confirmed By', key: 'confirmed_by', width: 22 },
-    { header: 'Receipt Link', key: 'receipt_url', width: 36 },
-    { header: 'Registered At', key: 'created_at', width: 18 },
+    { key: 'i', width: 5 },
+    { key: 'student_id', width: 14 },
+    { key: 'full_name', width: 26 },
+    { key: 'year_level', width: 11 },
+    { key: 'section', width: 10 },
+    { key: 'course', width: 9 },
+    { key: 'status', width: 10 },
+    { key: 'paid_at', width: 18 },
+    { key: 'amount', width: 11 },
+    { key: 'confirmed_by', width: 22 },
+    { key: 'receipt_url', width: 36 },
+    { key: 'created_at', width: 18 },
   ];
   ws.views = [{ state: 'frozen', ySplit: 1 }];
 

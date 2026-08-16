@@ -170,7 +170,7 @@ export default function SuperAdmin() {
     if (exporting) return;
     setExporting(true);
     try {
-      const res = await apiFetch('/api/membership/report', { method: 'GET' });
+      const res = await apiFetch('/api/admin/membership/report', { method: 'GET' });
       if (!res.ok) {
         const j = await res.json().catch(() => ({}));
         throw new Error(j.error || 'Could not build the report.');
