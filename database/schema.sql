@@ -163,7 +163,7 @@ create policy "attendance_no_public_access" on public.attendance
   for all to authenticated using (false) with check (false);
 create policy "attendance_select_own" on public.attendance
   for select to authenticated
-  using (student_id = (select p.student_id from public.profiles p where p.id = auth.uid()));
+  using (student_id = coalesce(public.get_my_profile() ->> 'student_id', ''));
 -- superadmins see every attendance record and may remove mistaken scans
 drop policy if exists "attendance_superadmin_select" on public.attendance;
 drop policy if exists "attendance_superadmin_delete" on public.attendance;
