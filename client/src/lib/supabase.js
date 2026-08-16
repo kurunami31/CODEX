@@ -69,6 +69,13 @@ export async function apiFetch(path, { method = 'POST', body } = {}) {
   if (res.status === 401) {
     const { data: fresh, error } = await supabase.auth.refreshSession();
     if (!error && fresh?.session) res = await send(fresh.session.access_token);
+    else {
+      // The stored session is dead (revoked or corrupt) and cannot be
+      // refreshed — clear it so the app lands back on the login screen
+      // instead of failing every API call with a cryptic "Invalid session."
+      await supabase.auth.signOut().catch(() => {});
+      throw new Error('Session expired — log in again.');
+    }
   }
   return res;
 }
