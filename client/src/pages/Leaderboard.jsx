@@ -16,21 +16,14 @@ export default function Leaderboard() {
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('id, full_name, student_id, year_level, section, avatar_url, role, points')
-      .order('points', { ascending: false })
-      .order('full_name', { ascending: true })
-      .limit(50);
+    const { data, error } = await supabase.rpc('get_members');
     if (error) return toast.error('Leaderboard error', error.message);
-    setRows(data || []);
+    const all = (data || []).filter((m) => m.points != null);
+    setRows(all.slice().sort((a, b) => b.points - a.points || String(a.full_name).localeCompare(b.full_name)).slice(0, 50));
 
-    if (user) {
-      const { count } = await supabase
-        .from('profiles')
-        .select('id', { count: 'exact', head: true })
-        .gt('points', profile?.points ?? 0);
-      setMyRank(count == null ? null : count + 1);
+    if (user && profile) {
+      const above = all.filter((m) => m.points > (profile.points ?? 0)).length;
+      setMyRank(above + 1);
     }
     setLoading(false);
   }, [user, profile, toast]);

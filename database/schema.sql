@@ -464,7 +464,8 @@ revoke all on function public.get_my_role, public.mark_attendance,
 -- ────────────────────────────────────────────────
 revoke select on public.profiles from authenticated;
 grant select (id, full_name, year_level, section, course, role,
-              avatar_url, created_at, membership_paid, membership_paid_at)
+              avatar_url, created_at, membership_paid, membership_paid_at,
+              points, receipt_url)
   on public.profiles to authenticated;
 
 -- Own full profile (incl. the owner's own student ID)
@@ -501,7 +502,8 @@ begin
       select coalesce(jsonb_agg(row_to_jsonb(t) order by t.full_name), '[]'::jsonb)
       from (
         select id, student_id, full_name, year_level, section, course, role,
-               avatar_url, created_at, membership_paid, membership_paid_at
+               avatar_url, created_at, membership_paid, membership_paid_at,
+               points, receipt_url
         from public.profiles
       ) t
     );
@@ -510,7 +512,7 @@ begin
     select coalesce(jsonb_agg(row_to_jsonb(t) order by t.full_name), '[]'::jsonb)
     from (
       select id, full_name, year_level, section, course, role,
-             avatar_url, created_at, membership_paid
+             avatar_url, created_at, membership_paid, points
       from public.profiles
     ) t
   );

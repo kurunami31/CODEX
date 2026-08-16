@@ -326,7 +326,7 @@ useEffect(() => {
                 <div className="idcard-details">
                   YEAR : {profile.year_level}<br />
                   SEC  : {profile.section}<br />
-                  ID   : {profile.student_id}
+                  ID   : {myStudentId || '—'}
                 </div>
               </div>
             </div>

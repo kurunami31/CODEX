@@ -23,13 +23,9 @@ export default function Directory() {
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('id, full_name, student_id, year_level, section, avatar_url, role, course, membership_paid')
-      .not('role', 'in', '("admin","superadmin")')
-      .order('full_name', { ascending: true });
+    const { data, error } = await supabase.rpc('get_members');
     if (error) toast.error('Directory error', error.message);
-    else setMembers(data || []);
+    else setMembers((data || []).filter((m) => !HIDDEN_ROLES.includes(m.role)));
     setLoading(false);
   }, [toast]);
 

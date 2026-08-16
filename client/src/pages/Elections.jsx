@@ -15,7 +15,7 @@ const POSITIONS = [
 
 const CANDIDATE_SELECT =
   'id, election_id, user_id, position, platform, winner, ' +
-  'profiles!election_candidates_user_id_fkey(id, full_name, avatar_url, year_level, section, student_id, role)';
+  'profiles!election_candidates_user_id_fkey(id, full_name, avatar_url, year_level, section, role)';
 
 function statusOf(e) {
   const now = Date.now();
@@ -63,7 +63,7 @@ export default function Elections() {
       supabase.from('elections').select('*').order('created_at', { ascending: false }),
       supabase.from('election_candidates').select(CANDIDATE_SELECT),
       user ? supabase.from('election_votes').select('election_id, position, candidate_id') : Promise.resolve({ data: [] }),
-      isAdmin ? supabase.from('profiles').select('id, full_name, student_id, year_level, section').order('full_name', { ascending: true }) : Promise.resolve({ data: [] }),
+      isAdmin ? supabase.rpc('get_members') : Promise.resolve({ data: [] }),
     ]);
     if (e.error) toast.error('Elections error', e.error.message);
     else {

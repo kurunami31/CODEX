@@ -101,7 +101,8 @@ export default function AppShell() {
     }
     setSearching(true);
     const like = `%${term}%`;
-    const [posts, events, members] = await Promise.all([
+    const termLc = term.toLowerCase();
+    const [posts, events, membersRpc] = await Promise.all([
       supabase
         .from('posts')
         .select('id, content, created_at, profiles!posts_author_id_fkey(full_name)')
@@ -114,13 +115,14 @@ export default function AppShell() {
         .ilike('title', like)
         .order('event_date', { ascending: true })
         .limit(4),
-      supabase
-        .from('profiles')
-        .select('id, full_name, student_id, section, year_level, avatar_url, role')
-        .or(`full_name.ilike.${like},student_id.ilike.${like}`)
-        .limit(4),
+      supabase.rpc('get_members'),
     ]);
-    setResults({ posts: posts.data || [], events: events.data || [], members: members.data || [] });
+    const members = (membersRpc.data || []).filter(
+      (m) =>
+        String(m.full_name || '').toLowerCase().includes(termLc) ||
+        String(m.student_id || '').toLowerCase().includes(termLc)
+    ).slice(0, 4);
+    setResults({ posts: posts.data || [], events: events.data || [], members });
     setSearching(false);
   };
 

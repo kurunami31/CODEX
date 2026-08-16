@@ -11,7 +11,15 @@ export default function Certificates() {
   const [wins, setWins] = useState([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(null); // { type: 'membership' } | { type: 'event', title, date } | { type: 'election', title, position, date }
+  const [myStudentId, setMyStudentId] = useState(null);
   const printRef = useRef(null);
+
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase.rpc('get_my_profile');
+      if (data?.student_id) setMyStudentId(data.student_id);
+    })();
+  }, []);
 
   useEffect(() => {
     (async () => {
@@ -187,7 +195,7 @@ export default function Certificates() {
                   <div className="cert-foot">
                     <div className="cert-line">
                       <div className="cert-line-cap">student no.</div>
-                      <b>{profile.student_id || '—'}</b>
+                      <b>{myStudentId || '—'}</b>
                     </div>
                     <div className="cert-line">
                       <div className="cert-line-cap">issued</div>
@@ -198,7 +206,7 @@ export default function Certificates() {
                       <b className="cert-sign">CODEBYTERS</b>
                     </div>
                   </div>
-                  <div className="cert-code">cert-{open.type === 'membership' ? 'member' : open.type === 'election' ? 'elected' : 'event'}-{String(profile.student_id || user?.id || '').toLowerCase().replace(/[^a-z0-9]/gi, '')}</div>
+                  <div className="cert-code">cert-{open.type === 'membership' ? 'member' : open.type === 'election' ? 'elected' : 'event'}-{String(myStudentId || user?.id || '').toLowerCase().replace(/[^a-z0-9]/gi, '')}</div>
                 </div>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'center', marginTop: 16, flexWrap: 'wrap' }}>
