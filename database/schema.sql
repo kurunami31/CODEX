@@ -468,6 +468,14 @@ grant select (id, full_name, year_level, section, course, role,
               points, receipt_url)
   on public.profiles to authenticated;
 
+-- Logged-out visitors may only count members (the welcome page shows a
+-- public member count via /api/status). The anon RLS policy below only
+-- opens the `id` column grant, so names and IDs stay hidden.
+grant select (id) on public.profiles to anon;
+drop policy if exists "profiles_select_anon_count" on public.profiles;
+create policy "profiles_select_anon_count" on public.profiles
+  for select to anon using (true);
+
 -- Own full profile (incl. the owner's own student ID)
 create or replace function public.get_my_profile()
 returns jsonb
