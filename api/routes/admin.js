@@ -532,6 +532,9 @@ router.get('/membership-feed/view', async (req, res) => {
   h1 { margin:0; font-size:17px; letter-spacing:.2px; }
   .sub { margin-top:4px; font-size:12px; color:#b9c4dd; display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap; }
   .refresh { background:#2b4a8f; color:#fff; border:0; border-radius:8px; padding:6px 12px; font-size:12px; font-weight:600; cursor:pointer; }
+  .search { width:100%; margin-top:10px; padding:10px 14px; border:0; border-radius:10px; background:#132a5c; color:#fff; font-size:15px; outline:none; -webkit-appearance:none; }
+  .search::placeholder { color:#8fa3cc; }
+  .search:focus { box-shadow:inset 0 0 0 2px #3b5fae; }
   main { max-width:640px; margin:0 auto; padding:12px 12px calc(48px + env(safe-area-inset-bottom, 0px)); }
   .chips { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin:12px 0; }
   .chip { background:#fff; border:1px solid var(--line); border-radius:12px; padding:10px 12px; text-align:center; }
@@ -556,6 +559,7 @@ router.get('/membership-feed/view', async (req, res) => {
 <header>
   <h1>CODEX &middot; Membership Fees</h1>
   <div class="sub"><span>Updated ${esc(updatedAt)} &middot; refreshes every 60s</span><button class="refresh" onclick="location.reload()">Refresh</button></div>
+  <input id="q" class="search" type="search" placeholder="Search name or student ID…" autocomplete="off" enterkeyhint="search">
 </header>
 <main>
   <div class="chips">
@@ -566,8 +570,26 @@ router.get('/membership-feed/view', async (req, res) => {
     <div class="chip"><b>${rate}%</b><span>Rate</span></div>
   </div>
   ${cards || '<div class="empty">No members yet.</div>'}
+  <div id="empty" class="empty" style="display:none">No matches found.</div>
 </main>
-<script>setInterval(function(){ location.reload(); }, 60000);</script>
+<script>
+var q = document.getElementById('q');
+var cards = Array.prototype.slice.call(document.querySelectorAll('.card'));
+var none = document.getElementById('empty');
+if (q) {
+  q.addEventListener('input', function () {
+    var term = q.value.trim().toLowerCase();
+    var shown = 0;
+    cards.forEach(function (c) {
+      var hit = !term || c.textContent.toLowerCase().indexOf(term) !== -1;
+      c.style.display = hit ? '' : 'none';
+      if (hit) shown++;
+    });
+    if (none) none.style.display = shown ? 'none' : 'block';
+  });
+}
+setInterval(function(){ location.reload(); }, 60000);
+</script>
 </body>
 </html>`;
 

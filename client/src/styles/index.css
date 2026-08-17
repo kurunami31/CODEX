@@ -316,7 +316,7 @@ button { font-family: inherit; cursor: pointer; }
 
 /* ── toast ──────────────────────────────────────────────── */
 .toast-wrap {
-  position: fixed; top: calc(var(--topbar-h) + 14px); left: 50%;
+  position: fixed; top: calc(var(--topbar-h) + env(safe-area-inset-top, 0px) + 14px); left: 50%;
   transform: translateX(-50%);
   z-index: 200; display: flex; flex-direction: column; gap: 8px;
   width: min(420px, calc(100vw - 32px));
@@ -749,7 +749,8 @@ html[data-theme='dark'] .rate-note { color: #ffc46b; }
 .main-col { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .topbar {
   position: sticky; top: 0; z-index: 30;
-  height: var(--topbar-h);
+  height: calc(var(--topbar-h) + env(safe-area-inset-top, 0px));
+  padding-top: env(safe-area-inset-top, 0px);
   display: flex; align-items: center; gap: 14px;
   padding: 0 clamp(16px, 3vw, 32px);
   background: rgba(255, 255, 255, 0.86);
@@ -940,7 +941,7 @@ html[data-theme='dark'] .bottomnav a:hover { color: var(--accent); }
 /* ── feed ───────────────────────────────────────────────── */
 .feed-cols { display: flex; gap: 24px; align-items: flex-start; }
 .feed-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 16px; }
-.feed-rail { width: 300px; flex-shrink: 0; position: sticky; top: calc(var(--topbar-h) + 20px); display: flex; flex-direction: column; gap: 16px; }
+.feed-rail { width: 300px; flex-shrink: 0; position: sticky; top: calc(var(--topbar-h) + env(safe-area-inset-top, 0px) + 20px); display: flex; flex-direction: column; gap: 16px; }
 .feed-rail .panel { padding: 18px; }
 
 .composer { padding: 18px; display: flex; flex-direction: column; gap: 12px; }
