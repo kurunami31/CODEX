@@ -519,6 +519,10 @@ router.get('/membership-feed/view', async (req, res) => {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0b1c3f">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="CODEX Fees">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="apple-touch-icon" href="/pwa-192x192.png">
 <title>CODEX &middot; Membership Fees</title>
 <style>
   :root { --ink:#1a2233; --muted:#5b6478; --line:#e3e7ef; --paid:#1a7f37; --paidbg:#e6f6ea; --unpaid:#c92a2a; --unpaidbg:#fdecec; --navy:#0b1c3f; }
