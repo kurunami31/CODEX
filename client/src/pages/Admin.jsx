@@ -240,17 +240,17 @@ export default function Admin() {
                         <select
                           className="input"
                           style={{ width: 86, padding: '4px 4px', fontSize: 12, minWidth: 0 }}
-                          value={amounts[p.id] ?? 120}
+                          value={amounts[p.id] ?? 100}
                           onChange={(e) => setAmounts((a) => ({ ...a, [p.id]: Number(e.target.value) }))}
                           disabled={confirmingId === p.id}
                           aria-label={`Payment amount for ${p.full_name}`}
                         >
-                          <option value={120}>₱120 full</option>
-                          <option value={60}>₱60 half</option>
+                          <option value={100}>₱100 full</option>
+                          <option value={50}>₱50 half</option>
                         </select>
                         <button
                           className="btn btn-accent btn-sm"
-                          onClick={() => confirmDues(p, amounts[p.id] ?? 120)}
+                          onClick={() => confirmDues(p, amounts[p.id] ?? 100)}
                           disabled={confirmingId === p.id}
                         >
                           <CheckIcon width={14} height={14} />

@@ -41,7 +41,7 @@ alter table public.profiles add column if not exists membership_paid boolean not
 alter table public.profiles add column if not exists membership_paid_at timestamptz;
 alter table public.profiles add column if not exists membership_confirmed_by uuid
   references auth.users(id) on delete set null;
--- Amount actually collected: full (120) or half (60) per sem. NULL while
+-- Amount actually collected: full (100) or half (50) per sem. NULL while
 -- unpaid; defaults to the full fee when confirming without an amount.
 alter table public.profiles add column if not exists membership_paid_amount numeric(10,2);
 
@@ -469,12 +469,12 @@ grant execute on function public.superadmin_delete_user(uuid) to authenticated;
 -- ────────────────────────────────────────────────
 --  RPC: confirm / revoke a member's dues (admins / superadmins)
 --  Sets membership_paid plus audit columns (when + who) and the amount
---  actually collected (full ₱120 or half ₱60 — defaults to the full fee).
+--  actually collected (full ₱100 or half ₱50 — defaults to the full fee).
 --  The old two-argument signature is dropped so callers cannot keep
 --  confirming without recording an amount.
 -- ────────────────────────────────────────────────
 drop function if exists public.confirm_membership(uuid, boolean);
-create or replace function public.confirm_membership(p_user_id uuid, p_paid boolean, p_amount numeric default 120)
+create or replace function public.confirm_membership(p_user_id uuid, p_paid boolean, p_amount numeric default 100)
 returns void
 language plpgsql
 security definer
@@ -491,7 +491,7 @@ begin
      set membership_paid = p_paid,
          membership_paid_at = case when p_paid then now() else null end,
          membership_confirmed_by = case when p_paid then auth.uid() else null end,
-         membership_paid_amount = case when p_paid then coalesce(p_amount, 120) else null end
+         membership_paid_amount = case when p_paid then coalesce(p_amount, 100) else null end
    where id = p_user_id;
   if not found then
     raise exception 'Member not found';

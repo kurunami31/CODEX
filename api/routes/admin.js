@@ -196,9 +196,9 @@ router.get('/membership/report', async (req, res) => {
   const unpaid = rows.filter((r) => !r.membership_paid);
   const confirmed = rows.filter((r) => r.email_confirmed);
   const unconfirmed = rows.filter((r) => !r.email_confirmed);
-  const amounts = paid.map((r) => Number(r.membership_paid_amount || 120));
+  const amounts = paid.map((r) => Number(r.membership_paid_amount || 100));
   const totalCollected = amounts.reduce((s, a) => s + a, 0);
-  const fullCount = amounts.filter((a) => a >= 120).length;
+  const fullCount = amounts.filter((a) => a >= 100).length;
   const halfCount = amounts.length - fullCount;
   const rate = rows.length ? Math.round((paid.length / rows.length) * 100) : 0;
   const exportedAt = new Date();
@@ -222,7 +222,7 @@ router.get('/membership/report', async (req, res) => {
   sum.getCell('A2').font = { italic: true, color: { argb: 'FF6B7280' } };
   sum.getCell('A2').alignment = { horizontal: 'center', vertical: 'middle' };
   sum.mergeCells('A3:B3');
-  sum.getCell('A3').value = 'Fee: ₱120.00 full or ₱60.00 half per semester';
+  sum.getCell('A3').value = 'Fee: ₱100.00 full or ₱50.00 half per semester';
   sum.getCell('A3').font = { italic: true, color: { argb: 'FF6B7280' } };
   sum.getCell('A3').alignment = { horizontal: 'center', vertical: 'middle' };
 
@@ -243,8 +243,8 @@ router.get('/membership/report', async (req, res) => {
     ['Unpaid', unpaid.length],
     ['Collection rate', `${rate}%`],
     ['Total collected', totalCollected],
-    ['Full payments (₱120)', fullCount],
-    ['Half payments (₱60)', halfCount],
+    ['Full payments (₱100)', fullCount],
+    ['Half payments (₱50)', halfCount],
   ];
   metrics.forEach(([label, value], i) => {
     const r = sum.addRow([label, value]);
@@ -317,7 +317,7 @@ router.get('/membership/report', async (req, res) => {
       r.course || '',
       r.membership_paid ? 'PAID' : 'UNPAID',
       r.membership_paid_at ? new Date(r.membership_paid_at) : null,
-      r.membership_paid ? Number(r.membership_paid_amount || 120) : null,
+      r.membership_paid ? Number(r.membership_paid_amount || 100) : null,
       r.confirmed_by_name || '—',
       r.email_confirmed ? 'CONFIRMED' : 'UNCONFIRMED',
       r.email_confirmed_at ? new Date(r.email_confirmed_at) : null,
@@ -444,7 +444,7 @@ router.get('/membership-feed', async (req, res) => {
       r.course,
       r.membership_paid ? 'PAID' : 'UNPAID',
       r.paid_at,
-      r.membership_paid ? (r.membership_paid_amount ?? 120) : '',
+      r.membership_paid ? (r.membership_paid_amount ?? 100) : '',
       r.confirmed_by_name,
       r.email_confirmed ? 'CONFIRMED' : 'UNCONFIRMED',
       r.email_confirmed_at,
@@ -474,7 +474,7 @@ router.get('/membership-feed/view', async (req, res) => {
   }
 
   const paid = rows.filter((r) => r.membership_paid);
-  const collected = paid.reduce((s, r) => s + Number(r.membership_paid_amount || 120), 0);
+  const collected = paid.reduce((s, r) => s + Number(r.membership_paid_amount || 100), 0);
   const rate = rows.length ? Math.round((paid.length / rows.length) * 100) : 0;
   const allCount = rows.length;
   const rawQ = String(req.query.q || '').trim();
@@ -484,7 +484,6 @@ router.get('/membership-feed/view', async (req, res) => {
       [r.full_name, r.student_id, r.year_level, r.section, r.course].some((v) => v && String(v).toLowerCase().includes(q))
     );
   }
-  const feedKey = esc(String(req.query.key || ''));
   const updatedAt = new Intl.DateTimeFormat('en-PH', {
     timeZone: 'Asia/Manila',
     dateStyle: 'medium',
@@ -494,11 +493,12 @@ router.get('/membership-feed/view', async (req, res) => {
 
   const esc = (v) =>
     String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const feedKey = esc(String(req.query.key || ''));
 
   const cards = rows
     .map((r) => {
       const isPaid = !!r.membership_paid;
-      const amount = isPaid ? `\u20B1${Number(r.membership_paid_amount || 120)}` : '';
+      const amount = isPaid ? `\u20B1${Number(r.membership_paid_amount || 100)}` : '';
       const receipt = r.receipt_url ? `<a href="${esc(r.receipt_url)}" target="_blank" rel="noopener">Open receipt</a>` : '';
       return `
       <article class="card ${isPaid ? 'paid' : 'unpaid'}">

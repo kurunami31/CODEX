@@ -156,7 +156,7 @@ export default function SuperAdmin() {
     loadStudents();
   };
 
-  const setMembership = async (s, paid, amount = 120) => {
+  const setMembership = async (s, paid, amount = 100) => {
     if (!paid && !window.confirm(`Revoke ${s.full_name || s.email}'s confirmed membership?`)) return;
     setBusy(true);
     const { error } = await supabase.rpc('confirm_membership', { p_user_id: s.id, p_paid: paid, p_amount: amount });
@@ -433,20 +433,20 @@ export default function SuperAdmin() {
                             <select
                               className="input"
                               style={{ width: 74, padding: '4px 4px', fontSize: 11, minWidth: 0 }}
-                              value={amounts[s.id] ?? 120}
+                              value={amounts[s.id] ?? 100}
                               onChange={(e) => setAmounts((a) => ({ ...a, [s.id]: Number(e.target.value) }))}
                               disabled={busy}
                               aria-label={`Payment amount for ${s.full_name || s.email}`}
                             >
-                              <option value={120}>₱120</option>
-                              <option value={60}>₱60</option>
+                              <option value={100}>₱100</option>
+                              <option value={50}>₱50</option>
                             </select>
                             <button
                               className="icon-btn"
                               style={{ color: 'var(--ok)' }}
                               title="Confirm membership fee"
                               aria-label={`Confirm ${s.full_name || s.email} membership`}
-                              onClick={() => setMembership(s, true, amounts[s.id] ?? 120)}
+                              onClick={() => setMembership(s, true, amounts[s.id] ?? 100)}
                               disabled={busy}
                             >
                               <CheckIcon width={14} height={14} />
