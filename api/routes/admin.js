@@ -536,7 +536,7 @@ router.get('/membership-feed/view', async (req, res) => {
 <style>
   :root { --ink:#1a2233; --muted:#5b6478; --line:#e3e7ef; --paid:#1a7f37; --paidbg:#e6f6ea; --unpaid:#c92a2a; --unpaidbg:#fdecec; --navy:#0b1c3f; }
   * { box-sizing: border-box; }
-  body { margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; background:#f4f6fa; color:var(--ink); padding-left:env(safe-area-inset-left, 0px); padding-right:env(safe-area-inset-right, 0px); }
+  body { margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; background:#f4f6fa; color:var(--ink); padding-left:env(safe-area-inset-left, 0px); padding-right:env(safe-area-inset-right, 0px); overflow-x:hidden; }
   header { background:var(--navy); color:#fff; padding:calc(16px + env(safe-area-inset-top, 0px)) calc(16px + env(safe-area-inset-right, 0px)) 12px calc(16px + env(safe-area-inset-left, 0px)); position:sticky; top:0; z-index:5; }
   h1 { margin:0; font-size:17px; letter-spacing:.2px; }
   .sub { margin-top:4px; font-size:12px; color:#b9c4dd; display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap; }
@@ -553,17 +553,18 @@ router.get('/membership-feed/view', async (req, res) => {
   .searchform { margin:0; }
   .results { color:var(--muted); font-size:13px; margin:4px 2px 10px; }
   .results a { color:#1d4ed8; text-decoration:none; font-weight:600; margin-left:8px; }
-  .card { background:#fff; border:1px solid var(--line); border-left:4px solid var(--line); border-radius:12px; padding:12px 14px; margin-bottom:10px; }
+  .card { background:#fff; border:1px solid var(--line); border-left:4px solid var(--line); border-radius:12px; padding:12px 14px; margin-bottom:10px; min-width:0; overflow-wrap:break-word; word-break:break-word; }
   .card.paid { border-left-color:var(--paid); }
   .card.unpaid { border-left-color:var(--unpaid); }
   .top { display:flex; justify-content:space-between; align-items:flex-start; gap:10px; }
+  .who { min-width:0; }
   .name { font-weight:700; font-size:15px; }
   .sid { color:var(--muted); font-size:12px; margin-top:1px; font-variant-numeric:tabular-nums; }
   .badge { font-size:11px; font-weight:800; letter-spacing:.5px; padding:4px 10px; border-radius:999px; white-space:nowrap; }
   .paid .badge { color:var(--paid); background:var(--paidbg); }
   .unpaid .badge { color:var(--unpaid); background:var(--unpaidbg); }
   .meta { margin-top:8px; font-size:12.5px; color:var(--muted); line-height:1.55; }
-  .meta a { color:#1d4ed8; text-decoration:none; font-weight:600; }
+  .meta a { color:#1d4ed8; text-decoration:none; font-weight:600; display:inline-block; max-width:100%; overflow-wrap:break-word; word-break:break-word; }
   .empty { text-align:center; color:var(--muted); padding:40px 0; }
 </style>
 </head>
