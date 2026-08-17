@@ -527,12 +527,12 @@ router.get('/membership-feed/view', async (req, res) => {
 <style>
   :root { --ink:#1a2233; --muted:#5b6478; --line:#e3e7ef; --paid:#1a7f37; --paidbg:#e6f6ea; --unpaid:#c92a2a; --unpaidbg:#fdecec; --navy:#0b1c3f; }
   * { box-sizing: border-box; }
-  body { margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; background:#f4f6fa; color:var(--ink); }
-  header { background:var(--navy); color:#fff; padding:16px 16px 12px; position:sticky; top:0; z-index:5; }
+  body { margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; background:#f4f6fa; color:var(--ink); padding-left:env(safe-area-inset-left, 0px); padding-right:env(safe-area-inset-right, 0px); }
+  header { background:var(--navy); color:#fff; padding:calc(16px + env(safe-area-inset-top, 0px)) calc(16px + env(safe-area-inset-right, 0px)) 12px calc(16px + env(safe-area-inset-left, 0px)); position:sticky; top:0; z-index:5; }
   h1 { margin:0; font-size:17px; letter-spacing:.2px; }
   .sub { margin-top:4px; font-size:12px; color:#b9c4dd; display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap; }
   .refresh { background:#2b4a8f; color:#fff; border:0; border-radius:8px; padding:6px 12px; font-size:12px; font-weight:600; cursor:pointer; }
-  main { max-width:640px; margin:0 auto; padding:12px 12px 48px; }
+  main { max-width:640px; margin:0 auto; padding:12px 12px calc(48px + env(safe-area-inset-bottom, 0px)); }
   .chips { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin:12px 0; }
   .chip { background:#fff; border:1px solid var(--line); border-radius:12px; padding:10px 12px; text-align:center; }
   .chip b { display:block; font-size:18px; font-variant-numeric:tabular-nums; }
