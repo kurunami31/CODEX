@@ -357,6 +357,7 @@ router.get('/membership/report', async (req, res) => {
   const stamp = exportedAt.toISOString().slice(0, 10);
   res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
   res.setHeader('Content-Disposition', `attachment; filename="membership-report-${stamp}.xlsx"`);
+  res.setHeader('Cache-Control', 'no-store');
   await workbook.xlsx.write(res);
   res.end();
 });
@@ -367,18 +368,27 @@ router.get('/membership/report', async (req, res) => {
 // database, so the sheet auto-updates as members are added and payments are
 // confirmed — no re-downloading the file ever again. Protected by the
 // static REPORT_FEED_KEY (never shipped to the client).
-router.get('/membership-feed', async (req, res) => {
+// GET /api/admin/membership-feed/view?key=… — the same data as a mobile-first
+// HTML page (bookmark / Add to Home Screen) for checking fees on a phone.
+
+function requireFeedKey(req, res) {
   const expected = process.env.REPORT_FEED_KEY;
   if (!expected) {
-    return res.status(503).json({ error: 'Report feed is not configured (REPORT_FEED_KEY missing).' });
+    res.status(503).json({ error: 'Report feed is not configured (REPORT_FEED_KEY missing).' });
+    return false;
   }
   if (req.query.key !== expected) {
-    return res.status(401).json({ error: 'Invalid feed key.' });
+    res.status(401).json({ error: 'Invalid feed key.' });
+    return false;
   }
   if (!process.env.DATABASE_URL) {
-    return res.status(503).json({ error: 'DATABASE_URL is not configured on the server.' });
+    res.status(503).json({ error: 'DATABASE_URL is not configured on the server.' });
+    return false;
   }
+  return true;
+}
 
+async function fetchReportRows() {
   const sql = `select p.student_id, p.full_name, p.year_level, p.section, p.course, p.role,
          p.membership_paid,
          to_char(p.membership_paid_at at time zone 'Asia/Manila', 'YYYY-MM-DD HH24:MI') as paid_at,
@@ -393,17 +403,23 @@ router.get('/membership-feed', async (req, res) => {
   left join public.profiles c on c.id = p.membership_confirmed_by
   left join auth.users u on u.id = p.id
   order by p.full_name`;
+  const client = new Client({ connectionString: process.env.DATABASE_URL });
+  await client.connect();
+  try {
+    const { rows } = await client.query(sql);
+    return rows;
+  } finally {
+    await client.end();
+  }
+}
+
+router.get('/membership-feed', async (req, res) => {
+  if (!requireFeedKey(req, res)) return;
 
   let rows;
   try {
-    const client = new Client({ connectionString: process.env.DATABASE_URL });
-    await client.connect();
-    try {
-      ({ rows } = await client.query(sql));
-    } finally {
-      await client.end();
-    }
-  } catch (err) {
+    rows = await fetchReportRows();
+  } catch {
     return res.status(500).json({ error: 'Could not read the report feed.' });
   }
 
@@ -441,6 +457,119 @@ router.get('/membership-feed', async (req, res) => {
   res.set('Cache-Control', 'no-store');
   res.type('text/csv; charset=utf-8');
   res.send(`\uFEFF${lines.join('\r\n')}\r\n`);
+});
+
+// Mobile-first HTML view of the same report — open it on the phone (bookmark
+// or Add to Home Screen) to check fees anywhere; every open and the 60s
+// auto-refresh pulls fresh rows straight from the database. Key-protected
+// like the CSV feed, and never cached so the phone can't show stale data.
+router.get('/membership-feed/view', async (req, res) => {
+  if (!requireFeedKey(req, res)) return;
+
+  let rows;
+  try {
+    rows = await fetchReportRows();
+  } catch {
+    return res.status(500).send('<h1>Could not read the report feed.</h1>');
+  }
+
+  const paid = rows.filter((r) => r.membership_paid);
+  const collected = paid.reduce((s, r) => s + Number(r.membership_paid_amount || 120), 0);
+  const rate = rows.length ? Math.round((paid.length / rows.length) * 100) : 0;
+  const updatedAt = new Intl.DateTimeFormat('en-PH', {
+    timeZone: 'Asia/Manila',
+    dateStyle: 'medium',
+    timeStyle: 'short',
+    hour12: false,
+  }).format(new Date());
+
+  const esc = (v) =>
+    String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+  const cards = rows
+    .map((r) => {
+      const isPaid = !!r.membership_paid;
+      const amount = isPaid ? `\u20B1${Number(r.membership_paid_amount || 120)}` : '';
+      const receipt = r.receipt_url ? `<a href="${esc(r.receipt_url)}" target="_blank" rel="noopener">Open receipt</a>` : '';
+      return `
+      <article class="card ${isPaid ? 'paid' : 'unpaid'}">
+        <div class="top">
+          <div class="who">
+            <div class="name">${esc(r.full_name)}</div>
+            <div class="sid">${esc(r.student_id)}</div>
+          </div>
+          <span class="badge">${isPaid ? 'PAID' : 'UNPAID'}</span>
+        </div>
+        <div class="meta">
+          <div>${esc(r.year_level)} &middot; ${esc(r.section)} &middot; ${esc(r.course)}</div>
+          ${isPaid ? `<div>Paid ${esc(r.paid_at)} &middot; ${amount}</div>` : ''}
+          ${r.confirmed_by_name ? `<div>Confirmed by ${esc(r.confirmed_by_name)}</div>` : ''}
+          <div>Email ${r.email_confirmed ? 'confirmed' : 'not confirmed'}${r.email_confirmed_at ? ` &middot; ${esc(r.email_confirmed_at)}` : ''}</div>
+          <div>Last sign in ${esc(r.last_sign_in || 'never')}</div>
+          <div>Member since ${esc(r.created_at)}</div>
+          ${receipt ? `<div>${receipt}</div>` : ''}
+        </div>
+      </article>`;
+    })
+    .join('');
+
+  const html = `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b1c3f">
+<title>CODEX &middot; Membership Fees</title>
+<style>
+  :root { --ink:#1a2233; --muted:#5b6478; --line:#e3e7ef; --paid:#1a7f37; --paidbg:#e6f6ea; --unpaid:#c92a2a; --unpaidbg:#fdecec; --navy:#0b1c3f; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; background:#f4f6fa; color:var(--ink); }
+  header { background:var(--navy); color:#fff; padding:16px 16px 12px; position:sticky; top:0; z-index:5; }
+  h1 { margin:0; font-size:17px; letter-spacing:.2px; }
+  .sub { margin-top:4px; font-size:12px; color:#b9c4dd; display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap; }
+  .refresh { background:#2b4a8f; color:#fff; border:0; border-radius:8px; padding:6px 12px; font-size:12px; font-weight:600; cursor:pointer; }
+  main { max-width:640px; margin:0 auto; padding:12px 12px 48px; }
+  .chips { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin:12px 0; }
+  .chip { background:#fff; border:1px solid var(--line); border-radius:12px; padding:10px 12px; text-align:center; }
+  .chip b { display:block; font-size:18px; font-variant-numeric:tabular-nums; }
+  .chip span { font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.4px; }
+  .chip.ok b { color:var(--paid); }
+  .card { background:#fff; border:1px solid var(--line); border-left:4px solid var(--line); border-radius:12px; padding:12px 14px; margin-bottom:10px; }
+  .card.paid { border-left-color:var(--paid); }
+  .card.unpaid { border-left-color:var(--unpaid); }
+  .top { display:flex; justify-content:space-between; align-items:flex-start; gap:10px; }
+  .name { font-weight:700; font-size:15px; }
+  .sid { color:var(--muted); font-size:12px; margin-top:1px; font-variant-numeric:tabular-nums; }
+  .badge { font-size:11px; font-weight:800; letter-spacing:.5px; padding:4px 10px; border-radius:999px; white-space:nowrap; }
+  .paid .badge { color:var(--paid); background:var(--paidbg); }
+  .unpaid .badge { color:var(--unpaid); background:var(--unpaidbg); }
+  .meta { margin-top:8px; font-size:12.5px; color:var(--muted); line-height:1.55; }
+  .meta a { color:#1d4ed8; text-decoration:none; font-weight:600; }
+  .empty { text-align:center; color:var(--muted); padding:40px 0; }
+</style>
+</head>
+<body>
+<header>
+  <h1>CODEX &middot; Membership Fees</h1>
+  <div class="sub"><span>Updated ${esc(updatedAt)} &middot; refreshes every 60s</span><button class="refresh" onclick="location.reload()">Refresh</button></div>
+</header>
+<main>
+  <div class="chips">
+    <div class="chip"><b>${rows.length}</b><span>Members</span></div>
+    <div class="chip ok"><b>${paid.length}</b><span>Paid</span></div>
+    <div class="chip"><b>${rows.length - paid.length}</b><span>Unpaid</span></div>
+    <div class="chip ok"><b>\u20B1${collected}</b><span>Collected</span></div>
+    <div class="chip"><b>${rate}%</b><span>Rate</span></div>
+  </div>
+  ${cards || '<div class="empty">No members yet.</div>'}
+</main>
+<script>setInterval(function(){ location.reload(); }, 60000);</script>
+</body>
+</html>`;
+
+  res.set('Cache-Control', 'no-store');
+  res.type('text/html; charset=utf-8');
+  res.send(html);
 });
 
 export default router;
