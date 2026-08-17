@@ -558,8 +558,8 @@ router.get('/membership-feed/view', async (req, res) => {
 <body>
 <header>
   <h1>CODEX &middot; Membership Fees</h1>
-  <div class="sub"><span>Updated ${esc(updatedAt)} &middot; refreshes every 60s</span><button class="refresh" onclick="location.reload()">Refresh</button></div>
-  <input id="q" class="search" type="search" placeholder="Search name or student ID…" autocomplete="off" enterkeyhint="search">
+  <div class="sub"><span>Updated ${esc(updatedAt)} &middot; refreshes every 60s</span><span id="count" style="color:#8fa3cc;font-size:12px"></span><button class="refresh" onclick="location.reload()">Refresh</button></div>
+  <input id="q" class="search" type="search" placeholder="Search name or student ID…" autocomplete="off" enterkeyhint="search" oninput="doFilter()" onkeyup="doFilter()" onsearch="doFilter()">
 </header>
 <main>
   <div class="chips">
@@ -573,14 +573,13 @@ router.get('/membership-feed/view', async (req, res) => {
   <div id="empty" class="empty" style="display:none">No matches found.</div>
 </main>
 <script>
-var q = document.getElementById('q');
-var cards = Array.prototype.slice.call(document.querySelectorAll('.card'));
-var none = document.getElementById('empty');
-var timer = setInterval(function () {
-  if (!q || !q.value) location.reload();
-}, 60000);
-if (q) {
-  var filter = function () {
+(function () {
+  var q = document.getElementById('q');
+  var cards = Array.prototype.slice.call(document.querySelectorAll('.card'));
+  var none = document.getElementById('empty');
+  var count = document.getElementById('count');
+  window.doFilter = function () {
+    if (!q) return;
     var words = q.value.trim().toLowerCase().split(/\s+/).filter(Boolean);
     var shown = 0;
     cards.forEach(function (c) {
@@ -590,12 +589,14 @@ if (q) {
       if (hit) shown++;
     });
     if (none) none.style.display = shown ? 'none' : 'block';
+    if (count) count.textContent = words.length ? shown + ' of ' + cards.length + ' shown' : '';
   };
-  q.addEventListener('input', filter);
-  q.addEventListener('search', filter);
-  q.addEventListener('keyup', filter);
-  q.addEventListener('change', filter);
-}
+  if (q) {
+    ['input', 'search', 'keyup', 'change'].forEach(function (ev) { q.addEventListener(ev, window.doFilter); });
+    q.addEventListener('focus', window.doFilter);
+  }
+  setInterval(function () { if (!q || !q.value) location.reload(); }, 60000);
+})();
 </script>
 </body>
 </html>`;
