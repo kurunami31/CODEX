@@ -476,6 +476,15 @@ router.get('/membership-feed/view', async (req, res) => {
   const paid = rows.filter((r) => r.membership_paid);
   const collected = paid.reduce((s, r) => s + Number(r.membership_paid_amount || 120), 0);
   const rate = rows.length ? Math.round((paid.length / rows.length) * 100) : 0;
+  const allCount = rows.length;
+  const rawQ = String(req.query.q || '').trim();
+  const q = rawQ.toLowerCase();
+  if (q) {
+    rows = rows.filter((r) =>
+      [r.full_name, r.student_id, r.year_level, r.section, r.course].some((v) => v && String(v).toLowerCase().includes(q))
+    );
+  }
+  const feedKey = esc(String(req.query.key || ''));
   const updatedAt = new Intl.DateTimeFormat('en-PH', {
     timeZone: 'Asia/Manila',
     dateStyle: 'medium',
@@ -541,6 +550,9 @@ router.get('/membership-feed/view', async (req, res) => {
   .chip b { display:block; font-size:18px; font-variant-numeric:tabular-nums; }
   .chip span { font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.4px; }
   .chip.ok b { color:var(--paid); }
+  .searchform { margin:0; }
+  .results { color:var(--muted); font-size:13px; margin:4px 2px 10px; }
+  .results a { color:#1d4ed8; text-decoration:none; font-weight:600; margin-left:8px; }
   .card { background:#fff; border:1px solid var(--line); border-left:4px solid var(--line); border-radius:12px; padding:12px 14px; margin-bottom:10px; }
   .card.paid { border-left-color:var(--paid); }
   .card.unpaid { border-left-color:var(--unpaid); }
@@ -559,7 +571,10 @@ router.get('/membership-feed/view', async (req, res) => {
 <header>
   <h1>CODEX &middot; Membership Fees</h1>
   <div class="sub"><span>Updated ${esc(updatedAt)} &middot; refreshes every 60s</span><span id="count" style="color:#8fa3cc;font-size:12px"></span><button class="refresh" onclick="location.reload()">Refresh</button></div>
-  <input id="q" class="search" type="search" placeholder="Search name or student ID…" autocomplete="off" enterkeyhint="search" oninput="doFilter()" onkeyup="doFilter()" onsearch="doFilter()">
+  <form action="?key=${feedKey}" method="get" class="searchform" role="search">
+    <input type="hidden" name="key" value="${feedKey}">
+    <input id="q" name="q" class="search" type="search" value="${esc(rawQ)}" placeholder="Search name or student ID…" autocomplete="off" enterkeyhint="search" oninput="doFilter()" onkeyup="doFilter()" onsearch="doFilter()">
+  </form>
 </header>
 <main>
   <div class="chips">
@@ -569,7 +584,8 @@ router.get('/membership-feed/view', async (req, res) => {
     <div class="chip ok"><b>\u20B1${collected}</b><span>Collected</span></div>
     <div class="chip"><b>${rate}%</b><span>Rate</span></div>
   </div>
-  ${cards || '<div class="empty">No members yet.</div>'}
+  ${q ? `<div class="results">${rows.length} of ${allCount} members match &quot;${esc(rawQ)}&quot; <a href="?key=${feedKey}">clear</a></div>` : ''}
+  ${cards || `<div class="empty">${q ? 'No matches found.' : 'No members yet.'}</div>`}
   <div id="empty" class="empty" style="display:none">No matches found.</div>
 </main>
 <script>
@@ -578,6 +594,7 @@ router.get('/membership-feed/view', async (req, res) => {
   var cards = Array.prototype.slice.call(document.querySelectorAll('.card'));
   var none = document.getElementById('empty');
   var count = document.getElementById('count');
+  var total = ${allCount};
   window.doFilter = function () {
     if (!q) return;
     var words = q.value.trim().toLowerCase().split(/\s+/).filter(Boolean);
@@ -589,7 +606,7 @@ router.get('/membership-feed/view', async (req, res) => {
       if (hit) shown++;
     });
     if (none) none.style.display = shown ? 'none' : 'block';
-    if (count) count.textContent = words.length ? shown + ' of ' + cards.length + ' shown' : '';
+    if (count) count.textContent = words.length ? shown + ' of ' + total + ' shown' : '';
   };
   if (q) {
     ['input', 'search', 'keyup', 'change'].forEach(function (ev) { q.addEventListener(ev, window.doFilter); });
