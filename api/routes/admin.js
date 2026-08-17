@@ -576,19 +576,26 @@ router.get('/membership-feed/view', async (req, res) => {
 var q = document.getElementById('q');
 var cards = Array.prototype.slice.call(document.querySelectorAll('.card'));
 var none = document.getElementById('empty');
+var timer = setInterval(function () {
+  if (!q || !q.value) location.reload();
+}, 60000);
 if (q) {
-  q.addEventListener('input', function () {
-    var term = q.value.trim().toLowerCase();
+  var filter = function () {
+    var words = q.value.trim().toLowerCase().split(/\s+/).filter(Boolean);
     var shown = 0;
     cards.forEach(function (c) {
-      var hit = !term || c.textContent.toLowerCase().indexOf(term) !== -1;
+      var text = c.textContent.toLowerCase();
+      var hit = !words.length || words.every(function (w) { return text.indexOf(w) !== -1; });
       c.style.display = hit ? '' : 'none';
       if (hit) shown++;
     });
     if (none) none.style.display = shown ? 'none' : 'block';
-  });
+  };
+  q.addEventListener('input', filter);
+  q.addEventListener('search', filter);
+  q.addEventListener('keyup', filter);
+  q.addEventListener('change', filter);
 }
-setInterval(function(){ location.reload(); }, 60000);
 </script>
 </body>
 </html>`;
