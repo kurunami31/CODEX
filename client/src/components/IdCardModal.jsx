@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import Avatar from './Avatar';
 import { roleLabel } from '../lib/roles';
+import { useAuth } from '../context/AuthContext';
 import { IdIcon, CheckIcon, XIcon } from './icons/Icons';
 
 /**
@@ -8,6 +9,8 @@ import { IdIcon, CheckIcon, XIcon } from './icons/Icons';
  * admin control panel and the staff member directory.
  */
 export default function IdCardModal({ member, onClose }) {
+  const { profile } = useAuth();
+  const isSuper = profile?.role === 'superadmin';
   useEffect(() => {
     const onKey = (e) => {
       if (e.key === 'Escape') onClose();
@@ -69,7 +72,8 @@ export default function IdCardModal({ member, onClose }) {
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', justifyContent: 'center' }}>
             <CheckIcon width={14} height={14} style={{ color: 'var(--ok)' }} />
             <span className="ocr-label" style={{ fontSize: 9 }}>
-              registered {roleLabel(member.role)} · {member.membership_paid ? 'dues paid' : 'dues unpaid'}
+              registered {roleLabel(member.role)}
+              {isSuper ? ` · ${member.membership_paid ? 'dues paid' : 'dues unpaid'}` : ''}
             </span>
           </div>
         </div>

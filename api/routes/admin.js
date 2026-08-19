@@ -69,13 +69,19 @@ router.get('/users', async (req, res) => {
   }
 
   const byId = new Map((profiles || []).map((p) => [p.id, p]));
-  const users = (list.users || []).map((u) => ({
-    id: u.id,
-    email: u.email,
-    email_confirmed: Boolean(u.email_confirmed_at),
-    created_at: u.created_at,
-    ...(byId.get(u.id) || null),
-  }));
+  const users = (list.users || [])
+    .map((u) => {
+      const prof = byId.get(u.id) || null;
+      if (prof?.role === 'adviser') return null;
+      return {
+        id: u.id,
+        email: u.email,
+        email_confirmed: Boolean(u.email_confirmed_at),
+        created_at: u.created_at,
+        ...prof,
+      };
+    })
+    .filter(Boolean);
 
   res.set('Cache-Control', 'no-store');
   res.json({ users, count: list.total ?? users.length });
@@ -402,6 +408,7 @@ async function fetchReportRows() {
   from public.profiles p
   left join public.profiles c on c.id = p.membership_confirmed_by
   left join auth.users u on u.id = p.id
+  where p.role <> 'adviser'
   order by p.full_name`;
   const client = new Client({ connectionString: process.env.DATABASE_URL });
   await client.connect();

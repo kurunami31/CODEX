@@ -16,6 +16,7 @@ import {
 export default function Admin() {
   const toast = useToast();
   const { profile } = useAuth();
+  const isSuper = profile?.role === 'superadmin';
   const [events, setEvents] = useState([]);
   const [selected, setSelected] = useState(null);
   const [attendees, setAttendees] = useState([]);
@@ -48,10 +49,11 @@ export default function Admin() {
   }, []);
 
   const loadUnpaid = useCallback(async () => {
+    if (!isSuper) return;
     const { data, error } = await supabase.rpc('get_members');
     if (error) toast.error('Membership error', error.message);
     else setUnpaid((data || []).filter((m) => m.membership_paid === false));
-  }, [toast]);
+  }, [toast, isSuper]);
 
   const loadMembers = useCallback(async () => {
     const { data, error } = await supabase.rpc('get_members');
@@ -174,7 +176,7 @@ export default function Admin() {
         {[
           { icon: <CalendarIcon width={15} height={15} />, k: 'events', v: events.length },
           { icon: <UsersIcon width={15} height={15} />, k: 'attendance records', v: attendees.length },
-          { icon: <WalletIcon width={15} height={15} />, k: 'dues unpaid', v: unpaid.length },
+          ...(isSuper ? [{ icon: <WalletIcon width={15} height={15} />, k: 'dues unpaid', v: unpaid.length }] : []),
           { icon: <QrIcon width={15} height={15} />, k: 'qr signing', v: 'HMAC v2' },
           { icon: <AlertIcon width={15} height={15} />, k: 'your role', v: roleLabel(profile?.role) },
         ].map((s) => (
@@ -188,6 +190,8 @@ export default function Admin() {
         ))}
       </div>
 
+      {isSuper && (
+      <>
       <div className="section-title">membership dues</div>
       <div className="panel" style={{ padding: '20px 22px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12, flexWrap: 'wrap' }}>
@@ -265,6 +269,8 @@ export default function Admin() {
           </div>
         )}
       </div>
+      </>
+      )}
 
       <div className="section-title">digital ids · member directory</div>
       <div className="panel" style={{ padding: '20px 22px' }}>
@@ -294,7 +300,7 @@ export default function Admin() {
                   <th>id no.</th>
                   <th>year / section</th>
                   <th>role</th>
-                  <th>membership</th>
+                  {isSuper && <th>membership</th>}
                   <th>digital id</th>
                 </tr>
               </thead>
@@ -310,13 +316,15 @@ export default function Admin() {
                     <td style={{ fontFamily: 'var(--f-ocr)', fontSize: 12 }}>{m.student_id || '—'}</td>
                     <td>{m.year_level} · {m.section}</td>
                     <td><span className={`role-pill role-pill--${m.role || 'student'}`}>{roleLabel(m.role)}</span></td>
-                    <td>
-                      {m.membership_paid ? (
-                        <span className="chip chip--ok"><CheckIcon width={11} height={11} /> paid</span>
-                      ) : (
-                        <span className="chip chip--warn"><WalletIcon width={11} height={11} /> unpaid</span>
-                      )}
-                    </td>
+                    {isSuper && (
+                      <td>
+                        {m.membership_paid ? (
+                          <span className="chip chip--ok"><CheckIcon width={11} height={11} /> paid</span>
+                        ) : (
+                          <span className="chip chip--warn"><WalletIcon width={11} height={11} /> unpaid</span>
+                        )}
+                      </td>
+                    )}
                     <td>
                       {['admin', 'superadmin'].includes(m.role) ? (
                         <span className="ocr-label" style={{ fontSize: 9 }}>restricted</span>

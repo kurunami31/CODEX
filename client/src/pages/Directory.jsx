@@ -17,6 +17,7 @@ const HIDDEN_ROLES = ['admin', 'superadmin'];
 export default function Directory() {
   const { profile } = useAuth();
   const toast = useToast();
+  const isSuper = profile?.role === 'superadmin';
   const [members, setMembers] = useState([]);
   const [search, setSearch] = useState('');
   const [viewing, setViewing] = useState(null);
@@ -82,7 +83,7 @@ export default function Directory() {
                   <th>id no.</th>
                   <th>year / section</th>
                   <th>role</th>
-                  <th>membership</th>
+                  {isSuper && <th>membership</th>}
                   <th>digital id</th>
                 </tr>
               </thead>
@@ -98,13 +99,15 @@ export default function Directory() {
                     <td style={{ fontFamily: 'var(--f-ocr)', fontSize: 12 }}>{m.student_id || '—'}</td>
                     <td>{m.year_level} · {m.section}</td>
                     <td><span className={`role-pill role-pill--${m.role || 'student'}`}>{roleLabel(m.role)}</span></td>
-                    <td>
-                      {m.membership_paid ? (
-                        <span className="chip chip--ok"><CheckIcon width={11} height={11} /> paid</span>
-                      ) : (
-                        <span className="chip chip--warn"><WalletIcon width={11} height={11} /> unpaid</span>
-                      )}
-                    </td>
+                    {isSuper && (
+                      <td>
+                        {m.membership_paid ? (
+                          <span className="chip chip--ok"><CheckIcon width={11} height={11} /> paid</span>
+                        ) : (
+                          <span className="chip chip--warn"><WalletIcon width={11} height={11} /> unpaid</span>
+                        )}
+                      </td>
+                    )}
                     <td>
                       <button className="btn btn-outline btn-sm" onClick={() => setViewing(m.id)}>
                         <IdIcon width={14} height={14} /> View ID

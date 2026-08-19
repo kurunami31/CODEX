@@ -349,7 +349,6 @@ export default function Adviser() {
                   <th>id no.</th>
                   <th>year / section</th>
                   <th>role</th>
-                  <th>membership</th>
                 </tr>
               </thead>
               <tbody>
@@ -364,13 +363,6 @@ export default function Adviser() {
                     <td style={{ fontFamily: 'var(--f-ocr)', fontSize: 12 }}>{m.student_id || '—'}</td>
                     <td>{m.year_level} · {m.section}</td>
                     <td><span className={`role-pill role-pill--${m.role || 'student'}`}>{roleLabel(m.role)}</span></td>
-                    <td>
-                      {m.membership_paid ? (
-                        <span className="chip chip--ok"><CheckIcon width={11} height={11} /> paid</span>
-                      ) : (
-                        <span className="chip chip--warn">unpaid</span>
-                      )}
-                    </td>
                   </tr>
                 ))}
               </tbody>

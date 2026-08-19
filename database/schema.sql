@@ -528,6 +528,7 @@ begin
       from public.profiles p
       left join public.profiles c on c.id = p.membership_confirmed_by
       left join auth.users u on u.id = p.id
+      where p.role <> 'adviser'
     ) t
   );
 end;

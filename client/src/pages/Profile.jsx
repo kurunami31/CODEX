@@ -179,14 +179,16 @@ export default function Profile() {
           <div className="profile-role-row" style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
             <h1 className="profile-name">{author?.full_name || '…'}</h1>
             <span className={`role-pill role-pill--${author?.role || 'student'}`}>{roleLabel(author?.role)}</span>
-            {author?.membership_paid ? (
-              <span className="chip chip--ok" title={author.membership_paid_at ? `Confirmed ${formatEventDate(author.membership_paid_at).day}` : 'Membership confirmed'}>
-                <CheckIcon width={11} height={11} /> dues paid
-              </span>
-            ) : (
-              <span className="chip chip--warn" title="Membership fee not yet confirmed by an officer">
-                <WalletIcon width={11} height={11} /> dues unpaid
-              </span>
+            {(profile?.role === 'superadmin' || author?.id === profile?.id) && (
+              author?.membership_paid ? (
+                <span className="chip chip--ok" title={author.membership_paid_at ? `Confirmed ${formatEventDate(author.membership_paid_at).day}` : 'Membership confirmed'}>
+                  <CheckIcon width={11} height={11} /> dues paid
+                </span>
+              ) : (
+                <span className="chip chip--warn" title="Membership fee not yet confirmed by an officer">
+                  <WalletIcon width={11} height={11} /> dues unpaid
+                </span>
+              )
             )}
           </div>
           <div className="ocr-label profile-sub">

@@ -338,6 +338,8 @@ useEffect(() => {
         </div>
       </div>
 
+      {profile.role !== 'adviser' && (
+      <>
       <div className="section-title">
         <WalletIcon width={14} height={14} /> membership dues
       </div>
@@ -380,6 +382,8 @@ useEffect(() => {
           </div>
         )}
       </div>
+      </>
+      )}
 
       <div className="section-title">
         <BellIcon width={14} height={14} /> notifications
