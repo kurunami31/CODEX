@@ -1498,6 +1498,49 @@ create policy "posts_adviser_delete" on public.posts
   for delete to authenticated
   using ((select role from public.profiles where id = auth.uid()) in ('adviser','admin','superadmin'));
 
+-- Adviser RPC: full posts list including author student IDs. REST joins
+-- cannot carry student_id (the ID lockdown revokes it from the
+-- authenticated role), so staff read it through this security-definer
+-- function instead. Returns the same nested `profiles` shape the REST
+-- join produced, so the client code is a drop-in swap.
+create or replace function public.get_posts_with_authors()
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_role text := public.get_my_role();
+begin
+  if coalesce(v_role, '') not in ('adviser','admin','superadmin') then
+    raise exception 'Insufficient permissions';
+  end if;
+  return (
+    select coalesce(jsonb_agg(to_jsonb(t) order by t.created_at desc), '[]'::jsonb)
+    from (
+      select p.id, p.author_id, p.content, p.created_at, p.archived, p.status,
+             p.approved_by, p.approved_at, p.image_url, p.images,
+             jsonb_build_object(
+               'id', pr.id,
+               'full_name', pr.full_name,
+               'role', pr.role,
+               'section', pr.section,
+               'avatar_url', pr.avatar_url,
+               'student_id', pr.student_id
+             ) as profiles
+      from public.posts p
+      left join public.profiles pr on pr.id = p.author_id
+    ) t
+  );
+end;
+$$;
+
+grant execute on function public.get_posts_with_authors() to authenticated;
+
+revoke all on function public.get_posts_with_authors from anon, public;
+
+grant execute on function public.get_posts_with_authors() to authenticator;
+
 -- ============================================================
 --  CERTIFICATE ENDORSEMENTS — advisers endorse students
 -- ============================================================

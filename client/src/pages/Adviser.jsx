@@ -29,10 +29,7 @@ export default function Adviser() {
 
   const loadPosts = useCallback(async () => {
     setLoadingPosts(true);
-    const { data, error } = await supabase
-      .from('posts')
-      .select('id, author_id, content, created_at, status, profiles!posts_author_id_fkey(id, full_name, role, section, avatar_url)')
-      .order('created_at', { ascending: false });
+    const { data, error } = await supabase.rpc('get_posts_with_authors');
     if (error) toast.error('Posts error', error.message);
     else setPosts(data || []);
     setLoadingPosts(false);
@@ -201,6 +198,7 @@ export default function Adviser() {
                     <b style={{ fontSize: 13 }}>{p.profiles?.full_name || 'deleted member'}</b>
                     <span className={`role-pill role-pill--${p.profiles?.role || 'student'}`}>{roleLabel(p.profiles?.role)}</span>
                     {p.profiles?.section && <span className="ocr-label" style={{ fontSize: 9 }}>section {p.profiles.section}</span>}
+                    {p.profiles?.student_id && <span className="ocr-label" style={{ fontFamily: 'var(--f-ocr)', fontSize: 9 }}>ID {p.profiles.student_id}</span>}
                     <span className={`chip ${p.status === 'flagged' ? 'chip--warn' : p.status === 'pending' ? '' : 'chip--ok'}`} style={{ marginLeft: 4 }}>
                       {p.status || 'approved'}
                     </span>
