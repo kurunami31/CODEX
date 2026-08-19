@@ -31,7 +31,7 @@ export default function Adviser() {
     setLoadingPosts(true);
     const { data, error } = await supabase
       .from('posts')
-      .select('id, author_id, content, created_at, status, profiles!posts_author_id_fkey(id, full_name, student_id, section, role, avatar_url)')
+      .select('id, author_id, content, created_at, status, profiles!posts_author_id_fkey(id, full_name, role, section, avatar_url)')
       .order('created_at', { ascending: false });
     if (error) toast.error('Posts error', error.message);
     else setPosts(data || []);
