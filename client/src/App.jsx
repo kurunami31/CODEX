@@ -133,7 +133,7 @@ export default function App() {
           <Route
             path="directory"
             element={
-              <RequireRole roles={['moderator', 'admin', 'superadmin']}>
+              <RequireRole roles={['moderator', 'admin', 'superadmin', 'adviser']}>
                 <Lazy><Directory /></Lazy>
               </RequireRole>
             }
