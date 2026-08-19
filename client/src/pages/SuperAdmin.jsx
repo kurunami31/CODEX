@@ -13,7 +13,7 @@ import {
 
 const YEARS = ['1st Year', '2nd Year', '3rd Year', '4th Year'];
 const COURSES = ['BSIT', 'BSEM', 'BSAB', 'other'];
-const ROLES = ['student', 'moderator', 'admin', 'superadmin'];
+const ROLES = ['student', 'moderator', 'admin', 'superadmin', 'adviser'];
 
 const TABS = [
   { id: 'students', label: 'Students', icon: <UsersIcon width={16} height={16} /> },

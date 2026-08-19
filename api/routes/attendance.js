@@ -88,7 +88,7 @@ router.post('/attendance/scan', async (req, res) => {
   // The attendance RPC itself enforces moderator/admin; check here too so
   // we fail fast and keep invalid scans out of the RPC layer.
   const { data: profile } = await sb.rpc('get_my_profile');
-  if (!profile || !['admin', 'moderator', 'superadmin'].includes(profile.role)) {
+  if (!profile || !['admin', 'moderator', 'superadmin', 'adviser'].includes(profile.role)) {
     return res.status(403).json({ error: 'Only moderators and admins can record attendance.' });
   }
 

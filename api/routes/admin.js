@@ -47,7 +47,7 @@ function adminClientOr500(res) {
 
 const VALID_YEARS = ['1st Year', '2nd Year', '3rd Year', '4th Year'];
 const VALID_COURSES = ['BSIT', 'BSEM', 'BSAB', 'other'];
-const VALID_ROLES = ['student', 'moderator', 'admin', 'superadmin'];
+const VALID_ROLES = ['student', 'moderator', 'admin', 'superadmin', 'adviser'];
 
 // GET /api/admin/users — list every member (email from auth.users + profile)
 router.get('/users', async (req, res) => {

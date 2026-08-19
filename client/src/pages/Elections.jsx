@@ -41,8 +41,8 @@ function fromLocalInput(v) {
 export default function Elections() {
   const { user, profile } = useAuth();
   const toast = useToast();
-  const isAdmin = ['admin', 'superadmin'].includes(profile?.role);
-  const isStaff = ['admin', 'moderator', 'superadmin'].includes(profile?.role);
+  const isAdmin = ['admin', 'superadmin', 'adviser'].includes(profile?.role);
+  const isStaff = ['admin', 'moderator', 'superadmin', 'adviser'].includes(profile?.role);
   const canVote = profile?.membership_paid || isStaff;
   const [elections, setElections] = useState([]);
   const [candidates, setCandidates] = useState([]);

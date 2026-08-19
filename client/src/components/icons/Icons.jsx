@@ -401,6 +401,15 @@ export function MenuDotsIcon(props) {
   );
 }
 
+export function FlagIcon(props) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M4 2v20" />
+      <path d="M4 4h12l-3 4 3 4H4" />
+    </svg>
+  );
+}
+
 export function CrownIcon(props) {
   return (
     <svg {...base} {...props}>

@@ -7,7 +7,8 @@ import { useToast } from '../context/ToastContext';
 import { formatEventDate } from '../lib/format';
 import { sendPush } from '../lib/notify';
 import { roleLabel } from '../lib/roles';
-import { HeartIcon, ShareIcon, PencilIcon, TrashIcon, ArchiveIcon, MenuDotsIcon, CommentIcon, ImageIcon, XIcon } from './icons/Icons';
+import { isAdviser } from '../lib/roles';
+import { HeartIcon, ShareIcon, PencilIcon, TrashIcon, ArchiveIcon, MenuDotsIcon, CommentIcon, ImageIcon, XIcon, CheckIcon, FlagIcon } from './icons/Icons';
 
 const LIMIT = 2000;
 const COMMENT_LIMIT = 500;
@@ -17,6 +18,7 @@ export default function PostCard({
   editing, editDraft, onEditStart, onEditCancel, onEditChange, onEditSave, saving, onArchive, onDelete,
   commentCount = 0, commentsOpen = false, onCommentsToggle, comments = null, onAddComment, onEditComment, onDeleteComment,
   commentsBusy = false, threadError = null, currentUserId, canModerate = false,
+  onReviewPost, adviserRole,
 }) {
   const author = post.profiles;
   const when = formatEventDate(post.created_at);
@@ -128,6 +130,8 @@ export default function PostCard({
           </span>
         </button>
         <span className={`role-pill post-role role-pill--${author?.role || 'student'}`}>{roleLabel(author?.role)}</span>
+        {post.status === 'flagged' && <span className="chip chip--warn" style={{ fontSize: 9, marginLeft: 4 }}>flagged</span>}
+        {post.status === 'pending' && <span className="chip" style={{ fontSize: 9, marginLeft: 4, background: 'var(--accent)', color: '#fff' }}>pending</span>}
         {(mine || manage) && (
           <div className="post-menu" ref={menuRef}>
             <button
@@ -222,6 +226,16 @@ export default function PostCard({
               <ShareIcon width={17} height={17} />
               Share
             </button>
+            {adviserRole && onReviewPost && post.status !== 'approved' && (
+              <button onClick={() => onReviewPost(post.id, 'approved')} style={{ color: 'var(--ok)' }} title="Approve post">
+                <CheckIcon width={15} height={15} /> Approve
+              </button>
+            )}
+            {adviserRole && onReviewPost && post.status !== 'flagged' && (
+              <button onClick={() => onReviewPost(post.id, 'flagged')} style={{ color: 'var(--warn)' }} title="Flag post">
+                <FlagIcon width={15} height={15} /> Flag
+              </button>
+            )}
           </div>
         </>
       )}

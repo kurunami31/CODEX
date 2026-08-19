@@ -17,7 +17,7 @@ create table if not exists public.profiles (
   year_level  text not null check (year_level in ('1st Year','2nd Year','3rd Year','4th Year')),
   section     text not null,
   course      text not null default 'BSIT' check (course in ('BSIT','BSEM','BSAB','other')),
-  role        text not null default 'student' check (role in ('student','moderator','admin','superadmin')),
+  role        text not null default 'student' check (role in ('student','moderator','admin','superadmin','adviser')),
   avatar_url  text,
   created_at  timestamptz not null default now()
 );
@@ -29,7 +29,7 @@ alter table public.profiles add column if not exists avatar_url text;
 -- (drops + re-adds the default-named check constraint with the new role)
 alter table public.profiles drop constraint if exists profiles_role_check;
 alter table public.profiles add constraint profiles_role_check
-  check (role in ('student','moderator','admin','superadmin'));
+  check (role in ('student','moderator','admin','superadmin','adviser'));
 
 -- ────────────────────────────────────────────────
 --  MEMBERSHIP DUES — members see their own status; only admins
@@ -155,7 +155,7 @@ create policy "events_select_all" on public.events
   for select to authenticated using (true);
 create policy "events_admin_write" on public.events
   for insert to authenticated
-  with check ((select role from public.profiles where id = auth.uid()) in ('admin','superadmin'));
+  with check ((select role from public.profiles where id = auth.uid()) in ('admin','superadmin','adviser'));
 
 -- attendance: no direct writes — all recording goes through the
 -- security-definer RPCs (mark_attendance / event_attendance). Students
@@ -245,8 +245,7 @@ begin
   if tg_op = 'UPDATE' and (new.membership_paid is distinct from old.membership_paid
                         or new.membership_paid_at is distinct from old.membership_paid_at
                         or new.membership_confirmed_by is distinct from old.membership_confirmed_by) then
-    if auth.uid() is not null and
-       coalesce((select role from public.profiles where id = auth.uid()), '') not in ('admin','superadmin') then
+    if auth.uid() is not null and        coalesce((select role from public.profiles where id = auth.uid()), '') not in ('admin','superadmin','adviser') then
       raise exception 'Only admins can confirm membership payments';
     end if;
   end if;
@@ -254,8 +253,7 @@ begin
   -- non-BSIT member could flip their own course to 'BSIT' and bypass the
   -- BSIT-only rule enforced by mark_attendance.
   if tg_op = 'UPDATE' and new.course is distinct from old.course then
-    if auth.uid() is not null and
-       coalesce((select role from public.profiles where id = auth.uid()), '') not in ('admin','superadmin') then
+    if auth.uid() is not null and        coalesce((select role from public.profiles where id = auth.uid()), '') not in ('admin','superadmin','adviser') then
       raise exception 'Only admins can change a member''s course';
     end if;
   end if;
@@ -301,7 +299,7 @@ declare
   v_profile record;
   v_result  jsonb;
 begin
-  if coalesce(v_role, '') not in ('admin','moderator','superadmin') then
+  if coalesce(v_role, '') not in ('admin','moderator','superadmin','adviser') then
     raise exception 'Insufficient permissions: only moderators and admins can mark attendance';
   end if;
 
@@ -358,7 +356,7 @@ declare
   v_role text := public.get_my_role();
   v_rows jsonb;
 begin
-  if coalesce(v_role, '') not in ('admin','moderator','superadmin') then
+  if coalesce(v_role, '') not in ('admin','moderator','superadmin','adviser') then
     raise exception 'Insufficient permissions';
   end if;
 
@@ -433,7 +431,7 @@ security definer
 set search_path = public
 as $$
 begin
-  if coalesce(public.get_my_role(), '') not in ('admin','superadmin') then
+  if coalesce(public.get_my_role(), '') not in ('admin','superadmin','adviser') then
     raise exception 'Insufficient permissions';
   end if;
   delete from public.events where id = p_event_id;
@@ -608,7 +606,7 @@ as $$
 declare
   v_role text := public.get_my_role();
 begin
-  if v_role in ('admin','moderator','superadmin') then
+  if v_role in ('admin','moderator','superadmin','adviser') then
     return (
       select coalesce(jsonb_agg(to_jsonb(t) order by t.full_name), '[]'::jsonb)
       from (
@@ -791,7 +789,7 @@ declare
   v_role text := public.get_my_role();
   v_rows jsonb;
 begin
-  if coalesce(v_role, '') not in ('admin','moderator','superadmin') then
+  if coalesce(v_role, '') not in ('admin','moderator','superadmin','adviser') then
     raise exception 'Insufficient permissions';
   end if;
 
@@ -919,7 +917,7 @@ declare
   v_profile record;
   v_result  jsonb;
 begin
-  if coalesce(v_role, '') not in ('admin','moderator','superadmin') then
+  if coalesce(v_role, '') not in ('admin','moderator','superadmin','adviser') then
     raise exception 'Insufficient permissions: only moderators and admins can mark attendance';
   end if;
 
@@ -1273,7 +1271,7 @@ declare
   v_role text := public.get_my_role();
   v_rows jsonb;
 begin
-  if coalesce(v_role, '') not in ('admin','moderator','superadmin') then
+  if coalesce(v_role, '') not in ('admin','moderator','superadmin','adviser') then
     raise exception 'Insufficient permissions';
   end if;
 
@@ -1444,3 +1442,192 @@ create policy "app_settings_read"
   using (true);
 
 grant select on public.app_settings to anon, authenticated;
+
+-- ============================================================
+--  ADVISER ROLE — post approval workflow
+-- ============================================================
+-- Posts default to status 'approved' so existing data is unaffected.
+-- Advisers can review, approve, or flag posts from their section.
+-- Only approved posts show in the main feed; flagged posts are hidden.
+-- ============================================================
+alter table public.posts add column if not exists status text not null default 'approved'
+  check (status in ('pending','approved','flagged'));
+alter table public.posts add column if not exists approved_by uuid references auth.users(id) on delete set null;
+alter table public.posts add column if not exists approved_at timestamptz;
+
+-- Adviser RPC: review a post (approve / flag / reset to pending)
+create or replace function public.adviser_review_post(
+  p_post_id uuid,
+  p_status text
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_role text := public.get_my_role();
+begin
+  if coalesce(v_role, '') not in ('adviser','admin','superadmin') then
+    raise exception 'Insufficient permissions: only advisers can review posts';
+  end if;
+  if p_status not in ('approved','flagged','pending') then
+    raise exception 'Invalid status: must be approved, flagged, or pending';
+  end if;
+  update public.posts
+     set status = p_status,
+         approved_by = auth.uid(),
+         approved_at = now()
+   where id = p_post_id;
+  if not found then
+    raise exception 'Post not found';
+  end if;
+end;
+$$;
+
+grant execute on function public.adviser_review_post(uuid, text) to authenticated;
+
+-- Advisers can also moderate any post (same as superadmin)
+drop policy if exists "posts_adviser_update" on public.posts;
+drop policy if exists "posts_adviser_delete" on public.posts;
+create policy "posts_adviser_update" on public.posts
+  for update to authenticated
+  using ((select role from public.profiles where id = auth.uid()) in ('adviser','admin','superadmin'))
+  with check ((select role from public.profiles where id = auth.uid()) in ('adviser','admin','superadmin'));
+create policy "posts_adviser_delete" on public.posts
+  for delete to authenticated
+  using ((select role from public.profiles where id = auth.uid()) in ('adviser','admin','superadmin'));
+
+-- ============================================================
+--  CERTIFICATE ENDORSEMENTS — advisers endorse students
+-- ============================================================
+create table if not exists public.certificate_endorsements (
+  id               uuid primary key default gen_random_uuid(),
+  student_id       text not null references public.profiles(student_id) on delete cascade,
+  adviser_id       uuid not null references auth.users(id) on delete cascade,
+  certificate_type text not null check (certificate_type in ('membership','event','election')),
+  event_id         uuid references public.events(id) on delete set null,
+  endorsed_at      timestamptz not null default now(),
+  notes            text,
+  unique (student_id, certificate_type, event_id)
+);
+
+alter table public.certificate_endorsements enable row level security;
+revoke all on table public.certificate_endorsements from anon;
+
+drop policy if exists "cert_endorsements_select_all" on public.certificate_endorsements;
+drop policy if exists "cert_endorsements_insert_adviser" on public.certificate_endorsements;
+drop policy if exists "cert_endorsements_delete_adviser" on public.certificate_endorsements;
+create policy "cert_endorsements_select_all" on public.certificate_endorsements
+  for select to authenticated using (true);
+create policy "cert_endorsements_insert_adviser" on public.certificate_endorsements
+  for insert to authenticated
+  with check ((select role from public.profiles where id = auth.uid()) in ('adviser','admin','superadmin'));
+create policy "cert_endorsements_delete_adviser" on public.certificate_endorsements
+  for delete to authenticated
+  using ((select role from public.profiles where id = auth.uid()) in ('adviser','admin','superadmin'));
+
+-- RPC: endorse a student for a certificate
+create or replace function public.endorse_certificate(
+  p_student_id text,
+  p_certificate_type text,
+  p_event_id uuid default null,
+  p_notes text default null
+)
+returns uuid
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_role text := public.get_my_role();
+  v_id uuid;
+begin
+  if coalesce(v_role, '') not in ('adviser','admin','superadmin') then
+    raise exception 'Insufficient permissions: only advisers can endorse certificates';
+  end if;
+  if p_certificate_type not in ('membership','event','election') then
+    raise exception 'Invalid certificate type';
+  end if;
+  insert into public.certificate_endorsements (student_id, adviser_id, certificate_type, event_id, notes)
+  values (p_student_id, auth.uid(), p_certificate_type, p_event_id, p_notes)
+  on conflict (student_id, certificate_type, event_id) do update
+    set adviser_id = auth.uid(), endorsed_at = now(), notes = p_notes
+  returning id into v_id;
+  return v_id;
+end;
+$$;
+
+grant execute on function public.endorse_certificate(text, text, uuid, text) to authenticated;
+
+-- RPC: revoke an endorsement
+create or replace function public.revoke_endorsement(
+  p_student_id text,
+  p_certificate_type text,
+  p_event_id uuid default null
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_role text := public.get_my_role();
+begin
+  if coalesce(v_role, '') not in ('adviser','admin','superadmin') then
+    raise exception 'Insufficient permissions';
+  end if;
+  delete from public.certificate_endorsements
+   where student_id = p_student_id
+     and certificate_type = p_certificate_type
+     and event_id is not distinct from p_event_id;
+end;
+$$;
+
+grant execute on function public.revoke_endorsement(text, text, uuid) to authenticated;
+
+-- RPC: get all endorsements (adviser + admin view)
+create or replace function public.get_endorsements()
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_role text := public.get_my_role();
+  v_rows jsonb;
+begin
+  if coalesce(v_role, '') not in ('adviser','admin','superadmin') then
+    raise exception 'Insufficient permissions';
+  end if;
+  select coalesce(jsonb_agg(to_jsonb(t) order by t.endorsed_at desc), '[]'::jsonb)
+  into v_rows
+  from (
+    select ce.id, ce.student_id, ce.certificate_type, ce.event_id,
+           ce.endorsed_at, ce.notes,
+           p.full_name as student_name, p.section, p.year_level,
+           a.full_name as adviser_name
+    from public.certificate_endorsements ce
+    join public.profiles p on p.student_id = ce.student_id
+    join public.profiles a on a.id = ce.adviser_id
+    left join public.events e on e.id = ce.event_id
+  ) t;
+  return v_rows;
+end;
+$$;
+
+grant execute on function public.get_endorsements() to authenticated;
+
+revoke all on function public.adviser_review_post, public.endorse_certificate,
+        public.revoke_endorsement, public.get_endorsements
+        from anon, public;
+
+grant execute on function
+  public.adviser_review_post(uuid, text),
+  public.endorse_certificate(text, text, uuid, text),
+  public.revoke_endorsement(text, text, uuid),
+  public.get_endorsements()
+  to authenticator;
+
+-- Tell PostgREST to reload its schema cache for the new RPCs
+notify pgrst, 'reload schema';

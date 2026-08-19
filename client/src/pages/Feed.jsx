@@ -10,6 +10,7 @@ import usePostComments from '../lib/usePostComments';
 import { postsSelect, supportsImages } from '../lib/columns';
 import { fetchFeedHn, fetchFeedGitHub } from '../lib/api';
 import { timeAgo } from '../lib/format';
+import { isAdviser } from '../lib/roles';
 import { ExternalIcon, StarIcon, GithubIcon, RssIcon, BoxIcon, ArchiveIcon, ImageIcon, XIcon } from '../components/icons/Icons';
 
 const LIMIT = 2000;
@@ -54,8 +55,12 @@ export default function Feed() {
       toast.error('Feed error', error.message);
       return;
     }
-    setPosts(data || []);
-  }, [toast]);
+    // Advisers see all posts; regular users only see approved (or posts without a status field)
+    const filtered = isAdviser(profile?.role)
+      ? (data || [])
+      : (data || []).filter((p) => !p.status || p.status === 'approved');
+    setPosts(filtered);
+  }, [toast, profile]);
 
   const loadArchived = useCallback(async () => {
     if (!user) return;
@@ -202,6 +207,13 @@ export default function Feed() {
     return [...ps, ...learningItems].sort((a, b) => new Date(b.ts || 0) - new Date(a.ts || 0));
   }, [posts, learningItems]);
 
+  const reviewPost = async (postId, status) => {
+    const { error } = await supabase.rpc('adviser_review_post', { p_post_id: postId, p_status: status });
+    if (error) return toast.error('Review failed', error.message);
+    toast.ok('Post reviewed', `Post is now ${status}.`);
+    loadPosts();
+  };
+
   const cardProps = (post, extra = {}) => ({
     key: `p-${post.id}`,
     post,
@@ -240,6 +252,8 @@ export default function Feed() {
     editDraft: actions.editDraft,
     editing: actions.editingId === post.id,
     saving: actions.saving,
+    onReviewPost: isAdviser(profile?.role) ? reviewPost : null,
+    adviserRole: isAdviser(profile?.role),
     ...extra,
   });
 

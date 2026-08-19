@@ -26,6 +26,6 @@ export async function postsSelect(profileSelect = 'id, full_name, role, year_lev
   const images = await supportsImages();
   const cols = images ? 'image_url, images' : 'image_url';
   return profileSelect
-    ? `id, author_id, content, created_at, archived, ${cols}, profiles!posts_author_id_fkey(${profileSelect})`
-    : `id, author_id, content, created_at, archived, ${cols}`;
+    ? `id, author_id, content, created_at, archived, status, approved_by, approved_at, ${cols}, profiles!posts_author_id_fkey(${profileSelect})`
+    : `id, author_id, content, created_at, archived, status, approved_by, approved_at, ${cols}`;
 }

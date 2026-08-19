@@ -22,6 +22,7 @@ const Elections = lazy(() => import('./pages/Elections'));
 const Directory = lazy(() => import('./pages/Directory'));
 const Admin = lazy(() => import('./pages/Admin'));
 const SuperAdmin = lazy(() => import('./pages/SuperAdmin'));
+const Adviser = lazy(() => import('./pages/Adviser'));
 
 function Lazy({ children }) {
   return <Suspense fallback={<div style={{ padding: 30 }}><div className="skeleton" style={{ height: 160 }} /></div>}>{children}</Suspense>;
@@ -144,6 +145,14 @@ export default function App() {
             element={
               <RequireRole roles={['admin', 'superadmin']}>
                 <Lazy><Admin /></Lazy>
+              </RequireRole>
+            }
+          />
+          <Route
+            path="adviser"
+            element={
+              <RequireRole roles={['adviser', 'admin', 'superadmin']}>
+                <Lazy><Adviser /></Lazy>
               </RequireRole>
             }
           />
