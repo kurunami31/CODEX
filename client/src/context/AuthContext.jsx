@@ -1,7 +1,6 @@
 import { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { supabase, supabaseReady, signIn, signUp, signOut } from '../lib/supabase';
-import { useInactivityLogout } from '../hooks/useInactivityLogout';
-import { useDeviceSession, useSessionValidator } from '../hooks/useDeviceSession';
+import { SecurityInitializer } from '../components/SecurityInitializer';
 
 const AuthContext = createContext(null);
 
@@ -15,13 +14,6 @@ export function AuthProvider({ children }) {
   const [session, setSession] = useState(null);
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
-
-  // Security: 5-minute inactivity auto-logout
-  useInactivityLogout();
-  
-  // Security: Single device session enforcement
-  useDeviceSession();
-  useSessionValidator();
 
   const completePendingProfile = useCallback(async (userId) => {
     let pending;
@@ -218,7 +210,7 @@ export function AuthProvider({ children }) {
         refreshProfile,
       }}
     >
-      {children}
+      <SecurityInitializer>{children}</SecurityInitializer>
     </AuthContext.Provider>
   );
 }
