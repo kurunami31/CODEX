@@ -129,7 +129,7 @@ export default function PostCard({
             <span>{when.day} · {when.time}</span>
           </span>
         </button>
-        <span className={`role-pill post-role role-pill--${author?.role || 'student'}`}>{roleLabel(author?.role)}</span>
+        <span className={`role-pill post-role role-pill--${author?.role || 'student'}`}>{roleLabel(author?.role, author?.position)}</span>
         {post.status === 'flagged' && <span className="chip chip--warn" style={{ fontSize: 9, marginLeft: 4 }}>flagged</span>}
         {post.status === 'pending' && <span className="chip" style={{ fontSize: 9, marginLeft: 4, background: 'var(--accent)', color: '#fff' }}>pending</span>}
         {(mine || manage) && (

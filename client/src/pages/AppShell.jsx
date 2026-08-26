@@ -307,7 +307,7 @@ export default function AppShell() {
             <Avatar name={profile?.full_name} seed={user?.id} size={36} ring url={profile?.avatar_url} />
             <div style={{ minWidth: 0 }}>
               <div className="u-name" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{profile?.full_name || '…'}</div>
-              <div className="u-role">{roleLabel(profile?.role)}</div>
+              <div className="u-role">{roleLabel(profile?.role, profile?.position)}</div>
             </div>
             <button className="icon-btn" style={{ marginLeft: 'auto', width: 32, height: 32, borderRadius: 9 }} onClick={handleLogout} title="Log out" aria-label="Log out">
               <LogOutIcon width={15} height={15} />
@@ -508,7 +508,7 @@ export default function AppShell() {
             <Avatar name={profile?.full_name} seed={user?.id} size={36} ring url={profile?.avatar_url} />
             <div style={{ minWidth: 0 }}>
               <div className="u-name">{profile?.full_name || '…'}</div>
-              <div className="u-role">{roleLabel(profile?.role)}</div>
+              <div className="u-role">{roleLabel(profile?.role, profile?.position)}</div>
             </div>
             <button className="icon-btn" style={{ marginLeft: 'auto', width: 32, height: 32, borderRadius: 9 }} onClick={handleLogout} title="Log out" aria-label="Log out">
               <LogOutIcon width={15} height={15} />

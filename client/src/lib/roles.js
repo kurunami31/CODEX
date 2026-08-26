@@ -17,4 +17,4 @@ export const ROLE_LABELS = {
   adviser: 'adviser',
 };
 
-export const roleLabel = (role) => ROLE_LABELS[role] || role || 'student';
+export const roleLabel = (role, position) => position || ROLE_LABELS[role] || role || 'student';

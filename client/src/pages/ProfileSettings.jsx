@@ -457,7 +457,7 @@ useEffect(() => {
         </div>
         <div className="settings-row">
           <span className="settings-key"><ShieldIcon width={15} height={15} /> Role</span>
-          <span className="settings-val">{roleLabel(profile.role)}</span>
+          <span className="settings-val">{roleLabel(profile.role, profile.position)}</span>
           <span className="chip">locked</span>
         </div>
         <p className="ocr-label" style={{ margin: 0 }}>

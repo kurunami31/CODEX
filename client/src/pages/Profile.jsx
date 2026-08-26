@@ -178,7 +178,7 @@ export default function Profile() {
         <div className="profile-meta">
           <div className="profile-role-row" style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
             <h1 className="profile-name">{author?.full_name || '…'}</h1>
-            <span className={`role-pill role-pill--${author?.role || 'student'}`}>{roleLabel(author?.role)}</span>
+            <span className={`role-pill role-pill--${author?.role || 'student'}`}>{roleLabel(author?.role, author?.position)}</span>
             {(profile?.role === 'superadmin' || author?.id === profile?.id) && (
               author?.membership_paid ? (
                 <span className="chip chip--ok" title={author.membership_paid_at ? `Confirmed ${formatEventDate(author.membership_paid_at).day}` : 'Membership confirmed'}>

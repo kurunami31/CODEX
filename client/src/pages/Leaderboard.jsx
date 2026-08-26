@@ -110,7 +110,7 @@ export default function Leaderboard() {
                         </td>
                         <td style={{ fontFamily: 'var(--f-ocr)', fontSize: 12 }}>{p.student_id || '—'}</td>
                         <td>{p.year_level} · {p.section}</td>
-                        <td><span className={`role-pill role-pill--${p.role || 'student'}`}>{roleLabel(p.role)}</span></td>
+                        <td><span className={`role-pill role-pill--${p.role || 'student'}`}>{roleLabel(p.role, p.position)}</span></td>
                         <td><b>{p.points}</b></td>
                       </tr>
                     ))}

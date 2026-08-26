@@ -278,7 +278,7 @@ export default function SuperAdmin() {
           { icon: <WalletIcon width={15} height={15} />, k: 'dues paid', v: students.filter((s) => s.membership_paid).length },
           { icon: <RssIcon width={15} height={15} />, k: 'posts', v: posts.length },
           { icon: <QrIcon width={15} height={15} />, k: 'attendance records', v: attendance.length },
-          { icon: <CrownIcon width={15} height={15} />, k: 'your role', v: roleLabel(profile?.role) },
+          { icon: <CrownIcon width={15} height={15} />, k: 'your role', v: roleLabel(profile?.role, profile?.position) },
         ].map((s) => (
           <div key={s.k} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px', background: 'var(--bg)', borderRadius: 'var(--r-md)', border: '1px solid var(--line)' }}>
             <span style={{ color: 'var(--accent-2)' }}>{s.icon}</span>
@@ -404,7 +404,7 @@ export default function SuperAdmin() {
                     </td>
                     <td style={{ fontFamily: 'var(--f-ocr)', fontSize: 12 }}>{s.student_id || '—'}</td>
                     <td>{s.year_level} · {s.section}</td>
-                    <td><span className={`role-pill role-pill--${s.role || 'student'}`}>{roleLabel(s.role)}</span></td>
+                    <td><span className={`role-pill role-pill--${s.role || 'student'}`}>{roleLabel(s.role, s.position)}</span></td>
                     <td>
                       {s.membership_paid ? (
                         <span className="chip chip--ok" title={s.membership_paid_at ? `Confirmed ${timeAgo(s.membership_paid_at)}` : 'Confirmed'}>
@@ -494,7 +494,7 @@ export default function SuperAdmin() {
                 <div style={{ minWidth: 0, flex: 1 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                     <b style={{ fontSize: 13 }}>{p.profiles?.full_name || 'deleted member'}</b>
-                    <span className={`role-pill role-pill--${p.profiles?.role || 'student'}`}>{roleLabel(p.profiles?.role)}</span>
+                    <span className={`role-pill role-pill--${p.profiles?.role || 'student'}`}>{roleLabel(p.profiles?.role, p.profiles?.position)}</span>
                     {p.archived && <span className="chip chip--warn">archived</span>}
                     <span className="ocr-label" style={{ fontSize: 9, marginLeft: 'auto' }}>{timeAgo(p.created_at)}</span>
                   </div>
@@ -675,7 +675,7 @@ function StudentModal({ mode, student, onClose, onSaved }) {
       .eq('id', student.id);
     setBusy(false);
     if (err) return setError(err.message);
-    toast.ok('Member updated', roleLabel(form.role) === 'student' ? 'Profile saved.' : `Role is now ${roleLabel(form.role)}.`);
+    toast.ok('Member updated', roleLabel(form.role, form.position) === 'student' ? 'Profile saved.' : `Role is now ${roleLabel(form.role, form.position)}.`);
     onSaved();
   };
 

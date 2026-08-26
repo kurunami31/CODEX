@@ -137,7 +137,7 @@ export default function Adviser() {
           { icon: <FlagIcon width={15} height={15} />, k: 'flagged', v: posts.filter((p) => p.status === 'flagged').length },
           { icon: <UsersIcon width={15} height={15} />, k: 'members', v: members.length },
           { icon: <CertificateIcon width={15} height={15} />, k: 'endorsements', v: endorsements.length },
-          { icon: <ShieldIcon width={15} height={15} />, k: 'your role', v: roleLabel(profile?.role) },
+          { icon: <ShieldIcon width={15} height={15} />, k: 'your role', v: roleLabel(profile?.role, profile?.position) },
         ].map((s) => (
           <div key={s.k} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px', background: 'var(--bg)', borderRadius: 'var(--r-md)', border: '1px solid var(--line)' }}>
             <span style={{ color: 'var(--accent-2)' }}>{s.icon}</span>
@@ -196,7 +196,7 @@ export default function Adviser() {
                 <div style={{ minWidth: 0, flex: 1 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                     <b style={{ fontSize: 13 }}>{p.profiles?.full_name || 'deleted member'}</b>
-                    <span className={`role-pill role-pill--${p.profiles?.role || 'student'}`}>{roleLabel(p.profiles?.role)}</span>
+                    <span className={`role-pill role-pill--${p.profiles?.role || 'student'}`}>{roleLabel(p.profiles?.role, p.profiles?.position)}</span>
                     {p.profiles?.section && <span className="ocr-label" style={{ fontSize: 9 }}>section {p.profiles.section}</span>}
                     {p.profiles?.student_id && <span className="ocr-label" style={{ fontFamily: 'var(--f-ocr)', fontSize: 9 }}>ID {p.profiles.student_id}</span>}
                     <span className={`chip ${p.status === 'flagged' ? 'chip--warn' : p.status === 'pending' ? '' : 'chip--ok'}`} style={{ marginLeft: 4 }}>
@@ -362,7 +362,7 @@ export default function Adviser() {
                     </td>
                     <td style={{ fontFamily: 'var(--f-ocr)', fontSize: 12 }}>{m.student_id || '—'}</td>
                     <td>{m.year_level} · {m.section}</td>
-                    <td><span className={`role-pill role-pill--${m.role || 'student'}`}>{roleLabel(m.role)}</span></td>
+                    <td><span className={`role-pill role-pill--${m.role || 'student'}`}>{roleLabel(m.role, m.position)}</span></td>
                   </tr>
                 ))}
               </tbody>

@@ -98,7 +98,7 @@ export default function Directory() {
                     </td>
                     <td style={{ fontFamily: 'var(--f-ocr)', fontSize: 12 }}>{m.student_id || '—'}</td>
                     <td>{m.year_level} · {m.section}</td>
-                    <td><span className={`role-pill role-pill--${m.role || 'student'}`}>{roleLabel(m.role)}</span></td>
+                    <td><span className={`role-pill role-pill--${m.role || 'student'}`}>{roleLabel(m.role, m.position)}</span></td>
                     {isSuper && (
                       <td>
                         {m.membership_paid ? (

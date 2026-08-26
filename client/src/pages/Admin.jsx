@@ -178,7 +178,7 @@ export default function Admin() {
           { icon: <UsersIcon width={15} height={15} />, k: 'attendance records', v: attendees.length },
           ...(isSuper ? [{ icon: <WalletIcon width={15} height={15} />, k: 'dues unpaid', v: unpaid.length }] : []),
           { icon: <QrIcon width={15} height={15} />, k: 'qr signing', v: 'HMAC v2' },
-          { icon: <AlertIcon width={15} height={15} />, k: 'your role', v: roleLabel(profile?.role) },
+          { icon: <AlertIcon width={15} height={15} />, k: 'your role', v: roleLabel(profile?.role, profile?.position) },
         ].map((s) => (
           <div key={s.k} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px', background: 'var(--bg)', borderRadius: 'var(--r-md)', border: '1px solid var(--line)' }}>
             <span style={{ color: 'var(--accent-2)' }}>{s.icon}</span>
@@ -315,7 +315,7 @@ export default function Admin() {
                     </td>
                     <td style={{ fontFamily: 'var(--f-ocr)', fontSize: 12 }}>{m.student_id || '—'}</td>
                     <td>{m.year_level} · {m.section}</td>
-                    <td><span className={`role-pill role-pill--${m.role || 'student'}`}>{roleLabel(m.role)}</span></td>
+                    <td><span className={`role-pill role-pill--${m.role || 'student'}`}>{roleLabel(m.role, m.position)}</span></td>
                     {isSuper && (
                       <td>
                         {m.membership_paid ? (

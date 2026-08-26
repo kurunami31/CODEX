@@ -72,7 +72,7 @@ export default function IdCardModal({ member, onClose }) {
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', justifyContent: 'center' }}>
             <CheckIcon width={14} height={14} style={{ color: 'var(--ok)' }} />
             <span className="ocr-label" style={{ fontSize: 9 }}>
-              registered {roleLabel(member.role)}
+              registered {roleLabel(member.role, member.position)}
               {isSuper ? ` · ${member.membership_paid ? 'dues paid' : 'dues unpaid'}` : ''}
             </span>
           </div>
