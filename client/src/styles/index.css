@@ -1412,8 +1412,15 @@ html[data-theme='dark'] .bottomnav a:hover { color: var(--accent); }
 .scan-result .res-grid .k { font-family: var(--f-ocr); font-size: calc(0.65625rem * var(--text-scale)); letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
 .scan-result .res-grid .v { font-weight: 600; color: var(--ink); }
 
-/* ── attendance table ───────────────────────────────────── */
-.table-wrap { overflow-x: auto; border-radius: var(--r-lg); border: 1px solid var(--line); background: var(--paper); }
+/* ── tables ───────────────────────────────────── */
+.table-wrap { 
+  overflow-x: auto; 
+  overflow-y: auto; 
+  max-height: 50vh; 
+  border-radius: var(--r-lg); 
+  border: 1px solid var(--line); 
+  background: var(--paper); 
+}
 table.codex-table { width: 100%; border-collapse: collapse; font-size: calc(0.875rem * var(--text-scale)); min-width: 560px; }
 .codex-table th {
   font-family: var(--f-ocr); font-size: calc(0.65625rem * var(--text-scale)); letter-spacing: 0.16em; text-transform: uppercase;
