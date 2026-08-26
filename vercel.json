@@ -4,6 +4,10 @@
   "outputDirectory": "client/dist",
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api" },
+    { "source": "/assets/(.*)", "destination": "/assets/$1" },
+    { "source": "/fonts/(.*)", "destination": "/fonts/$1" },
+    { "source": "/sw.js", "destination": "/sw.js" },
+    { "source": "/manifest.webmanifest", "destination": "/manifest.webmanifest" },
     { "source": "/(.*)", "destination": "/index.html" }
   ],
   "headers": [
