@@ -11,8 +11,15 @@ export function useInactivityLogout() {
   const { logout, session } = useAuth();
   const timeoutRef = useRef(null);
   const isLoggingOut = useRef(false);
+  const mountedRef = useRef(false);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
 
   const resetTimer = useCallback(() => {
+    if (!mountedRef.current) return;
     if (isLoggingOut.current || !session) return;
     
     if (timeoutRef.current) {
@@ -20,16 +27,19 @@ export function useInactivityLogout() {
     }
     
     timeoutRef.current = setTimeout(() => {
+      if (!mountedRef.current) return;
       isLoggingOut.current = true;
       logout();
     }, INACTIVITY_TIMEOUT);
   }, [logout, session]);
 
   const handleActivity = useCallback(() => {
-    resetTimer();
+    if (mountedRef.current) resetTimer();
   }, [resetTimer]);
 
   useEffect(() => {
+    if (!mountedRef.current) return;
+    
     if (!session) {
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current);

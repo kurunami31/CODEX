@@ -1,40 +1,40 @@
 // Single-device session tracking hook
 // Enforces one active session per user by tracking device ID
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { getDeviceId } from '../lib/deviceFingerprint';
 
 export function useDeviceSession() {
-  const { profile, session, refreshProfile } = useAuth();
+  const { profile, session } = useAuth();
   const [deviceConflict, setDeviceConflict] = useState(false);
   const [currentDeviceId, setCurrentDeviceId] = useState(null);
+  const mountedRef = useRef(false);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
 
   // Register this device for the current user
   const registerDevice = useCallback(async () => {
+    if (!mountedRef.current) return false;
     if (!profile || !session) return;
     
     try {
       const deviceId = await getDeviceId();
       setCurrentDeviceId(deviceId);
       
-      // Store device info in profile metadata (using position field or a new column)
-      // We'll use a custom approach: store device info in localStorage for now
-      // and check on auth state changes
-      
       const storedDeviceId = localStorage.getItem('codex_registered_device_id');
       if (storedDeviceId && storedDeviceId !== deviceId) {
-        // Different device detected - conflict!
         setDeviceConflict(true);
         return false;
       }
       
-      // Register this device
       localStorage.setItem('codex_registered_device_id', deviceId);
       localStorage.setItem('codex_device_registered_at', Date.now().toString());
       
-      // Also sync to profile if we add a device_id column later
       return true;
     } catch (err) {
       console.error('Device registration failed:', err);
@@ -44,10 +44,10 @@ export function useDeviceSession() {
 
   // Check for device conflict on auth state change
   useEffect(() => {
+    if (!mountedRef.current) return;
     if (session && profile) {
       registerDevice();
     } else if (!session) {
-      // Clear conflict on logout
       setDeviceConflict(false);
       setCurrentDeviceId(null);
     }
@@ -58,10 +58,8 @@ export function useDeviceSession() {
     if (!profile) return;
     
     try {
-      // This would require a backend function to invalidate other sessions
-      // For now, we just register current device as the only valid one
       const deviceId = await getDeviceId();
-      localStorage.setItem('codex_registered_device_id', await getDeviceId());
+      localStorage.setItem('codex_registered_device_id', deviceId);
       localStorage.setItem('codex_device_registered_at', Date.now().toString());
       return true;
     } catch (err) {
@@ -76,19 +74,28 @@ export function useDeviceSession() {
 // Hook to validate session on each request
 export function useSessionValidator() {
   const { session, logout, profile } = useAuth();
-  const { currentDeviceId } = useDeviceSession();
+  const mountedRef = useRef(false);
 
   useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
+
+  useEffect(() => {
+    if (!mountedRef.current) return;
     if (!session || !profile) return;
 
+    let mounted = true;
+    let intervalId = null;
+
     const validateSession = async () => {
+      if (!mounted) return;
       try {
-        // Check if our device ID matches the registered one
         const currentId = localStorage.getItem('codex_registered_device_id');
+        const { getDeviceId } = await import('../lib/deviceFingerprint');
         const deviceId = await getDeviceId();
         
         if (currentId && currentId !== deviceId) {
-          // Another device has logged in - force logout
           console.warn('Session conflict detected - another device logged in');
           logout();
         }
@@ -97,10 +104,14 @@ export function useSessionValidator() {
       }
     };
 
-    // Validate on mount and periodically
-    validateSession();
-    const interval = setInterval(validateSession, 60000); // Check every minute
+    if (mounted) {
+      validateSession();
+      intervalId = setInterval(validateSession, 60000);
+    }
     
-    return () => clearInterval(interval);
-  }, [session, profile]);
+    return () => {
+      mounted = false;
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, [session, profile, logout]);
 }
