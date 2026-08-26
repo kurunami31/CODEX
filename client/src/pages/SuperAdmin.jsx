@@ -3,7 +3,7 @@ import { supabase, apiFetch } from '../lib/supabase';
 import { postsSelect } from '../lib/columns';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
-import { timeAgo } from '../lib/format';
+import { timeAgo, formatTime } from '../lib/format';
 import { roleLabel } from '../lib/roles';
 import Avatar from '../components/Avatar';
 import {
@@ -534,7 +534,8 @@ export default function SuperAdmin() {
                   <th>id no.</th>
                   <th>event</th>
                   <th>year / section</th>
-                  <th>scanned at</th>
+                  <th>time in</th>
+                  <th>time out</th>
                   <th>scanned by</th>
                   <th>remove</th>
                 </tr>
@@ -551,7 +552,8 @@ export default function SuperAdmin() {
                     <td style={{ fontFamily: 'var(--f-ocr)', fontSize: 12 }}>{a.student_id}</td>
                     <td style={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.events?.title || 'deleted event'}</td>
                     <td>{a.profiles?.year_level} · {a.profiles?.section}</td>
-                    <td style={{ whiteSpace: 'nowrap' }}>{timeAgo(a.scanned_at)}</td>
+                    <td>{a.time_in ? formatTime(a.time_in) : '—'}</td>
+                    <td>{a.time_out ? formatTime(a.time_out) : <span style={{ color: 'var(--warn)' }}>still in</span>}</td>
                     <td>{scanners[a.scanned_by] || '—'}</td>
                     <td>
                       <button

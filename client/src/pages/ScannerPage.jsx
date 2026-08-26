@@ -4,7 +4,7 @@ import { Html5Qrcode } from 'html5-qrcode';
 import { supabase, apiFetch } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
-import { formatEventDate } from '../lib/format';
+import { formatEventDate, formatTime } from '../lib/format';
 import { isStaff as checkStaff } from '../lib/roles';
 import {
   XIcon, FlashIcon, CameraIcon, QrIcon, CheckIcon, AlertIcon,
@@ -296,17 +296,23 @@ export default function ScannerPage() {
                 <div>
                   <b>{result.student?.full_name}</b>
                   <div style={{ fontSize: 12, color: 'var(--muted)' }}>
-                    {result.status === 'present' ? 'marked present · ' : 'already recorded · '}
-                    {result.student?.course}
+                    {result.status === 'checked_in' ? 'checked in' : result.status === 'checked_out' ? 'checked out' : result.status}
+                    {result.time_in && <span style={{ marginLeft: 8 }}>{formatTime(result.time_in)}</span>}
+                    {result.time_out && <span style={{ marginLeft: 8 }}>→ {formatTime(result.time_out)}</span>}
+                    <span style={{ marginLeft: 8, color: 'var(--muted)' }}>
+                      {result.student?.course}
+                    </span>
                   </div>
                 </div>
-                <span className={`chip ${result.status === 'present' ? 'chip--ok' : 'chip--warn'}`} style={{ marginLeft: 'auto' }}>
-                  <CheckIcon width={12} height={12} /> {result.status}
+                <span className={`chip ${result.status === 'checked_out' ? 'chip--warn' : 'chip--ok'}`} style={{ marginLeft: 'auto' }}>
+                  <CheckIcon width={12} height={12} /> {result.status === 'checked_out' ? 'Out' : 'In'}
                 </span>
               </div>
               <div className="res-grid">
                 <div><div className="k">id no.</div><div className="v" style={{ fontFamily: 'var(--f-ocr)' }}>{result.student?.student_id}</div></div>
                 <div><div className="k">year / section</div><div className="v">{result.student?.year_level} · {result.student?.section}</div></div>
+                <div><div className="k">time in</div><div className="v">{result.time_in ? formatTime(result.time_in) : '—'}</div></div>
+                <div><div className="k">time out</div><div className="v">{result.time_out ? formatTime(result.time_out) : <span style={{ color: 'var(--warn)' }}>—</span>}</div></div>
                 <div><div className="k">verified</div><div className="v">HMAC signature ✓</div></div>
                 <div><div className="k">qr type</div><div className="v">{result.qrType === 'presence' ? 'live presence ✓' : 'year ID'}</div></div>
               </div>

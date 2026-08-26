@@ -4,7 +4,7 @@ import QRCode from 'qrcode';
 import { supabase, apiFetch } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
-import { formatEventDate, isUpcoming, timeAgo } from '../lib/format';
+import { formatEventDate, isUpcoming, timeAgo, formatTime } from '../lib/format';
 import { isStaff as checkStaff } from '../lib/roles';
 import Avatar from '../components/Avatar';
 import {
@@ -259,12 +259,13 @@ export default function EventDetail() {
           ) : (
             <div className="table-wrap">
               <table className="codex-table">
-                <thead>
+<thead>
                   <tr>
                     <th>student</th>
                     <th>id no.</th>
                     <th>year / section</th>
-                    <th>scanned at</th>
+                    <th>time in</th>
+                    <th>time out</th>
                     <th>scanned by</th>
                   </tr>
                 </thead>
@@ -277,10 +278,10 @@ export default function EventDetail() {
                         {a.full_name}
                       </div>
                     </td>
-                      <td style={{ fontFamily: 'var(--f-ocr)', fontSize: 12 }}>{a.student_id}</td>
-                      <td>{a.year_level} · {a.section}</td>
-                      <td>{timeAgo(a.scanned_at)}</td>
-                      <td>{a.scanned_by_name || '—'}</td>
+                    <td style={{ fontFamily: 'var(--f-ocr)', fontSize: 12 }}>{a.student_id}</td>
+                    <td>{a.time_in ? formatTime(a.time_in) : '—'}</td>
+                    <td>{a.time_out ? formatTime(a.time_out) : <span style={{ color: 'var(--warn)' }}>still in</span>}</td>
+                    <td>{a.scanned_by_name || '—'}</td>
                     </tr>
                   ))}
                 </tbody>

@@ -12,6 +12,12 @@ export function timeAgo(iso) {
   return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
+export function formatTime(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  return d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit', hour12: true });
+}
+
 export function formatEventDate(iso) {
   const d = new Date(iso);
   const day = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
