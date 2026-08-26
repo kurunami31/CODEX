@@ -1,5 +1,7 @@
 import { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { supabase, supabaseReady, signIn, signUp, signOut } from '../lib/supabase';
+import { useInactivityLogout } from '../hooks/useInactivityLogout';
+import { useDeviceSession, useSessionValidator } from '../hooks/useDeviceSession';
 
 const AuthContext = createContext(null);
 
@@ -13,6 +15,13 @@ export function AuthProvider({ children }) {
   const [session, setSession] = useState(null);
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  // Security: 5-minute inactivity auto-logout
+  useInactivityLogout();
+  
+  // Security: Single device session enforcement
+  useDeviceSession();
+  useSessionValidator();
 
   const completePendingProfile = useCallback(async (userId) => {
     let pending;
@@ -186,6 +195,8 @@ export function AuthProvider({ children }) {
     setProfile(null);
     try {
       localStorage.removeItem(PENDING_PROFILE_KEY);
+      localStorage.removeItem('codex_registered_device_id');
+      localStorage.removeItem('codex_device_registered_at');
     } catch {
       /* ignore */
     }
