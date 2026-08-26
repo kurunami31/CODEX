@@ -76,6 +76,23 @@ export async function drawIdCard(ctx, { profile, avatarUrl, qr }) {
   ctx.setTransform(ID_CARD_SCALE, 0, 0, ID_CARD_SCALE, 0, 0);
   ctx.clearRect(0, 0, W, H);
 
+  // ── background watermark: CB logo (ghost) ──
+  try {
+    const cbLogoImg = await loadImage('/assets/cb-logo.png');
+    const maxDim = Math.min(W, H) * 0.5;
+    const scale = Math.min(maxDim / cbLogoImg.width, maxDim / cbLogoImg.height);
+    const logoW = cbLogoImg.width * scale;
+    const logoH = cbLogoImg.height * scale;
+    const logoX = (W - logoW) / 2;
+    const logoY = (H - logoH) / 2;
+    ctx.save();
+    ctx.globalAlpha = 0.04;
+    ctx.drawImage(cbLogoImg, logoX, logoY, logoW, logoH);
+    ctx.restore();
+  } catch {
+    /* logo unavailable — skip */
+  }
+
   // background + frame
   const bg = ctx.createLinearGradient(0, 0, W, H);
   bg.addColorStop(0, '#ffffff');

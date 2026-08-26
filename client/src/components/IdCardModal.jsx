@@ -3,6 +3,7 @@ import Avatar from './Avatar';
 import { roleLabel } from '../lib/roles';
 import { useAuth } from '../context/AuthContext';
 import { IdIcon, CheckIcon, XIcon } from './icons/Icons';
+import cbLogo from '../../public/assets/cb-logo.png';
 
 /**
  * Full-size digital ID card for a member, shown in a modal. Shared by the
@@ -30,7 +31,22 @@ export default function IdCardModal({ member, onClose }) {
           <button className="icon-btn" onClick={onClose} aria-label="Close"><XIcon width={16} height={16} /></button>
         </div>
         <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14 }}>
-          <div className="idcard">
+          <div className="idcard" style={{ position: 'relative' }}>
+            <img
+              src={cbLogo}
+              alt=""
+              style={{
+                position: 'absolute',
+                top: '50%',
+                left: '50%',
+                transform: 'translate(-50%, -50%)',
+                width: '60%',
+                maxWidth: '180px',
+                opacity: 0.06,
+                pointerEvents: 'none',
+                zIndex: 0,
+              }}
+            />
             <div className="idcard-head">
               <img src="/assets/dorsu-logo.png" alt="DOrSU" />
               <div className="idcard-org">
