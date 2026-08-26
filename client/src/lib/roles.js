@@ -13,7 +13,7 @@ export const ROLE_LABELS = {
   student: 'student',
   moderator: 'moderator',
   admin: 'admin',
-  superadmin: 'super admin',
+  superadmin: 'Developer',
   adviser: 'adviser',
 };
 
