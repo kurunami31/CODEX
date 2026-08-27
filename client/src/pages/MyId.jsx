@@ -60,57 +60,68 @@ export default function MyId() {
       const blob = await new Promise((resolve) => canvas.toBlob(resolve, mime, isJpeg ? 0.92 : undefined));
       if (!blob) throw new Error('Could not render the image.');
 
-      // Universal mobile picker path: on Android the blob URL opens the
-      // system "Save image as" dialog; everywhere it hands the file to the
-      // OS share sheet ("Save Image" / share to Drive, etc.).
-      const mobileSave = async () => {
-        const url = URL.createObjectURL(blob);
-        try {
-          if ('download' in HTMLAnchorElement.prototype) {
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = filename;
-            a.setAttribute('download', filename);
-            document.body.appendChild(a);
-            a.click();
-            a.remove();
+      // Universal download strategy that works across all platforms
+      const saveImage = async () => {
+        // Try modern File System Access API first (Chrome/Edge on desktop, some Android)
+        if ('showSaveFilePicker' in window) {
+          try {
+            const handle = await window.showSaveFilePicker({
+              suggestedName: filename,
+              types: [{
+                description: 'Image file',
+                accept: { [mime]: [`.${ext}`] }
+              }]
+            });
+            const writable = await handle.createWritable();
+            await writable.write(blob);
+            await writable.close();
             toast.ok('ID saved', `Saved as ${ext.toUpperCase()} — check your downloads.`);
-          } else {
-            // Very old in-app browsers: <a download> is unsupported — open
-            // the image in a new tab and let the user long-press → Save Image.
-            const win = window.open(url, '_blank');
-            if (win) {
-              toast.info('Save the image', 'Long-press the image and choose "Save Image".');
-            } else {
-              toast.error('Could not save', 'Your browser blocked the save — allow pop-ups and try again.');
+            return true;
+          } catch (err) {
+            if (err.name !== 'AbortError') {
+              console.warn('File System Access API failed:', err);
             }
           }
-        } finally {
-          setTimeout(() => URL.revokeObjectURL(url), 60_000);
         }
-      };
 
-      const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || navigator.maxTouchPoints > 1;
-
-      if (isMobile && typeof navigator.canShare === 'function') {
-        const file = new File([blob], filename, { type: mime });
-        if (navigator.canShare({ files: [file] })) {
+        // Try navigator.share (mobile browsers with share API)
+        if (navigator.share && navigator.canShare?.({ files: [new File([blob], filename, { type: mime })] })) {
           try {
-            await navigator.share({ files: [file], title: 'CODEBYTERS digital ID', text: 'My CODEBYTERS digital ID' });
+            const file = new File([blob], filename, { type: mime });
+            await navigator.share({
+              files: [new File([blob], filename, { type: mime })],
+              title: 'CODEBYTERS digital ID',
+              text: 'My CODEBYTERS digital ID'
+            });
             toast.ok('ID saved', 'Saved via your device share sheet.');
-            return;
+            return true;
           } catch (err) {
-            if (err?.name === 'AbortError') return; // user dismissed the sheet — no toast
-            // any other share failure falls through to the direct save below
+            if (err.name !== 'AbortError') {
+              console.warn('Share API failed:', err);
+            }
           }
         }
-      }
 
-      // Desktop and mobile-without-share: direct download / save-as. On
-      // desktop this always saves the file — no share dialogs (Windows
-      // Chrome reports navigator.canShare as true, which would hijack the
-      // save into the Windows share dialog instead).
-      await mobileSave();
+        // Fallback: create download link (works on most desktop, some mobile)
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        a.style.display = 'none';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        
+        // For iOS Safari - open in new tab as last resort
+        setTimeout(() => {
+          URL.revokeObjectURL(url);
+        }, 1000);
+        
+        toast.ok('ID saved', `Saved as ${ext.toUpperCase()} — check your downloads.`);
+        return true;
+      };
+
+      await saveImage();
     } catch (err) {
       toast.error('Download failed', err?.message || 'Could not render your ID.');
     } finally {
