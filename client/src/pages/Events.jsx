@@ -8,6 +8,7 @@ import { isStaff as checkStaff, isAdmin as checkAdmin } from '../lib/roles';
 import {
   CalendarIcon, MapPinIcon, ClockIcon, PlusIcon, XIcon, ChevronRightIcon,
   CameraIcon, QrIcon, CheckIcon, TerminalIcon, AlertIcon, UsersIcon,
+  PencilIcon,
 } from '../components/icons/Icons';
 
 export default function Events() {
@@ -16,6 +17,7 @@ export default function Events() {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
+  const [editEvent, setEditEvent] = useState(null);
   const [myAttendance, setMyAttendance] = useState(new Map());
   const [rsvps, setRsvps] = useState([]); // [{ event_id, user_id }]
   const [rsvpBusy, setRsvpBusy] = useState(false);
@@ -26,7 +28,7 @@ export default function Events() {
   const loadEvents = async () => {
     const { data, error } = await supabase
       .from('events')
-      .select('id, title, description, location, event_date, created_at')
+      .select('id, title, description, location, event_date, created_at, created_by, event_end')
       .order('event_date', { ascending: true });
     if (error) toast.error('Events error', error.message);
     else setEvents(data || []);
@@ -145,6 +147,15 @@ export default function Events() {
                       <CameraIcon width={14} height={14} /> Scan
                     </Link>
                   )}
+                  {(isAdmin || ev.created_by === user?.id) && (
+                    <button
+                      className="btn btn-outline btn-sm"
+                      onClick={() => setEditEvent(ev)}
+                      title="Edit event"
+                    >
+                      <PencilIcon width={14} height={14} /> Edit
+                    </button>
+                  )}
                 </div>
               </article>
             );
@@ -176,6 +187,7 @@ export default function Events() {
       </div>
 
       {showCreate && <CreateEventModal onClose={() => setShowCreate(false)} onCreated={onCreated} />}
+      {editEvent && <EditEventModal event={editEvent} onClose={() => setEditEvent(null)} onSaved={() => { setEditEvent(null); loadEvents(); }} />}
     </>
   );
 }
@@ -245,6 +257,93 @@ function CreateEventModal({ onClose, onCreated }) {
           {error && <div className="err-box"><span>!</span><span>{error}</span></div>}
           <button className="btn btn-accent btn-lg" disabled={busy}>
             {busy ? 'Creating…' : 'Publish event'}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function EditEventModal({ event, onClose, onSaved }) {
+  const { user } = useAuth();
+  const toast = useToast();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [form, setForm] = useState({
+    title: event.title,
+    description: event.description || '',
+    location: event.location || '',
+    date: event.event_date ? event.event_date.split('T')[0] : '',
+    time: event.event_date ? event.event_date.split('T')[1].slice(0, 5) : '09:00',
+    endDate: event.event_end ? event.event_end.split('T')[0] : '',
+    endTime: event.event_end ? event.event_end.split('T')[1].slice(0, 5) : '',
+  });
+
+  const submit = async (e) => {
+    e.preventDefault();
+    setError('');
+    if (!form.title.trim() || !form.date) return setError('Title and date are required.');
+    if (!form.endDate) return setError('End date is required.');
+    const event_date = new Date(`${form.date}T${form.time}:00`).toISOString();
+    const event_end = new Date(`${form.endDate}T${form.endTime}:00`).toISOString();
+    if (event_end <= event_date) return setError('End date/time must be after start date/time.');
+    setBusy(true);
+    const { error: err } = await supabase.from('events').update({
+      title: form.title.trim().slice(0, 120),
+      description: form.description.trim().slice(0, 1000) || null,
+      location: form.location.trim().slice(0, 160) || null,
+      event_date,
+      event_end,
+    }).eq('id', event.id);
+    setBusy(false);
+    if (err) return setError(err.message);
+    toast.ok('Event updated', 'Changes saved.');
+    onSaved();
+  };
+
+  return (
+    <div className="modal-back" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="modal">
+        <div className="modal-head">
+          <h3><CalendarIcon width={18} height={18} style={{ verticalAlign: -3, marginRight: 6, color: 'var(--accent-2)' }} />Edit event</h3>
+          <button className="icon-btn" onClick={onClose} aria-label="Close"><XIcon width={16} height={16} /></button>
+        </div>
+        <form className="modal-body auth-form" onSubmit={submit}>
+          <div className="field">
+            <label htmlFor="ev-title">Event title</label>
+            <input id="ev-title" className="input" placeholder="CODEBYTERS General Assembly" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} maxLength={120} />
+          </div>
+          <div className="field">
+            <label htmlFor="ev-desc">Description</label>
+            <textarea id="ev-desc" className="textarea" placeholder="What's this event about?" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} maxLength={1000} />
+          </div>
+          <div className="field">
+            <label htmlFor="ev-loc">Location</label>
+            <input id="ev-loc" className="input" placeholder="DOrSU ICT Building — AVR" value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} maxLength={160} />
+          </div>
+          <div className="auth-grid2">
+            <div className="field">
+              <label htmlFor="ev-date">Start date</label>
+              <input id="ev-date" className="input" type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} required />
+            </div>
+            <div className="field">
+              <label htmlFor="ev-time">Start time</label>
+              <input id="ev-time" className="input" type="time" value={form.time} onChange={(e) => setForm({ ...form, time: e.target.value })} required />
+            </div>
+          </div>
+          <div className="auth-grid2">
+            <div className="field">
+              <label htmlFor="ev-end-date">End date</label>
+              <input id="ev-end-date" className="input" type="date" value={form.endDate} onChange={(e) => setForm({ ...form, endDate: e.target.value })} required />
+            </div>
+            <div className="field">
+              <label htmlFor="ev-end-time">End time</label>
+              <input id="ev-end-time" className="input" type="time" value={form.endTime} onChange={(e) => setForm({ ...form, endTime: e.target.value })} required />
+            </div>
+          </div>
+          {error && <div className="err-box"><span>!</span><span>{error}</span></div>}
+          <button className="btn btn-accent btn-lg" disabled={busy}>
+            {busy ? 'Saving…' : 'Save changes'}
           </button>
         </form>
       </div>
