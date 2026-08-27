@@ -203,12 +203,20 @@ function CreateEventModal({ onClose, onCreated }) {
     location: '',
     date: '',
     time: '09:00',
+    endDate: '',
+    endTime: '17:00',
+    // AM/PM windows
+    amStart: '08:00',
+    amEnd: '12:00',
+    pmStart: '13:00',
+    pmEnd: '17:00',
   });
 
   const submit = async (e) => {
     e.preventDefault();
     setError('');
     if (!form.title.trim() || !form.date) return setError('Title and date are required.');
+    if (!form.amStart || !form.amEnd || !form.pmStart || !form.pmEnd) return setError('All attendance windows (AM/PM) are required.');
     const event_date = new Date(`${form.date}T${form.time}:00`).toISOString();
     setBusy(true);
     const { error: err } = await supabase.from('events').insert({
@@ -216,6 +224,10 @@ function CreateEventModal({ onClose, onCreated }) {
       description: form.description.trim().slice(0, 1000) || null,
       location: form.location.trim().slice(0, 160) || null,
       event_date,
+      am_start: `${form.date}T${form.amStart}:00`,
+      am_end: `${form.date}T${form.amEnd}:00`,
+      pm_start: `${form.date}T${form.pmStart}:00`,
+      pm_end: `${form.date}T${form.pmEnd}:00`,
       created_by: user.id,
     });
     setBusy(false);
@@ -250,8 +262,31 @@ function CreateEventModal({ onClose, onCreated }) {
               <input id="ev-date" className="input" type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} required />
             </div>
             <div className="field">
-              <label htmlFor="ev-time">Time</label>
+              <label htmlFor="ev-time">Event start time</label>
               <input id="ev-time" className="input" type="time" value={form.time} onChange={(e) => setForm({ ...form, time: e.target.value })} required />
+            </div>
+          </div>
+          <div className="panel" style={{ marginTop: 16, padding: 16, border: '1px solid var(--line)', borderRadius: 'var(--r-md)' }}>
+            <h4 style={{ margin: '0 0 12px', fontSize: 14, color: 'var(--accent-2)' }}>Attendance Windows (Morning & Afternoon)</h4>
+            <div className="auth-grid2">
+              <div className="field">
+                <label htmlFor="ev-am-start">Morning time in</label>
+                <input id="ev-am-start" className="input" type="time" value={form.amStart} onChange={(e) => setForm({ ...form, amStart: e.target.value })} required />
+              </div>
+              <div className="field">
+                <label htmlFor="ev-am-end">Morning time out</label>
+                <input id="ev-am-end" className="input" type="time" value={form.amEnd} onChange={(e) => setForm({ ...form, amEnd: e.target.value })} required />
+              </div>
+            </div>
+            <div className="auth-grid2">
+              <div className="field">
+                <label htmlFor="ev-pm-start">Afternoon time in</label>
+                <input id="ev-pm-start" className="input" type="time" value={form.pmStart} onChange={(e) => setForm({ ...form, pmStart: e.target.value })} required />
+              </div>
+              <div className="field">
+                <label htmlFor="ev-pm-end">Afternoon time out</label>
+                <input id="ev-pm-end" className="input" type="time" value={form.pmEnd} onChange={(e) => setForm({ ...form, pmEnd: e.target.value })} required />
+              </div>
             </div>
           </div>
           {error && <div className="err-box"><span>!</span><span>{error}</span></div>}
@@ -277,6 +312,10 @@ function EditEventModal({ event, onClose, onSaved }) {
     time: event.event_date ? event.event_date.split('T')[1].slice(0, 5) : '09:00',
     endDate: event.event_end ? event.event_end.split('T')[0] : '',
     endTime: event.event_end ? event.event_end.split('T')[1].slice(0, 5) : '',
+    amStart: event.am_start ? event.am_start.split('T')[1].slice(0, 5) : '08:00',
+    amEnd: event.am_end ? event.am_end.split('T')[1].slice(0, 5) : '12:00',
+    pmStart: event.pm_start ? event.pm_start.split('T')[1].slice(0, 5) : '13:00',
+    pmEnd: event.pm_end ? event.pm_end.split('T')[1].slice(0, 5) : '17:00',
   });
 
   const submit = async (e) => {
@@ -284,6 +323,7 @@ function EditEventModal({ event, onClose, onSaved }) {
     setError('');
     if (!form.title.trim() || !form.date) return setError('Title and date are required.');
     if (!form.endDate) return setError('End date is required.');
+    if (!form.amStart || !form.amEnd || !form.pmStart || !form.pmEnd) return setError('All attendance windows (AM/PM) are required.');
     const event_date = new Date(`${form.date}T${form.time}:00`).toISOString();
     const event_end = new Date(`${form.endDate}T${form.endTime}:00`).toISOString();
     if (event_end <= event_date) return setError('End date/time must be after start date/time.');
@@ -294,6 +334,10 @@ function EditEventModal({ event, onClose, onSaved }) {
       location: form.location.trim().slice(0, 160) || null,
       event_date,
       event_end,
+      am_start: `${form.date}T${form.amStart}:00`,
+      am_end: `${form.date}T${form.amEnd}:00`,
+      pm_start: `${form.date}T${form.pmStart}:00`,
+      pm_end: `${form.date}T${form.pmEnd}:00`,
     }).eq('id', event.id);
     setBusy(false);
     if (err) return setError(err.message);
@@ -339,6 +383,29 @@ function EditEventModal({ event, onClose, onSaved }) {
             <div className="field">
               <label htmlFor="ev-end-time">End time</label>
               <input id="ev-end-time" className="input" type="time" value={form.endTime} onChange={(e) => setForm({ ...form, endTime: e.target.value })} required />
+            </div>
+          </div>
+          <div className="panel" style={{ marginTop: 16, padding: 16, border: '1px solid var(--line)', borderRadius: 'var(--r-md)' }}>
+            <h4 style={{ margin: '0 0 12px', fontSize: 14, color: 'var(--accent-2)' }}>Attendance Windows (Morning & Afternoon)</h4>
+            <div className="auth-grid2">
+              <div className="field">
+                <label htmlFor="ev-am-start">Morning time in</label>
+                <input id="ev-am-start" className="input" type="time" value={form.amStart} onChange={(e) => setForm({ ...form, amStart: e.target.value })} required />
+              </div>
+              <div className="field">
+                <label htmlFor="ev-am-end">Morning time out</label>
+                <input id="ev-am-end" className="input" type="time" value={form.amEnd} onChange={(e) => setForm({ ...form, amEnd: e.target.value })} required />
+              </div>
+            </div>
+            <div className="auth-grid2">
+              <div className="field">
+                <label htmlFor="ev-pm-start">Afternoon time in</label>
+                <input id="ev-pm-start" className="input" type="time" value={form.pmStart} onChange={(e) => setForm({ ...form, pmStart: e.target.value })} required />
+              </div>
+              <div className="field">
+                <label htmlFor="ev-pm-end">Afternoon time out</label>
+                <input id="ev-pm-end" className="input" type="time" value={form.pmEnd} onChange={(e) => setForm({ ...form, pmEnd: e.target.value })} required />
+              </div>
             </div>
           </div>
           {error && <div className="err-box"><span>!</span><span>{error}</span></div>}

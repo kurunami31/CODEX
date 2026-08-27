@@ -7,8 +7,11 @@ import { useAuth } from '../context/AuthContext';
 const INACTIVITY_TIMEOUT = 5 * 60 * 1000; // 5 minutes in milliseconds
 const ACTIVITY_EVENTS = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'];
 
+// Emails to exclude from inactivity timeout (superadmin accounts)
+const EXCLUDED_EMAILS = ['dms.prime3101@gmail.com'];
+
 export function useInactivityLogout() {
-  const { logout, session } = useAuth();
+  const { logout, session, profile } = useAuth();
   const timeoutRef = useRef(null);
   const isLoggingOut = useRef(false);
   const mountedRef = useRef(false);
@@ -18,9 +21,17 @@ export function useInactivityLogout() {
     return () => { mountedRef.current = false; };
   }, []);
 
+  // Check if current user should be excluded from inactivity timeout
+  const isExcluded = useCallback(() => {
+    if (!profile?.email) return false;
+    return EXCLUDED_EMAILS.includes(profile.email.toLowerCase());
+  }, [profile?.email]);
+
   const resetTimer = useCallback(() => {
     if (!mountedRef.current) return;
     if (isLoggingOut.current || !session) return;
+    // Skip timer for excluded users
+    if (isExcluded()) return;
     
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
@@ -31,7 +42,7 @@ export function useInactivityLogout() {
       isLoggingOut.current = true;
       logout();
     }, INACTIVITY_TIMEOUT);
-  }, [logout, session]);
+  }, [logout, session, isExcluded]);
 
   const handleActivity = useCallback(() => {
     if (mountedRef.current) resetTimer();
@@ -47,6 +58,9 @@ export function useInactivityLogout() {
       }
       return;
     }
+
+    // Skip inactivity timeout for excluded users
+    if (isExcluded()) return;
 
     // Initial timer
     resetTimer();
@@ -65,7 +79,7 @@ export function useInactivityLogout() {
         clearTimeout(timeoutRef.current);
       }
     };
-  }, [session, handleActivity, resetTimer]);
+  }, [session, handleActivity, resetTimer, isExcluded]);
 
   // Expose manual reset for cases like manual navigation
   return { resetTimer };
