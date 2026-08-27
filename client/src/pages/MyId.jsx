@@ -261,13 +261,15 @@ export default function MyId() {
 
   useEffect(() => {
     (async () => {
+      if (!myStudentId) return;
       const { data } = await supabase
         .from('attendance')
         .select('event_id, scanned_at, events(title, event_date)')
+        .eq('student_id', myStudentId)
         .order('scanned_at', { ascending: false });
       if (data) setMyEvents(data);
     })();
-  }, []);
+  }, [myStudentId]);
 
   if (!profile) return null;
 
