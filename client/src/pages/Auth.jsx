@@ -218,8 +218,6 @@ export default function Auth() {
           <h3>One last step</h3>
           <p>
             We sent a confirmation link to <b>{form.email}</b>. Open it, then come back and log in.
-            (Tip: if email confirmation is enabled in your Supabase project, new sign-ups need this
-            before their profile activates.)
           </p>
           <button className="btn btn-accent btn-sm" onClick={() => { setNeedsVerify(false); setTab('login'); }}>
             Got it — back to login
