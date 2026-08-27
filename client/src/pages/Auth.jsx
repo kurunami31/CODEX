@@ -95,6 +95,13 @@ export default function Auth() {
           throw new Error('Please enter a valid email address.');
         }
         
+        // Restrict to allowed email domains
+        const allowedDomains = ['gmail.com', 'dorsu.edu.ph'];
+        const emailDomain = email.split('@')[1]?.toLowerCase();
+        if (!emailDomain || !allowedDomains.includes(emailDomain)) {
+          throw new Error('Only @gmail.com or @dorsu.edu.ph email addresses are allowed.');
+        }
+        
         // Validate full name
         if (!fullName) {
           throw new Error('Full name is required.');

@@ -139,6 +139,13 @@ export function AuthProvider({ children }) {
       return { error: { message: 'Please enter a valid email address.' } };
     }
     
+    // Restrict to allowed email domains
+    const allowedDomains = ['gmail.com', 'dorsu.edu.ph'];
+    const emailDomain = email.split('@')[1]?.toLowerCase();
+    if (!emailDomain || !allowedDomains.includes(emailDomain)) {
+      return { error: { message: 'Only @gmail.com or @dorsu.edu.ph email addresses are allowed.' } };
+    }
+    
     const nameRegex = /^[a-zA-Z\s.'-]{2,}$/;
     if (!fullName || !nameRegex.test(fullName)) {
       return { error: { message: 'Please enter a valid full name (letters, spaces, periods, hyphens, apostrophes only).' } };
