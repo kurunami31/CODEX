@@ -258,14 +258,16 @@ export default function EventDetail() {
             </div>
           ) : (
             <div className="table-wrap">
-              <table className="codex-table">
-<thead>
+<table className="codex-table">
+                <thead>
                   <tr>
                     <th>student</th>
                     <th>id no.</th>
                     <th>year / section</th>
-                    <th>time in</th>
-                    <th>time out</th>
+                    <th>am time in</th>
+                    <th>am time out</th>
+                    <th>pm time in</th>
+                    <th>pm time out</th>
                     <th>scanned by</th>
                   </tr>
                 </thead>
@@ -279,8 +281,10 @@ export default function EventDetail() {
                       </div>
                     </td>
                     <td style={{ fontFamily: 'var(--f-ocr)', fontSize: 12 }}>{a.student_id}</td>
-                    <td>{a.time_in ? formatTime(a.time_in) : '—'}</td>
-                    <td>{a.time_out ? formatTime(a.time_out) : <span style={{ color: 'var(--warn)' }}>still in</span>}</td>
+                    <td>{a.time_in_am ? formatTime(a.time_in_am) : '—'}</td>
+                    <td>{a.time_out_am ? formatTime(a.time_out_am) : <span style={{ color: 'var(--warn)' }}>—</span>}</td>
+                    <td>{a.time_in_pm ? formatTime(a.time_in_pm) : '—'}</td>
+                    <td>{a.time_out_pm ? formatTime(a.time_out_pm) : <span style={{ color: 'var(--warn)' }}>—</span>}</td>
                     <td>{a.scanned_by_name || '—'}</td>
                     </tr>
                   ))}
