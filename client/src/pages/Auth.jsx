@@ -57,6 +57,10 @@ export default function Auth() {
     studentId: '',
     yearLevel: YEARS[1],
     section: '',
+    // Honeypot field (hidden from humans, filled by bots)
+    website: '',
+    // Timestamp when form was loaded (to detect bots submitting too fast)
+    formLoadedAt: Date.now(),
   });
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
@@ -78,16 +82,69 @@ export default function Auth() {
         toast.ok('Welcome back', 'Session established. Opening the terminal…');
         navigate((location.state && location.state.from) || '/app/feed', { replace: true });
       } else {
-        if (!form.fullName.trim() || !form.studentId.trim() || !form.section.trim()) {
-          throw new Error('Fill in your full name, student ID and section.');
+        // Client-side validation for registration
+        const email = form.email.trim();
+        const password = form.password;
+        const fullName = form.fullName.trim();
+        const studentId = form.studentId.trim();
+        const section = form.section.trim();
+        
+        // Validate email format
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!email || !emailRegex.test(email)) {
+          throw new Error('Please enter a valid email address.');
         }
+        
+        // Validate full name
+        if (!fullName) {
+          throw new Error('Full name is required.');
+        }
+        const nameRegex = /^[a-zA-Z\s.'-]{2,}$/;
+        if (!nameRegex.test(fullName)) {
+          throw new Error('Please enter a valid full name (letters, spaces, periods, hyphens, apostrophes only).');
+        }
+        
+        // Validate password strength
+        if (!password || password.length < 6) {
+          throw new Error('Password must be at least 6 characters.');
+        }
+        
+        // Validate student ID
+        if (!studentId) {
+          throw new Error('Student ID is required.');
+        }
+        const studentIdRegex = /^[0-9]{4}-[0-9]{4}$/;
+        if (!studentIdRegex.test(studentId)) {
+          throw new Error('Student ID must be in format YYYY-NNNN (e.g., 2024-1001).');
+        }
+        
+        // Validate section
+        if (!section) {
+          throw new Error('Section is required.');
+        }
+        const sectionRegex = /^[A-Z0-9\s-]+$/i;
+        if (!sectionRegex.test(section)) {
+          throw new Error('Section can only contain letters, numbers, spaces, and hyphens.');
+        }
+        
+        // Anti-bot: Honeypot field check
+        if (form.website) {
+          throw new Error('Spam detected. Please try again.');
+        }
+        
+        // Anti-bot: Form submitted too fast (< 3 seconds)
+        const elapsed = Date.now() - form.formLoadedAt;
+        if (elapsed < 3000) {
+          throw new Error('Please take your time filling out the form.');
+        }
+        
         const { error } = await register({
-          email: form.email.trim(),
-          password: form.password,
-          studentId: form.studentId.trim(),
-          fullName: form.fullName.trim(),
+          email,
+          password,
+          studentId,
+          fullName,
           yearLevel: form.yearLevel,
-          section: form.section.trim(),
+          section,
         });
         if (error) {
           if (error.message?.toLowerCase().includes('confirm')) {
@@ -233,12 +290,14 @@ export default function Auth() {
                       <input id="signup-section" className="input" placeholder="A / B / C" value={form.section} onChange={set('section')} autoComplete="off" />
                     </div>
                   </div>
-                  <div className="auth-grid2">
-                    <div className="field">
-                      <label htmlFor="signup-email">DOrSU email</label>
-                      <input id="signup-email" className="input" type="email" placeholder="you@student.codex.org" value={form.email} onChange={set('email')} autoComplete="email" required />
-                    </div>
-                    {passwordField('signup')}
+<div className="auth-grid2">
+            <div className="field">
+              <label htmlFor="signup-email">DOrSU email</label>
+              <input id="signup-email" className="input" type="email" placeholder="you@student.codex.org" value={form.email} onChange={set('email')} autoComplete="email" required />
+            </div>
+            {passwordField('signup')}
+            {/* Honeypot field - hidden from humans, filled by bots */}
+            <input type="text" name="website" id="website" value={form.website} onChange={set('website')} style={{ display: 'none' }} tabIndex={-1} autoComplete="off" />
                   </div>
                   {feedback('signup')}
                   <button type="submit" className="btn btn-accent btn-lg auth-submit" disabled={busy || cooldownLeft > 0}>

@@ -133,6 +133,31 @@ export function AuthProvider({ children }) {
   };
 
   const register = async ({ email, password, studentId, fullName, yearLevel, section }) => {
+    // Server-side validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!email || !emailRegex.test(email)) {
+      return { error: { message: 'Please enter a valid email address.' } };
+    }
+    
+    const nameRegex = /^[a-zA-Z\s.'-]{2,}$/;
+    if (!fullName || !nameRegex.test(fullName)) {
+      return { error: { message: 'Please enter a valid full name (letters, spaces, periods, hyphens, apostrophes only).' } };
+    }
+    
+    if (!password || password.length < 6) {
+      return { error: { message: 'Password must be at least 6 characters.' } };
+    }
+    
+    const studentIdRegex = /^[0-9]{4}-[0-9]{4}$/;
+    if (!studentId || !studentIdRegex.test(studentId)) {
+      return { error: { message: 'Student ID must be in format YYYY-NNNN (e.g., 2024-1001).' } };
+    }
+    
+    const sectionRegex = /^[A-Z0-9\s-]+$/i;
+    if (!section || !sectionRegex.test(section)) {
+      return { error: { message: 'Section can only contain letters, numbers, spaces, and hyphens.' } };
+    }
+
     const { data, error } = await signUp(email, password);
     if (isRateLimited(error)) {
       return { error: { message: 'Too many sign-up attempts from this network — the limit resets every hour. Try again later, or use mobile data / a different network.', status: 429 } };
