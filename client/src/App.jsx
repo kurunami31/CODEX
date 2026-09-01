@@ -23,6 +23,7 @@ const Directory = lazy(() => import('./pages/Directory'));
 const Admin = lazy(() => import('./pages/Admin'));
 const SuperAdmin = lazy(() => import('./pages/SuperAdmin'));
 const Adviser = lazy(() => import('./pages/Adviser'));
+const About = lazy(() => import('./pages/About'));
 
 function Lazy({ children }) {
   return <Suspense fallback={<div style={{ padding: 30 }}><div className="skeleton" style={{ height: 160 }} /></div>}>{children}</Suspense>;
@@ -139,6 +140,7 @@ export default function App() {
             }
           />
           <Route path="settings" element={<Lazy><ProfileSettings /></Lazy>} />
+          <Route path="about" element={<Lazy><About /></Lazy>} />
           <Route path="scanner/:eventId" element={<Lazy><ScannerPage /></Lazy>} />
           <Route
             path="admin"

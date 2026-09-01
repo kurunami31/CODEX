@@ -7,7 +7,7 @@ import { timeAgo } from '../lib/format';
 import { hasLocalSubscription } from '../lib/push';
 import Avatar from '../components/Avatar';
 import { isStaff as checkStaff, isAdmin as checkAdmin, isAdviser as checkAdviser, roleLabel } from '../lib/roles';
-import { HomeIcon, RssIcon, CalendarIcon, IdIcon, ShieldIcon, LogOutIcon, SearchIcon, CameraIcon, GearIcon, SunIcon, MoonIcon, CrownIcon, MenuIcon, XIcon, TrophyIcon, CertificateIcon, GavelIcon, BellIcon } from '../components/icons/Icons';
+import { HomeIcon, RssIcon, CalendarIcon, IdIcon, ShieldIcon, LogOutIcon, SearchIcon, CameraIcon, GearIcon, SunIcon, MoonIcon, CrownIcon, MenuIcon, XIcon, TrophyIcon, CertificateIcon, GavelIcon, BellIcon, BoxIcon } from '../components/icons/Icons';
 
 const TITLES = {
   '/app/feed': 'feed',
@@ -21,6 +21,7 @@ const TITLES = {
   '/app/adviser': 'adviser',
   '/app/superadmin': 'root access',
   '/app/settings': 'settings',
+  '/app/about': 'about',
 };
 
 export default function AppShell() {
@@ -234,6 +235,7 @@ export default function AppShell() {
     { to: '/app/certificates', label: 'Certificates', icon: <CertificateIcon width={20} height={20} /> },
     { to: '/app/elections', label: 'Elections', icon: <GavelIcon width={20} height={20} /> },
     { to: '/app/settings', label: 'Settings', icon: <GearIcon width={20} height={20} /> },
+    { to: '/app/about', label: 'About', icon: <BoxIcon width={20} height={20} /> },
     ...(checkAdviser(profile?.role) ? [{ to: '/app/adviser', label: 'Adviser', icon: <ShieldIcon width={20} height={20} /> }] : []),
     ...(checkAdmin(profile?.role) ? [{ to: '/app/admin', label: 'Control', icon: <ShieldIcon width={20} height={20} /> }] : []),
     ...(profile?.role === 'superadmin' ? [{ to: '/app/superadmin', label: 'Super Admin', icon: <CrownIcon width={20} height={20} /> }] : []),
