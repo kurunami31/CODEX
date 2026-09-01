@@ -48,7 +48,7 @@ export default function About() {
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             <span className="chip chip--teal"><HeartIcon width={12} height={12} /> built with passion</span>
             <span className="chip chip--ok"><SparkIcon width={12} height={12} /> open source spirit</span>
-            <span className="chip"><TerminalIcon width={12} height={12} /> v1.0 — SY 2025–2026</span>
+            <span className="chip"><TerminalIcon width={12} height={12} /> v1.0 — SY 2026–2027</span>
           </div>
         </div>
       </article>
@@ -110,7 +110,7 @@ export default function About() {
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <span className="chip chip--teal">BSIT · DOrSU</span>
           <span className="chip chip--ok">Innovate. Inspire. Impact.</span>
-          <span className="chip">SY 2025–2026</span>
+          <span className="chip">SY 2026–2027</span>
         </div>
       </div>
 
@@ -167,7 +167,7 @@ export default function About() {
               <span className="ocr-label">program</span>
               <span><b>BSIT</b> — Bachelor of Science in Information Technology</span>
               <span className="ocr-label">year</span>
-              <span><b>3rd Year</b> · SY 2025–2026</span>
+              <span><b>3rd Year</b> · SY 2026–2027</span>
               <span className="ocr-label">major</span>
               <span><b>Business Analytics</b></span>
               <span className="ocr-label">university</span>
@@ -253,7 +253,7 @@ export default function About() {
       {/* ── Footer ──────────────────────────────────────────── */}
       <div style={{ textAlign: 'center', padding: '8px 0 4px' }}>
         <span className="ocr-label" style={{ color: 'var(--muted)' }}>
-          CODEX v1.0 · CODEBYTERS · DOrSU · SY 2025–2026
+          CODEX v1.0 · CODEBYTERS · DOrSU · SY 2026–2027
         </span>
       </div>
     </div>
