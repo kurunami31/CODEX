@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import {
   ChevronLeftIcon, TerminalIcon, GithubIcon, MailIcon, ExternalIcon,
   UsersIcon, CalendarIcon, QrIcon, BotIcon, TrophyIcon, CertificateIcon,
-  GavelIcon, HeartIcon, SparkIcon, BoxIcon,
+  GavelIcon, HeartIcon, SparkIcon, BoxIcon, RssIcon,
 } from '../components/icons/Icons';
 
 export default function About() {
