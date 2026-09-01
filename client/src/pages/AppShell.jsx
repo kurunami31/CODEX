@@ -41,7 +41,7 @@ export default function AppShell() {
   const [notifItems, setNotifItems] = useState([]);
   const [unread, setUnread] = useState(0);
   const [pushOn, setPushOn] = useState(false);
-  const [collapsed, setCollapsed] = useState(() => localStorage.getItem('codex_sidebar_collapsed') === '1');
+  const [collapsed, setCollapsed] = useState(() => { try { return localStorage.getItem('codex_sidebar_collapsed') === '1'; } catch { return false; } });
 
   const loadNotifs = useCallback(async () => {
     if (!user) return;
@@ -262,7 +262,7 @@ export default function AppShell() {
   const toggleCollapse = () => {
     const next = !collapsed;
     setCollapsed(next);
-    localStorage.setItem('codex_sidebar_collapsed', next ? '1' : '0');
+    try { localStorage.setItem('codex_sidebar_collapsed', next ? '1' : '0'); } catch {}
   };
 
   return (
