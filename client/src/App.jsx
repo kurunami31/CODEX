@@ -113,6 +113,7 @@ export default function App() {
         <Routes>
         <Route path="/" element={introDone ? <Navigate to="/welcome" replace /> : null} />
         <Route path="/welcome" element={<RedirectIfAuthed><Welcome /></RedirectIfAuthed>} />
+        <Route path="/about" element={<Lazy><About /></Lazy>} />
         <Route path="/auth" element={<RedirectIfAuthed><Auth /></RedirectIfAuthed>} />
         <Route
           path="/app"

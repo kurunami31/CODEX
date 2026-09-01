@@ -94,6 +94,7 @@ export default function Welcome() {
           <span>developed by</span>
           <a href="https://kurunami31.github.io/Portfolio/" target="_blank" rel="noopener noreferrer">Christopher Lyod B. Mercado</a>
         </div>
+        <Link to="/about" className="welcome-about-link">about codex</Link>
         <a className="welcome-fb" href="https://www.facebook.com/codebyters" target="_blank" rel="noopener noreferrer">follow us · facebook.com/codebyters</a>
       </footer>
     </div>

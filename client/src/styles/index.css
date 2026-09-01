@@ -480,6 +480,13 @@ button { font-family: inherit; cursor: pointer; }
   background: rgba(14, 208, 182, 0.08); transition: background 0.15s ease, border-color 0.15s ease;
 }
 .welcome-foot .welcome-fb:hover { background: rgba(14, 208, 182, 0.18); border-color: rgba(14, 208, 182, 0.6); }
+.welcome-foot .welcome-about-link {
+  font-family: var(--f-ocr); font-size: calc(0.6875rem * var(--text-scale)); letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--muted); text-decoration: none;
+  padding: 6px 12px; border: 1px solid rgba(255,255,255,0.1); border-radius: var(--r-sm);
+  background: rgba(255,255,255,0.04); transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+}
+.welcome-foot .welcome-about-link:hover { color: var(--accent); border-color: rgba(14, 208, 182, 0.35); background: rgba(14, 208, 182, 0.08); }
 
 /* ── auth page ──────────────────────────────────────────── */
 .auth-wrap {
