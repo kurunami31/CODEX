@@ -41,6 +41,7 @@ export default function AppShell() {
   const [notifItems, setNotifItems] = useState([]);
   const [unread, setUnread] = useState(0);
   const [pushOn, setPushOn] = useState(false);
+  const [collapsed, setCollapsed] = useState(() => localStorage.getItem('codex_sidebar_collapsed') === '1');
 
   const loadNotifs = useCallback(async () => {
     if (!user) return;
@@ -258,9 +259,15 @@ export default function AppShell() {
     navigate('/welcome');
   };
 
+  const toggleCollapse = () => {
+    const next = !collapsed;
+    setCollapsed(next);
+    localStorage.setItem('codex_sidebar_collapsed', next ? '1' : '0');
+  };
+
   return (
     <div className="app">
-      <aside className="sidebar">
+      <aside className={`sidebar${collapsed ? ' sidebar--collapsed' : ''}`}>
         <div className="brand">
           <img src="/assets/codebyterts-logo.gif" alt="CODEBYTERS" />
           <div>
@@ -303,6 +310,15 @@ export default function AppShell() {
             </>
           )}
         </nav>
+
+        <button
+          className="sidebar-collapse-btn"
+          onClick={toggleCollapse}
+          title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+        >
+          <ChevronLeftIcon width={16} height={16} style={{ transition: 'transform 0.2s ease', transform: collapsed ? 'rotate(180deg)' : 'none' }} />
+        </button>
 
         <div className="side-foot">
           <div className="user-card">
