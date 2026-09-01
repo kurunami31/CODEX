@@ -281,11 +281,12 @@ export default function EventDetail() {
                       </div>
                     </td>
                     <td style={{ fontFamily: 'var(--f-ocr)', fontSize: 12 }}>{a.student_id}</td>
+                    <td>{a.profiles?.year_level ? `${a.profiles.year_level}${a.profiles.section ? ' / ' + a.profiles.section : ''}` : '—'}</td>
                     <td>{a.time_in_am ? formatTime(a.time_in_am) : '—'}</td>
                     <td>{a.time_out_am ? formatTime(a.time_out_am) : <span style={{ color: 'var(--warn)' }}>—</span>}</td>
                     <td>{a.time_in_pm ? formatTime(a.time_in_pm) : '—'}</td>
                     <td>{a.time_out_pm ? formatTime(a.time_out_pm) : <span style={{ color: 'var(--warn)' }}>—</span>}</td>
-                    <td>{a.scanned_by_name || '—'}</td>
+                    <td>{a.scanned_by_profile?.full_name || '—'}</td>
                     </tr>
                   ))}
                 </tbody>

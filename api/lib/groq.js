@@ -3,7 +3,7 @@ import { env } from './env.js';
 
 export const groq = new Groq({ apiKey: env('GROQ_API_KEY') });
 
-export const DEFAULT_MODEL = env('GROQ_MODEL') || 'llama-3.3-70b-versatile';
+export const DEFAULT_MODEL = env('GROQ_MODEL') || 'qwen/qwen3.6-27b';
 
 export const SYSTEM_PROMPT = `You are CODEX AI, the official AI assistant of CODEBYTERS — the BSIT student organization of Davao Oriental State University (DOrSU), and the guardian of the CODEX community platform.
 

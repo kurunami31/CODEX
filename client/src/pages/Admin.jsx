@@ -101,9 +101,9 @@ export default function Admin() {
     const byYear = new Map();
     const bySection = new Map();
     for (const a of rows) {
-      const y = a.year_level || '—';
+      const y = a.profiles?.year_level || '—';
       byYear.set(y, (byYear.get(y) || 0) + 1);
-      const s = `${a.year_level || '—'} · ${a.section || '—'}`;
+      const s = `${a.profiles?.year_level || '—'} · ${a.profiles?.section || '—'}`;
       bySection.set(s, (bySection.get(s) || 0) + 1);
     }
     const sort = (m) => [...m.entries()].sort((x, y) => y[1] - x[1]);
@@ -120,11 +120,11 @@ export default function Admin() {
       const rows = attendees.map((a, i) => [
         i + 1,
         a.student_id,
-        a.full_name,
-        a.year_level || '',
-        a.section || '',
-        new Date(a.scanned_at).toLocaleString(),
-        a.scanned_by_name || '',
+        a.profiles?.full_name || a.student_id,
+        a.profiles?.year_level || '',
+        a.profiles?.section || '',
+        a.time_in_am || '',
+        a.scanned_by_profile?.full_name || '',
       ]);
       const csv = [header, ...rows].map((r) => r.map(cell).join(',')).join('\r\n');
       const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
@@ -492,14 +492,14 @@ export default function Admin() {
                       <td style={{ fontFamily: 'var(--f-ocr)', fontSize: 11, color: 'var(--muted)' }}>{String(i + 1).padStart(2, '0')}</td>
                       <td>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 10, whiteSpace: 'nowrap' }}>
-                          <Avatar name={a.full_name} seed={a.student_id} size={28} url={a.avatar_url} />
-                          {a.full_name}
+                          <Avatar name={a.profiles?.full_name} seed={a.student_id} size={28} url={a.profiles?.avatar_url} />
+                          {a.profiles?.full_name || a.student_id}
                         </div>
                       </td>
                       <td style={{ fontFamily: 'var(--f-ocr)', fontSize: 12 }}>{a.student_id}</td>
-                      <td>{a.year_level} · {a.section}</td>
-                      <td>{timeAgo(a.scanned_at)}</td>
-                      <td>{a.scanned_by_name || '—'}</td>
+                      <td>{a.profiles?.year_level || '—'} · {a.profiles?.section || '—'}</td>
+                      <td>{a.time_in_am ? formatTime(a.time_in_am) : '—'}</td>
+                      <td>{a.scanned_by_profile?.full_name || '—'}</td>
                       <td>
                         <span className="chip chip--ok"><CheckIcon width={11} height={11} /> BSIT</span>
                       </td>

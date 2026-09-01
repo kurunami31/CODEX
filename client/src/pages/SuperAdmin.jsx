@@ -534,8 +534,10 @@ export default function SuperAdmin() {
                   <th>id no.</th>
                   <th>event</th>
                   <th>year / section</th>
-                  <th>time in</th>
-                  <th>time out</th>
+                  <th>am time in</th>
+                  <th>am time out</th>
+                  <th>pm time in</th>
+                  <th>pm time out</th>
                   <th>scanned by</th>
                   <th>remove</th>
                 </tr>
@@ -552,8 +554,10 @@ export default function SuperAdmin() {
                     <td style={{ fontFamily: 'var(--f-ocr)', fontSize: 12 }}>{a.student_id}</td>
                     <td style={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.events?.title || 'deleted event'}</td>
                     <td>{a.profiles?.year_level} · {a.profiles?.section}</td>
-                    <td>{a.time_in ? formatTime(a.time_in) : '—'}</td>
-                    <td>{a.time_out ? formatTime(a.time_out) : <span style={{ color: 'var(--warn)' }}>still in</span>}</td>
+                    <td>{a.time_in_am ? formatTime(a.time_in_am) : '—'}</td>
+                    <td>{a.time_out_am ? formatTime(a.time_out_am) : <span style={{ color: 'var(--warn)' }}>—</span>}</td>
+                    <td>{a.time_in_pm ? formatTime(a.time_in_pm) : '—'}</td>
+                    <td>{a.time_out_pm ? formatTime(a.time_out_pm) : <span style={{ color: 'var(--warn)' }}>—</span>}</td>
                     <td>{scanners[a.scanned_by] || '—'}</td>
                     <td>
                       <button
