@@ -7,7 +7,7 @@ import { timeAgo } from '../lib/format';
 import { hasLocalSubscription } from '../lib/push';
 import Avatar from '../components/Avatar';
 import { isStaff as checkStaff, isAdmin as checkAdmin, isAdviser as checkAdviser, roleLabel } from '../lib/roles';
-import { HomeIcon, RssIcon, CalendarIcon, IdIcon, ShieldIcon, LogOutIcon, SearchIcon, CameraIcon, GearIcon, SunIcon, MoonIcon, CrownIcon, MenuIcon, XIcon, TrophyIcon, CertificateIcon, GavelIcon, BellIcon, BoxIcon, ChevronLeftIcon } from '../components/icons/Icons';
+import { RssIcon, CalendarIcon, IdIcon, ShieldIcon, LogOutIcon, SearchIcon, CameraIcon, GearIcon, SunIcon, MoonIcon, CrownIcon, MenuIcon, XIcon, TrophyIcon, CertificateIcon, GavelIcon, BellIcon, BoxIcon } from '../components/icons/Icons';
 
 const TITLES = {
   '/app/feed': 'feed',
@@ -41,7 +41,7 @@ export default function AppShell() {
   const [notifItems, setNotifItems] = useState([]);
   const [unread, setUnread] = useState(0);
   const [pushOn, setPushOn] = useState(false);
-  const [collapsed, setCollapsed] = useState(() => { try { return localStorage.getItem('codex_sidebar_collapsed') === '1'; } catch { return false; } });
+  const [terminalOpen, setTerminalOpen] = useState(true);
 
   const loadNotifs = useCallback(async () => {
     if (!user) return;
@@ -259,15 +259,15 @@ export default function AppShell() {
     navigate('/welcome');
   };
 
-  const toggleCollapse = () => {
-    const next = !collapsed;
-    setCollapsed(next);
-    try { localStorage.setItem('codex_sidebar_collapsed', next ? '1' : '0'); } catch {}
-  };
+  const ChevronDownIcon = (props) => (
+    <svg width={props.width || 16} height={props.height || 16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={props.style}>
+      <polyline points="6 9 12 15 18 9" />
+    </svg>
+  );
 
   return (
     <div className="app">
-      <aside className={`sidebar${collapsed ? ' sidebar--collapsed' : ''}`}>
+      <aside className="sidebar">
         <div className="brand">
           <img src="/assets/codebyterts-logo.gif" alt="CODEBYTERS" />
           <div>
@@ -277,8 +277,11 @@ export default function AppShell() {
         </div>
 
         <nav>
-          <div className="nav-group">terminal</div>
-          {navItems.map((item) => (
+          <button className="nav-group nav-group--toggle" onClick={() => setTerminalOpen((o) => !o)}>
+            terminal
+            <ChevronDownIcon width={14} height={14} style={{ transition: 'transform 0.2s', transform: terminalOpen ? 'rotate(0deg)' : 'rotate(-90deg)' }} />
+          </button>
+          {terminalOpen && navItems.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
@@ -310,15 +313,6 @@ export default function AppShell() {
             </>
           )}
         </nav>
-
-        <button
-          className="sidebar-collapse-btn"
-          onClick={toggleCollapse}
-          title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-        >
-          <ChevronLeftIcon width={16} height={16} style={{ transition: 'transform 0.2s ease', transform: collapsed ? 'rotate(180deg)' : 'none' }} />
-        </button>
 
         <div className="side-foot">
           <div className="user-card">
@@ -495,8 +489,11 @@ export default function AppShell() {
           </div>
         </div>
         <nav>
-          <div className="nav-group">terminal</div>
-          {navItems.map((item) => (
+          <button className="nav-group nav-group--toggle" onClick={() => setTerminalOpen((o) => !o)}>
+            terminal
+            <ChevronDownIcon width={14} height={14} style={{ transition: 'transform 0.2s', transform: terminalOpen ? 'rotate(0deg)' : 'rotate(-90deg)' }} />
+          </button>
+          {terminalOpen && navItems.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
