@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
-import { formatEventDate, isUpcoming, timeAgo } from '../lib/format';
+import { formatEventDate, isUpcoming, timeAgo, formatTime } from '../lib/format';
 import { roleLabel } from '../lib/roles';
 import { sendPush } from '../lib/notify';
 import Avatar from '../components/Avatar';
@@ -36,7 +36,7 @@ export default function Admin() {
   const loadEvents = useCallback(async () => {
     const { data, error } = await supabase
       .from('events')
-      .select('id, title, description, location, event_date')
+      .select('id, title, description, location, event_date, am_start, am_end, pm_start, pm_end, event_end')
       .order('event_date', { ascending: false });
     if (error) toast.error('Events error', error.message);
     else setEvents(data || []);
@@ -481,7 +481,11 @@ export default function Admin() {
                       <th>student</th>
                       <th>id no.</th>
                       <th>year / section</th>
-                      <th>scanned at</th>
+                      {selected?.am_start && <th>am time in</th>}
+                      {selected?.am_start && <th>am time out</th>}
+                      {selected?.pm_start && <th>pm time in</th>}
+                      {selected?.pm_start && <th>pm time out</th>}
+                      {!selected?.am_start && !selected?.pm_start && <th>scanned at</th>}
                       <th>scanned by</th>
                       <th>verify</th>
                     </tr>
@@ -498,7 +502,11 @@ export default function Admin() {
                       </td>
                       <td style={{ fontFamily: 'var(--f-ocr)', fontSize: 12 }}>{a.student_id}</td>
                       <td>{a.profiles?.year_level || '—'} · {a.profiles?.section || '—'}</td>
-                      <td>{a.time_in_am ? formatTime(a.time_in_am) : '—'}</td>
+                      {selected?.am_start && <td>{a.time_in_am ? formatTime(a.time_in_am) : '—'}</td>}
+                      {selected?.am_start && <td>{a.time_out_am ? formatTime(a.time_out_am) : <span style={{ color: 'var(--warn)' }}>—</span>}</td>}
+                      {selected?.pm_start && <td>{a.time_in_pm ? formatTime(a.time_in_pm) : '—'}</td>}
+                      {selected?.pm_start && <td>{a.time_out_pm ? formatTime(a.time_out_pm) : <span style={{ color: 'var(--warn)' }}>—</span>}</td>}
+                      {!selected?.am_start && !selected?.pm_start && <td>{a.scanned_at ? formatTime(a.scanned_at) : '—'}</td>}
                       <td>{a.scanned_by_profile?.full_name || '—'}</td>
                       <td>
                         <span className="chip chip--ok"><CheckIcon width={11} height={11} /> BSIT</span>
@@ -527,24 +535,41 @@ function CreateEventModal({ onClose, onCreated }) {
   const toast = useToast();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  const [form, setForm] = useState({ title: '', description: '', location: '', date: '', time: '09:00' });
+  const [form, setForm] = useState({
+    title: '', description: '', location: '', date: '', time: '09:00',
+    endDate: '', endTime: '17:00',
+    amEnabled: true, pmEnabled: true,
+    amStart: '08:00', amEnd: '12:00',
+    pmStart: '13:00', pmEnd: '17:00',
+  });
 
   const submit = async (e) => {
     e.preventDefault();
     setError('');
     if (!form.title.trim() || !form.date) return setError('Title and date are required.');
+    if (!form.endDate) return setError('End date/time is required for attendance cutoff.');
+    if (!form.amEnabled && !form.pmEnabled) return setError('Enable at least one attendance session (AM or PM).');
+    if (form.amEnabled && (!form.amStart || !form.amEnd)) return setError('AM time in and time out are required when AM is enabled.');
+    if (form.pmEnabled && (!form.pmStart || !form.pmEnd)) return setError('PM time in and time out are required when PM is enabled.');
+    const event_date = new Date(`${form.date}T${form.time}:00`).toISOString();
+    const event_end = new Date(`${form.endDate}T${form.endTime}:00`).toISOString();
+    if (event_end <= event_date) return setError('End date/time must be after start date/time.');
     setBusy(true);
     const { error: err } = await supabase.from('events').insert({
       title: form.title.trim().slice(0, 120),
       description: form.description.trim().slice(0, 1000) || null,
       location: form.location.trim().slice(0, 160) || null,
-      event_date: new Date(`${form.date}T${form.time}:00`).toISOString(),
+      event_date,
+      event_end,
       created_by: user.id,
+      am_start: form.amEnabled ? `${form.date}T${form.amStart}:00` : null,
+      am_end: form.amEnabled ? `${form.date}T${form.amEnd}:00` : null,
+      pm_start: form.pmEnabled ? `${form.date}T${form.pmStart}:00` : null,
+      pm_end: form.pmEnabled ? `${form.date}T${form.pmEnd}:00` : null,
     });
     setBusy(false);
     if (err) return setError(err.message);
     toast.ok('Event created', 'It is now scannable at the venue.');
-    // Ping every subscribed member about the new event (no-op if push isn't configured).
     sendPush({ to: 'all', title: 'New event', body: form.title.trim(), url: '/app/events' });
     onCreated();
   };
@@ -579,8 +604,55 @@ function CreateEventModal({ onClose, onCreated }) {
               <input id="adm-time" className="input" type="time" value={form.time} onChange={(e) => setForm({ ...form, time: e.target.value })} required />
             </div>
           </div>
+          <div className="auth-grid2">
+            <div className="field">
+              <label htmlFor="adm-end-date">End date</label>
+              <input id="adm-end-date" className="input" type="date" value={form.endDate} onChange={(e) => setForm({ ...form, endDate: e.target.value })} required />
+            </div>
+            <div className="field">
+              <label htmlFor="adm-end-time">End time</label>
+              <input id="adm-end-time" className="input" type="time" value={form.endTime} onChange={(e) => setForm({ ...form, endTime: e.target.value })} required />
+            </div>
+          </div>
+          <div className="panel" style={{ marginTop: 16, padding: 16, border: '1px solid var(--line)', borderRadius: 'var(--r-md)' }}>
+            <h4 style={{ margin: '0 0 12px', fontSize: 14, color: 'var(--accent-2)' }}>Attendance Sessions</h4>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, cursor: 'pointer', fontSize: 13.5 }}>
+              <input type="checkbox" checked={form.amEnabled} onChange={(e) => setForm({ ...form, amEnabled: e.target.checked })} />
+              <b>Morning session (AM)</b>
+            </label>
+            {form.amEnabled && (
+              <div className="auth-grid2" style={{ marginBottom: 12 }}>
+                <div className="field">
+                  <label htmlFor="adm-am-start">AM time in</label>
+                  <input id="adm-am-start" className="input" type="time" value={form.amStart} onChange={(e) => setForm({ ...form, amStart: e.target.value })} required />
+                </div>
+                <div className="field">
+                  <label htmlFor="adm-am-end">AM time out</label>
+                  <input id="adm-am-end" className="input" type="time" value={form.amEnd} onChange={(e) => setForm({ ...form, amEnd: e.target.value })} required />
+                </div>
+              </div>
+            )}
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, cursor: 'pointer', fontSize: 13.5 }}>
+              <input type="checkbox" checked={form.pmEnabled} onChange={(e) => setForm({ ...form, pmEnabled: e.target.checked })} />
+              <b>Afternoon session (PM)</b>
+            </label>
+            {form.pmEnabled && (
+              <div className="auth-grid2">
+                <div className="field">
+                  <label htmlFor="adm-pm-start">PM time in</label>
+                  <input id="adm-pm-start" className="input" type="time" value={form.pmStart} onChange={(e) => setForm({ ...form, pmStart: e.target.value })} required />
+                </div>
+                <div className="field">
+                  <label htmlFor="adm-pm-end">PM time out</label>
+                  <input id="adm-pm-end" className="input" type="time" value={form.pmEnd} onChange={(e) => setForm({ ...form, pmEnd: e.target.value })} required />
+                </div>
+              </div>
+            )}
+          </div>
           {error && <div className="err-box"><span>!</span><span>{error}</span></div>}
-          <button className="btn btn-accent btn-lg" disabled={busy}>{busy ? 'Creating…' : 'Publish event'}</button>
+          <button className="btn btn-accent btn-lg" disabled={busy}>
+            {busy ? 'Creating…' : 'Publish event'}
+          </button>
         </form>
       </div>
     </div>

@@ -69,9 +69,11 @@ router.post('/attendance/scan', async (req, res) => {
   const token = bearer(req);
   if (!token) return res.status(401).json({ error: 'Missing session token.' });
 
-  const { eventId, qr } = req.body || {};
+  const { eventId, qr, phase } = req.body || {};
   if (typeof eventId !== 'string' || !eventId) return res.status(400).json({ error: 'eventId is required.' });
   if (typeof eventId !== 'string' || eventId.length > 64) return res.status(400).json({ error: 'Invalid eventId.' });
+  const validPhases = ['time_in_am', 'time_out_am', 'time_in_pm', 'time_out_pm'];
+  if (!phase || !validPhases.includes(phase)) return res.status(400).json({ error: 'phase is required: time_in_am, time_out_am, time_in_pm, time_out_pm' });
 
   // Accept both the canonical { payload, sig } and the compact { p, s }
   // shapes that the ID card has shipped over time.
@@ -99,6 +101,7 @@ router.post('/attendance/scan', async (req, res) => {
   const { data, error } = await sb.rpc('mark_attendance', {
     p_event_id: eventId,
     p_student_id: sid,
+    p_phase: phase,
   });
 
   if (error) {

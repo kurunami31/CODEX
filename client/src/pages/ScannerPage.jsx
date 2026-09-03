@@ -23,9 +23,10 @@ export default function ScannerPage() {
   const [error, setError] = useState('');
   const [torchOn, setTorchOn] = useState(false);
   const [manualId, setManualId] = useState('');
-  const [result, setResult] = useState(null); // { status, student, qrHolder }
+  const [result, setResult] = useState(null); // { status, student, qrHolder, phase }
   const [scanError, setScanError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [phase, setPhase] = useState('time_in_am'); // time_in_am | time_out_am | time_in_pm | time_out_pm
 
   const scannerRef = useRef(null);
   const busyRef = useRef(false);
@@ -38,7 +39,9 @@ export default function ScannerPage() {
 
   useEffect(() => {
     (async () => {
-      const { data } = await supabase.from('events').select('id, title, event_date').order('event_date', { ascending: true });
+      const { data } = await supabase.from('events')
+        .select('id, title, event_date, am_start, am_end, pm_start, pm_end, event_end')
+        .order('event_date', { ascending: true });
       setEvents(data || []);
       if (eventId && eventId !== '0') {
         const found = (data || []).find((e) => e.id === eventId);
@@ -126,7 +129,7 @@ export default function ScannerPage() {
     setBusy(true);
     try {
       const res = await apiFetch('/api/attendance/scan', {
-        body: { eventId: activeEvent.id, qr },
+        body: { eventId: activeEvent.id, qr, phase },
       });
       const body = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(body.error || 'Scan rejected.');
@@ -173,6 +176,7 @@ export default function ScannerPage() {
     const { data, error: err } = await supabase.rpc('mark_attendance', {
       p_event_id: activeEvent.id,
       p_student_id: sid,
+      p_phase: phase,
     });
     setBusy(false);
     if (err) {
@@ -231,6 +235,37 @@ export default function ScannerPage() {
             <div style={{ textAlign: 'center' }}>
               <div className="ocr-label ocr-label--light">scanning for</div>
               <b style={{ color: '#eafffa', fontSize: 15 }}>{activeEvent.title}</b>
+            </div>
+
+            {/* AM/PM session picker */}
+            <div style={{ display: 'flex', gap: 6, justifyContent: 'center', flexWrap: 'wrap' }}>
+              {activeEvent.am_start && (
+                <>
+                  <button
+                    className={`btn btn-sm ${phase === 'time_in_am' ? 'btn-accent' : 'btn-dark'}`}
+                    onClick={() => setPhase('time_in_am')}
+                  >AM In</button>
+                  <button
+                    className={`btn btn-sm ${phase === 'time_out_am' ? 'btn-accent' : 'btn-dark'}`}
+                    onClick={() => setPhase('time_out_am')}
+                  >AM Out</button>
+                </>
+              )}
+              {activeEvent.pm_start && (
+                <>
+                  <button
+                    className={`btn btn-sm ${phase === 'time_in_pm' ? 'btn-accent' : 'btn-dark'}`}
+                    onClick={() => setPhase('time_in_pm')}
+                  >PM In</button>
+                  <button
+                    className={`btn btn-sm ${phase === 'time_out_pm' ? 'btn-accent' : 'btn-dark'}`}
+                    onClick={() => setPhase('time_out_pm')}
+                  >PM Out</button>
+                </>
+              )}
+              {!activeEvent.am_start && !activeEvent.pm_start && (
+                <span className="ocr-label ocr-label--light" style={{ fontSize: 10 }}>no attendance windows set</span>
+              )}
             </div>
 
             <div className="scan-window" id="qr-reader" />
@@ -296,23 +331,24 @@ export default function ScannerPage() {
                 <div>
                   <b>{result.student?.full_name}</b>
                   <div style={{ fontSize: 12, color: 'var(--muted)' }}>
-                    {result.status === 'checked_in' ? 'checked in' : result.status === 'checked_out' ? 'checked out' : result.status}
-                    {result.time_in && <span style={{ marginLeft: 8 }}>{formatTime(result.time_in)}</span>}
-                    {result.time_out && <span style={{ marginLeft: 8 }}>→ {formatTime(result.time_out)}</span>}
+                    {result.phase === 'time_in_am' ? 'AM time in' :
+                     result.phase === 'time_out_am' ? 'AM time out' :
+                     result.phase === 'time_in_pm' ? 'PM time in' :
+                     result.phase === 'time_out_pm' ? 'PM time out' : result.status}
                     <span style={{ marginLeft: 8, color: 'var(--muted)' }}>
                       {result.student?.course}
                     </span>
                   </div>
                 </div>
-                <span className={`chip ${result.status === 'checked_out' ? 'chip--warn' : 'chip--ok'}`} style={{ marginLeft: 'auto' }}>
-                  <CheckIcon width={12} height={12} /> {result.status === 'checked_out' ? 'Out' : 'In'}
+                <span className="chip chip--ok" style={{ marginLeft: 'auto' }}>
+                  <CheckIcon width={12} height={12} /> {result.status === 'updated' ? 'Logged' : 'In'}
                 </span>
               </div>
               <div className="res-grid">
                 <div><div className="k">id no.</div><div className="v" style={{ fontFamily: 'var(--f-ocr)' }}>{result.student?.student_id}</div></div>
                 <div><div className="k">year / section</div><div className="v">{result.student?.year_level} · {result.student?.section}</div></div>
-                <div><div className="k">time in</div><div className="v">{result.time_in ? formatTime(result.time_in) : '—'}</div></div>
-                <div><div className="k">time out</div><div className="v">{result.time_out ? formatTime(result.time_out) : <span style={{ color: 'var(--warn)' }}>—</span>}</div></div>
+                <div><div className="k">session</div><div className="v">{result.phase === 'time_in_am' ? 'AM Time In' : result.phase === 'time_out_am' ? 'AM Time Out' : result.phase === 'time_in_pm' ? 'PM Time In' : 'PM Time Out'}</div></div>
+                <div><div className="k">time</div><div className="v">{result.phase && result[result.phase] ? formatTime(result[result.phase]) : '—'}</div></div>
                 <div><div className="k">verified</div><div className="v">HMAC signature ✓</div></div>
                 <div><div className="k">qr type</div><div className="v">{result.qrType === 'presence' ? 'live presence ✓' : 'year ID'}</div></div>
               </div>

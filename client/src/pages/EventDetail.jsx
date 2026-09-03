@@ -264,10 +264,11 @@ export default function EventDetail() {
                     <th>student</th>
                     <th>id no.</th>
                     <th>year / section</th>
-                    <th>am time in</th>
-                    <th>am time out</th>
-                    <th>pm time in</th>
-                    <th>pm time out</th>
+                    {event.am_start && <th>am time in</th>}
+                    {event.am_start && <th>am time out</th>}
+                    {event.pm_start && <th>pm time in</th>}
+                    {event.pm_start && <th>pm time out</th>}
+                    {!event.am_start && !event.pm_start && <th>scanned at</th>}
                     <th>scanned by</th>
                   </tr>
                 </thead>
@@ -282,10 +283,11 @@ export default function EventDetail() {
                     </td>
                     <td style={{ fontFamily: 'var(--f-ocr)', fontSize: 12 }}>{a.student_id}</td>
                     <td>{a.profiles?.year_level ? `${a.profiles.year_level}${a.profiles.section ? ' / ' + a.profiles.section : ''}` : '—'}</td>
-                    <td>{a.time_in_am ? formatTime(a.time_in_am) : '—'}</td>
-                    <td>{a.time_out_am ? formatTime(a.time_out_am) : <span style={{ color: 'var(--warn)' }}>—</span>}</td>
-                    <td>{a.time_in_pm ? formatTime(a.time_in_pm) : '—'}</td>
-                    <td>{a.time_out_pm ? formatTime(a.time_out_pm) : <span style={{ color: 'var(--warn)' }}>—</span>}</td>
+                    {event.am_start && <td>{a.time_in_am ? formatTime(a.time_in_am) : '—'}</td>}
+                    {event.am_start && <td>{a.time_out_am ? formatTime(a.time_out_am) : <span style={{ color: 'var(--warn)' }}>—</span>}</td>}
+                    {event.pm_start && <td>{a.time_in_pm ? formatTime(a.time_in_pm) : '—'}</td>}
+                    {event.pm_start && <td>{a.time_out_pm ? formatTime(a.time_out_pm) : <span style={{ color: 'var(--warn)' }}>—</span>}</td>}
+                    {!event.am_start && !event.pm_start && <td>{a.scanned_at ? formatTime(a.scanned_at) : '—'}</td>}
                     <td>{a.scanned_by_profile?.full_name || '—'}</td>
                     </tr>
                   ))}
