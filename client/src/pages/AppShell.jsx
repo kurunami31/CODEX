@@ -276,6 +276,17 @@ export default function AppShell() {
           </div>
         </div>
 
+        <div className="user-card">
+          <Avatar name={profile?.full_name} seed={user?.id} size={36} ring url={profile?.avatar_url} />
+          <div style={{ minWidth: 0 }}>
+            <div className="u-name" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{profile?.full_name || '…'}</div>
+            <div className="u-role">{roleLabel(profile?.role, profile?.position)}</div>
+          </div>
+          <button className="icon-btn" style={{ marginLeft: 'auto', width: 32, height: 32, borderRadius: 9 }} onClick={handleLogout} title="Log out" aria-label="Log out">
+            <LogOutIcon width={15} height={15} />
+          </button>
+        </div>
+
         <nav>
           <button className="nav-group nav-group--toggle" onClick={() => setTerminalOpen((o) => !o)}>
             terminal
@@ -313,19 +324,6 @@ export default function AppShell() {
             </>
           )}
         </nav>
-
-        <div className="side-foot">
-          <div className="user-card">
-            <Avatar name={profile?.full_name} seed={user?.id} size={36} ring url={profile?.avatar_url} />
-            <div style={{ minWidth: 0 }}>
-              <div className="u-name" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{profile?.full_name || '…'}</div>
-              <div className="u-role">{roleLabel(profile?.role, profile?.position)}</div>
-            </div>
-            <button className="icon-btn" style={{ marginLeft: 'auto', width: 32, height: 32, borderRadius: 9 }} onClick={handleLogout} title="Log out" aria-label="Log out">
-              <LogOutIcon width={15} height={15} />
-            </button>
-          </div>
-        </div>
       </aside>
 
       <div className="main-col">
@@ -488,6 +486,16 @@ export default function AppShell() {
             <div className="brand-sub">codebyters community</div>
           </div>
         </div>
+        <div className="user-card">
+          <Avatar name={profile?.full_name} seed={user?.id} size={36} ring url={profile?.avatar_url} />
+          <div style={{ minWidth: 0 }}>
+            <div className="u-name">{profile?.full_name || '…'}</div>
+            <div className="u-role">{roleLabel(profile?.role, profile?.position)}</div>
+          </div>
+          <button className="icon-btn" style={{ marginLeft: 'auto', width: 32, height: 32, borderRadius: 9 }} onClick={handleLogout} title="Log out" aria-label="Log out">
+            <LogOutIcon width={15} height={15} />
+          </button>
+        </div>
         <nav>
           <button className="nav-group nav-group--toggle" onClick={() => setTerminalOpen((o) => !o)}>
             terminal
@@ -518,18 +526,6 @@ export default function AppShell() {
             </>
           )}
         </nav>
-        <div className="drawer-foot">
-          <div className="user-card">
-            <Avatar name={profile?.full_name} seed={user?.id} size={36} ring url={profile?.avatar_url} />
-            <div style={{ minWidth: 0 }}>
-              <div className="u-name">{profile?.full_name || '…'}</div>
-              <div className="u-role">{roleLabel(profile?.role, profile?.position)}</div>
-            </div>
-            <button className="icon-btn" style={{ marginLeft: 'auto', width: 32, height: 32, borderRadius: 9 }} onClick={handleLogout} title="Log out" aria-label="Log out">
-              <LogOutIcon width={15} height={15} />
-            </button>
-          </div>
-        </div>
       </aside>
     </div>
   );
