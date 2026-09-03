@@ -7,7 +7,7 @@ import { timeAgo } from '../lib/format';
 import { hasLocalSubscription } from '../lib/push';
 import Avatar from '../components/Avatar';
 import { isStaff as checkStaff, isAdmin as checkAdmin, isAdviser as checkAdviser, roleLabel } from '../lib/roles';
-import { HomeIcon, RssIcon, CalendarIcon, IdIcon, ShieldIcon, LogOutIcon, SearchIcon, CameraIcon, GearIcon, SunIcon, MoonIcon, CrownIcon, MenuIcon, XIcon, TrophyIcon, CertificateIcon, GavelIcon, BellIcon, BoxIcon } from '../components/icons/Icons';
+import { HomeIcon, RssIcon, CalendarIcon, IdIcon, ShieldIcon, LogOutIcon, SearchIcon, CameraIcon, GearIcon, SunIcon, MoonIcon, CrownIcon, MenuIcon, XIcon, TrophyIcon, CertificateIcon, GavelIcon, BellIcon, BoxIcon, ChevronLeftIcon } from '../components/icons/Icons';
 
 const TITLES = {
   '/app/feed': 'feed',
