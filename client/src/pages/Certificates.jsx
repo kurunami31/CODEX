@@ -139,7 +139,46 @@ export default function Certificates() {
   };
 
   const printCert = () => {
-    requestAnimationFrame(() => window.print());
+    const el = printRef.current;
+    if (!el) return;
+    const html = `<!DOCTYPE html><html><head><style>
+      * { margin:0; padding:0; box-sizing:border-box; }
+      body { display:grid; place-items:center; width:297mm; height:210mm; overflow:hidden; }
+      .frame { width:270mm; padding:18mm 22mm 14mm; text-align:center; color:#1a2f38; background:#fdfbf5;
+        border:3px solid #1a5c3a; position:relative; }
+      .inner { border:1px solid #c9a84c; padding:12px 20px; position:relative; display:flex; flex-direction:column; align-items:center; }
+      .corner { position:absolute; width:24px; height:24px; z-index:2; }
+      .corner::before,.corner::after { content:''; position:absolute; background:#c9a84c; }
+      .corner::before { width:100%; height:2px; } .corner::after { width:2px; height:100%; }
+      .tl { top:4px; left:4px; } .tr { top:4px; right:4px; } .bl { bottom:4px; left:4px; } .br { bottom:4px; right:4px; }
+      .tl::before{top:0;left:0} .tl::after{top:0;left:0} .tr::before{top:0;right:0} .tr::after{top:0;right:0}
+      .bl::before{bottom:0;left:0} .bl::after{bottom:0;left:0} .br::before{bottom:0;right:0} .br::after{bottom:0;right:0}
+      .wm { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:220px; opacity:0.08; pointer-events:none; }
+      .hdr { display:flex; align-items:center; justify-content:center; gap:16px; margin-bottom:6px; }
+      .logo { width:48px; height:48px; object-fit:contain; } .logo-r { border-radius:8px; }
+      .hdr-txt { text-align:center; }
+      .uni { font-family:Georgia,serif; font-weight:700; font-size:13px; color:#1a5c3a; letter-spacing:0.06em; }
+      .addr { font-size:8.5px; color:#6b7c84; letter-spacing:0.1em; margin-top:1px; }
+      .prog { font-size:8.5px; color:#6b7c84; letter-spacing:0.12em; text-transform:uppercase; margin-top:1px; }
+      .div { display:flex; align-items:center; gap:8px; width:55%; margin:8px 0; }
+      .div-l { flex:1; height:1px; background:linear-gradient(90deg,transparent,#c9a84c,transparent); }
+      .div-d { width:5px; height:5px; background:#c9a84c; transform:rotate(45deg); flex-shrink:0; }
+      .title { font-family:Georgia,serif; font-size:20px; font-weight:700; letter-spacing:0.14em; text-transform:uppercase; color:#1a5c3a; margin:4px 0 8px; }
+      .awarded { font-family:Georgia,serif; font-style:italic; font-size:11px; color:#6b7c84; letter-spacing:0.12em; margin-bottom:2px; }
+      .name { font-family:Georgia,serif; font-size:26px; font-weight:700; color:#0b2b3a; letter-spacing:0.03em; line-height:1.2; }
+      .uline { width:260px; max-width:80%; height:1px; background:#1a2f38; margin:2px auto 8px; }
+      .body { max-width:460px; font-size:10.5px; line-height:1.6; color:#3a4f58; margin:0 auto 8px; }
+      .issued { font-family:Georgia,serif; font-style:italic; font-size:10px; color:#3a4f58; margin:4px 0 6px; }
+      .ftr-org { margin-bottom:6px; }
+      .ftr-name { font-family:Georgia,serif; font-weight:700; font-size:11px; letter-spacing:0.12em; color:#1a5c3a; }
+      .ftr-sub { font-size:7px; letter-spacing:0.14em; text-transform:uppercase; color:#7c8c94; }
+      .ftr { width:100%; display:flex; justify-content:center; align-items:center; gap:24px;
+        padding-top:6px; border-top:1px solid #d6ddd8; font-size:8px; color:#7c8c94; letter-spacing:0.08em; margin-top:auto; }
+    </style></head><body>${el.querySelector('.cert-frame').outerHTML}</body></html>`;
+    const w = window.open('', '_blank', 'width=1122,height=793');
+    w.document.write(html);
+    w.document.close();
+    w.onload = () => { w.print(); };
   };
 
   if (!profile) return null;
