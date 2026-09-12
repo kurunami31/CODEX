@@ -1946,6 +1946,27 @@ html[data-theme='dark'] .portal-config code { background: rgba(255, 255, 255, 0.
   flex-shrink: 0;
 }
 .cert-logo--right { border-radius: 8px; }
+.cert-header-text { text-align: center; }
+.cert-header-uni {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-weight: 700;
+  font-size: 14px;
+  letter-spacing: 0.06em;
+  color: #1a5c3a;
+}
+.cert-header-addr {
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  color: #6b7c84;
+  margin-top: 1px;
+}
+.cert-header-prog {
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #6b7c84;
+  margin-top: 1px;
+}
 
 /* ornamental divider */
 .cert-divider {
@@ -2123,7 +2144,8 @@ html[data-theme='dark'] .cert-frame { background: #0d1f28; }
 html[data-theme='dark'] .cert-border-outer { border-color: #0aa88f; }
 html[data-theme='dark'] .cert-border-inner { border-color: #c9a84c; }
 html[data-theme='dark'] .cert-content { color: #d0dce0; }
-html[data-theme='dark'] .cert-org { color: #0aa88f; }
+html[data-theme='dark'] .cert-header-uni { color: #0aa88f; }
+html[data-theme='dark'] .cert-header-addr, html[data-theme='dark'] .cert-header-prog { color: #6b8a94; }
 html[data-theme='dark'] .cert-title { color: #0aa88f; }
 html[data-theme='dark'] .cert-name { color: #e8f0f2; }
 html[data-theme='dark'] .cert-name-underline { background: #e8f0f2; }

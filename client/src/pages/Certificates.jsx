@@ -371,9 +371,14 @@ export default function Certificates() {
                       <img src="/assets/cb-logo.png" alt="" className="cert-watermark" />
 
                       <div className="cert-content">
-                        {/* header: logos only */}
+                        {/* header: logos + university name */}
                         <div className="cert-header">
                           <img src="/assets/dorsu-logo.png" alt="DOrSU" className="cert-logo" />
+                          <div className="cert-header-text">
+                            <div className="cert-header-uni">Davao Oriental State University</div>
+                            <div className="cert-header-addr">Guang-Guang, Dahican, Mati City</div>
+                            <div className="cert-header-prog">Information Technology Program</div>
+                          </div>
                           <img src="/assets/it-logo.png" alt="CODEBYTERS" className="cert-logo cert-logo--right" />
                         </div>
 
