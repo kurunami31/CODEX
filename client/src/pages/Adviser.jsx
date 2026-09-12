@@ -5,6 +5,7 @@ import { useToast } from '../context/ToastContext';
 import { timeAgo } from '../lib/format';
 import { roleLabel } from '../lib/roles';
 import Avatar from '../components/Avatar';
+import PillSelect from '../components/PillSelect';
 import {
   ShieldIcon, CheckIcon, FlagIcon, SearchIcon, PlusIcon,
   XIcon, CertificateIcon, UsersIcon, RssIcon, AlertIcon,
@@ -405,26 +406,37 @@ function EndorseModal({ members, events, onClose, onEndorsed, busy }) {
         <form className="modal-body auth-form" onSubmit={submit}>
           <div className="field">
             <label htmlFor="end-student">Student</label>
-            <select id="end-student" className="input" value={form.student_id} onChange={(e) => setForm({ ...form, student_id: e.target.value })} required>
-              <option value="">Select a student…</option>
-              {members.map((m) => (
-                <option key={m.id} value={m.student_id}>{m.full_name} ({m.student_id})</option>
-              ))}
-            </select>
+            <PillSelect
+              value={form.student_id}
+              onChange={(v) => setForm({ ...form, student_id: v })}
+              options={[
+                { value: '', label: 'Select a student…' },
+                ...members.map((m) => ({ value: m.student_id, label: `${m.full_name} (${m.student_id})` })),
+              ]}
+              ariaLabel="Student"
+            />
           </div>
           <div className="field">
             <label htmlFor="end-type">Certificate type</label>
-            <select id="end-type" className="input" value={form.certificate_type} onChange={(e) => setForm({ ...form, certificate_type: e.target.value })}>
-              {CERT_TYPES.map((t) => <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>)}
-            </select>
+            <PillSelect
+              value={form.certificate_type}
+              onChange={(v) => setForm({ ...form, certificate_type: v })}
+              options={CERT_TYPES.map((t) => ({ value: t, label: t.charAt(0).toUpperCase() + t.slice(1) }))}
+              ariaLabel="Certificate type"
+            />
           </div>
           {form.certificate_type === 'event' && (
             <div className="field">
               <label htmlFor="end-event">Event</label>
-              <select id="end-event" className="input" value={form.event_id} onChange={(e) => setForm({ ...form, event_id: e.target.value })}>
-                <option value="">Select an event…</option>
-                {events.map((ev) => <option key={ev.id} value={ev.id}>{ev.title}</option>)}
-              </select>
+              <PillSelect
+                value={form.event_id}
+                onChange={(v) => setForm({ ...form, event_id: v })}
+                options={[
+                  { value: '', label: 'Select an event…' },
+                  ...events.map((ev) => ({ value: ev.id, label: ev.title })),
+                ]}
+                ariaLabel="Event"
+              />
             </div>
           )}
           <div className="field">

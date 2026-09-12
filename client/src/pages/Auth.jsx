@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
+import PillSelect from '../components/PillSelect';
 import { CheckIcon, RssIcon, CalendarIcon, IdIcon, BotIcon, EyeIcon, EyeOffIcon } from '../components/icons/Icons';
 
 const YEARS = ['1st Year', '2nd Year', '3rd Year', '4th Year'];
@@ -280,9 +281,12 @@ export default function Auth() {
                     </div>
                     <div className="field">
                       <label htmlFor="signup-yearLevel">Year level</label>
-                      <select id="signup-yearLevel" className="select" value={form.yearLevel} onChange={set('yearLevel')}>
-                        {YEARS.map((y) => <option key={y}>{y}</option>)}
-                      </select>
+                      <PillSelect
+                        value={form.yearLevel}
+                        onChange={(v) => setForm((f) => ({ ...f, yearLevel: v }))}
+                        options={YEARS.map((y) => ({ value: y, label: y }))}
+                        ariaLabel="Year level"
+                      />
                     </div>
                   </div>
                   <div className="auth-grid2">

@@ -508,17 +508,16 @@ export default function SuperAdmin() {
                           </button>
                         ) : (
                           <>
-                            <select
-                              className="input"
-                              style={{ width: 74, padding: '4px 4px', fontSize: 11, minWidth: 0 }}
+                            <PillSelect
                               value={amounts[s.id] ?? 100}
-                              onChange={(e) => setAmounts((a) => ({ ...a, [s.id]: Number(e.target.value) }))}
-                              disabled={busy}
-                              aria-label={`Payment amount for ${s.full_name || s.email}`}
-                            >
-                              <option value={100}>₱100</option>
-                              <option value={50}>₱50</option>
-                            </select>
+                              onChange={(v) => setAmounts((a) => ({ ...a, [s.id]: Number(v) }))}
+                              options={[
+                                { value: 100, label: '₱100' },
+                                { value: 50, label: '₱50' },
+                              ]}
+                              ariaLabel={`Payment amount for ${s.full_name || s.email}`}
+                              style={{ width: 78 }}
+                            />
                             <button
                               className="icon-btn"
                               style={{ color: 'var(--ok)' }}
@@ -795,9 +794,12 @@ function StudentModal({ mode, student, onClose, onSaved }) {
           <div className="auth-grid2">
             <div className="field">
               <label htmlFor="sa-year">Year level</label>
-              <select id="sa-year" className="input" value={form.year_level} onChange={set('year_level')}>
-                {YEARS.map((y) => <option key={y} value={y}>{y}</option>)}
-              </select>
+              <PillSelect
+                value={form.year_level}
+                onChange={(v) => setForm((f) => ({ ...f, year_level: v }))}
+                options={YEARS.map((y) => ({ value: y, label: y }))}
+                ariaLabel="Year level"
+              />
             </div>
             <div className="field">
               <label htmlFor="sa-sec">Section</label>
@@ -807,15 +809,21 @@ function StudentModal({ mode, student, onClose, onSaved }) {
           <div className="auth-grid2">
             <div className="field">
               <label htmlFor="sa-course">Course</label>
-              <select id="sa-course" className="input" value={form.course} onChange={set('course')}>
-                {COURSES.map((c) => <option key={c} value={c}>{c}</option>)}
-              </select>
+              <PillSelect
+                value={form.course}
+                onChange={(v) => setForm((f) => ({ ...f, course: v }))}
+                options={COURSES.map((c) => ({ value: c, label: c }))}
+                ariaLabel="Course"
+              />
             </div>
             <div className="field">
               <label htmlFor="sa-role">Role</label>
-              <select id="sa-role" className="input" value={form.role} onChange={set('role')}>
-                {ROLES.map((r) => <option key={r} value={r}>{roleLabel(r)}</option>)}
-              </select>
+              <PillSelect
+                value={form.role}
+                onChange={(v) => setForm((f) => ({ ...f, role: v }))}
+                options={ROLES.map((r) => ({ value: r, label: roleLabel(r) }))}
+                ariaLabel="Role"
+              />
             </div>
           </div>
           {error && <div className="err-box"><span>!</span><span>{error}</span></div>}

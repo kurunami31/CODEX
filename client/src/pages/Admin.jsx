@@ -7,6 +7,7 @@ import { formatEventDate, isUpcoming, timeAgo } from '../lib/format';
 import { roleLabel } from '../lib/roles';
 import { sendPush } from '../lib/notify';
 import Avatar from '../components/Avatar';
+import PillSelect from '../components/PillSelect';
 import IdCardModal from '../components/IdCardModal';
 import {
   ShieldIcon, CalendarIcon, UsersIcon, CameraIcon, PlusIcon, XIcon,
@@ -310,17 +311,16 @@ export default function Admin() {
                     </td>
                     <td>
                       <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                        <select
-                          className="input"
-                          style={{ width: 86, padding: '4px 4px', fontSize: 12, minWidth: 0 }}
+                        <PillSelect
                           value={amounts[p.id] ?? 100}
-                          onChange={(e) => setAmounts((a) => ({ ...a, [p.id]: Number(e.target.value) }))}
-                          disabled={confirmingId === p.id}
-                          aria-label={`Payment amount for ${p.full_name}`}
-                        >
-                          <option value={100}>₱100 full</option>
-                          <option value={50}>₱50 half</option>
-                        </select>
+                          onChange={(v) => setAmounts((a) => ({ ...a, [p.id]: Number(v) }))}
+                          options={[
+                            { value: 100, label: '₱100 full' },
+                            { value: 50, label: '₱50 half' },
+                          ]}
+                          ariaLabel={`Payment amount for ${p.full_name}`}
+                          style={{ width: 90 }}
+                        />
                         <button
                           className="btn btn-accent btn-sm"
                           onClick={() => confirmDues(p, amounts[p.id] ?? 100)}
@@ -355,17 +355,16 @@ export default function Admin() {
               <TrashIcon width={13} height={13} /> Delete {selectedIds.size}
             </button>
           )}
-          <select
-            className="input"
-            style={{ maxWidth: 160, padding: '5px 8px', fontSize: 12 }}
+          <PillSelect
             value={confirmFilter}
-            onChange={(e) => setConfirmFilter(e.target.value)}
-            aria-label="Filter by confirmation status"
-          >
-            <option value="all">All accounts</option>
-            <option value="confirmed">Confirmed</option>
-            <option value="unconfirmed">Unconfirmed</option>
-          </select>
+            onChange={setConfirmFilter}
+            options={[
+              { value: 'all', label: 'All accounts' },
+              { value: 'confirmed', label: 'Confirmed' },
+              { value: 'unconfirmed', label: 'Unconfirmed' },
+            ]}
+            ariaLabel="Filter by confirmation status"
+          />
           <div className="search-box" style={{ maxWidth: 260, width: '100%' }}>
             <SearchIcon width={15} height={15} />
             <input placeholder="Search name, ID, section…" value={memberSearch} onChange={(e) => setMemberSearch(e.target.value)} />

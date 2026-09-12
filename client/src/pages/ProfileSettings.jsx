@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import Avatar from '../components/Avatar';
+import PillSelect from '../components/PillSelect';
 import CropModal from '../components/CropModal';
 import { roleLabel } from '../lib/roles';
 import { useFontScale, TEXT_SCALES } from '../context/FontScaleContext';
@@ -263,16 +264,12 @@ useEffect(() => {
           <div className="auth-grid2">
             <div className="field">
               <label htmlFor="ps-year">Year level</label>
-              <select
-                id="ps-year"
-                className="select"
+              <PillSelect
                 value={form.yearLevel}
-                onChange={(e) => setForm({ ...form, yearLevel: e.target.value })}
-              >
-                {YEAR_LEVELS.map((y) => (
-                  <option key={y} value={y}>{y}</option>
-                ))}
-              </select>
+                onChange={(v) => setForm({ ...form, yearLevel: v })}
+                options={YEAR_LEVELS.map((y) => ({ value: y, label: y }))}
+                ariaLabel="Year level"
+              />
             </div>
             <div className="field">
               <label htmlFor="ps-section">Section</label>
