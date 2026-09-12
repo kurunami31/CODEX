@@ -6,6 +6,7 @@ import { useToast } from '../context/ToastContext';
 import { timeAgo, formatTime } from '../lib/format';
 import { roleLabel } from '../lib/roles';
 import Avatar from '../components/Avatar';
+import PillSelect from '../components/PillSelect';
 import {
   CrownIcon, UsersIcon, RssIcon, QrIcon, PlusIcon, XIcon, PencilIcon, TrashIcon,
   SearchIcon, AlertIcon, CheckIcon, WalletIcon, WrenchIcon, DownloadIcon,
@@ -394,17 +395,17 @@ export default function SuperAdmin() {
           />
         </div>
         {tab === 'students' && (
-          <select
-            className="input select--pill"
-            style={{ maxWidth: 160, padding: '5px 12px', fontSize: 12 }}
+          <PillSelect
             value={confirmFilter}
-            onChange={(e) => setConfirmFilter(e.target.value)}
-            aria-label="Filter by confirmation status"
-          >
-            <option value="all">All accounts</option>
-            <option value="confirmed">Confirmed</option>
-            <option value="unconfirmed">Unconfirmed</option>
-          </select>
+            onChange={setConfirmFilter}
+            options={[
+              { value: 'all', label: 'All accounts' },
+              { value: 'confirmed', label: 'Confirmed' },
+              { value: 'unconfirmed', label: 'Unconfirmed' },
+            ]}
+            ariaLabel="Filter by confirmation status"
+            style={{ minWidth: 130 }}
+          />
         )}
         {tab === 'students' && selectedIds.size > 0 && (
           <button className="btn btn-sm" style={{ color: 'var(--danger)', borderColor: 'var(--danger)' }} onClick={batchDelete} disabled={busy}>
@@ -412,18 +413,16 @@ export default function SuperAdmin() {
           </button>
         )}
         {tab === 'attendance' && (
-          <select
-            className="input select--pill"
-            style={{ maxWidth: 260, padding: '5px 12px', fontSize: 12 }}
+          <PillSelect
             value={eventFilter}
-            onChange={(e) => setEventFilter(e.target.value)}
-            aria-label="Filter by event"
-          >
-            <option value="">All events</option>
-            {events.map((ev) => (
-              <option key={ev.id} value={ev.id}>{ev.title}</option>
-            ))}
-          </select>
+            onChange={setEventFilter}
+            options={[
+              { value: '', label: 'All events' },
+              ...events.map((ev) => ({ value: ev.id, label: ev.title })),
+            ]}
+            ariaLabel="Filter by event"
+            style={{ minWidth: 180, maxWidth: 280 }}
+          />
         )}
       </div>
 
