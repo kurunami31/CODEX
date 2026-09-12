@@ -155,8 +155,9 @@ export default function Certificates() {
       @page{size:297mm 210mm;margin:0}
       html,body{width:297mm;height:210mm;overflow:hidden;background:#fff}
       .cert-frame{width:100%;height:100%;border-radius:0;aspect-ratio:auto;display:flex;flex-direction:column}
+      .cert-border-outer{flex-direction:column}
+      .cert-border-inner{flex-direction:column}
       .cert-content{justify-content:flex-start}
-      .cert-footer{margin-top:auto}
     </style></head><body>${frameHtml}</body></html>`);
     doc.close();
     iframe.contentWindow.onload = () => {
