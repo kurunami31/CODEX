@@ -2167,23 +2167,16 @@ html[data-theme='dark'] .tally-track { background: #0e2c3b; border-color: #14384
 
 /* ── print: only the certificate is visible ──────────────── */
 @media print {
-  body * { visibility: hidden; }
-  .cert-print, .cert-print * { visibility: visible; }
-  .cert-print {
-    position: fixed; inset: 0; margin: 0; padding: 0;
-    display: grid; place-items: center; background: #fff; z-index: 9999;
-    overflow: hidden;
-  }
-  .cert-frame {
-    width: 960px; height: 600px; aspect-ratio: auto;
-    break-inside: avoid; page-break-inside: avoid;
-    overflow: hidden;
-  }
-  .cert-content { padding: 18px 40px 10px; gap: 0; }
+  @page { size: A4 landscape; margin: 0; }
+  html, body { width: 297mm; height: 210mm; margin: 0; padding: 0; overflow: hidden; }
+  body > * { visibility: hidden; }
+  .cert-print { visibility: visible; position: fixed; inset: 0; display: grid; place-items: center; background: #fff; z-index: 9999; width: 297mm; height: 210mm; overflow: hidden; }
+  .cert-print * { visibility: visible; }
+  .cert-frame { width: 270mm; height: 190mm; aspect-ratio: auto; overflow: hidden; break-inside: avoid; page-break-inside: avoid; border-radius: 0; }
+  .cert-content { padding: 16px 40px 10px; gap: 0; }
   .cert-body { font-size: 10.5px; line-height: 1.55; max-width: 480px; margin: 0 auto 8px; }
   .cert-body br + br { display: block; content: ''; margin-top: 3px; }
   .cert-footer-org { margin-bottom: 4px; }
-  @page { size: 960px 600px; margin: 0; }
 }
 
 /* ── crop modal ─────────────────────────────────────────── */
