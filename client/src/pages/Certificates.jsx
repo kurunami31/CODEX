@@ -162,7 +162,7 @@ export default function Certificates() {
       .cert-corner--bl{bottom:6px;left:6px}.cert-corner--bl::before{bottom:0;left:0}.cert-corner--bl::after{bottom:0;left:0}
       .cert-corner--br{bottom:6px;right:6px}.cert-corner--br::before{bottom:0;right:0}.cert-corner--br::after{bottom:0;right:0}
       .cert-watermark{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:260px;opacity:0.08;pointer-events:none;z-index:0;user-select:none}
-      .cert-content{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:20px 32px 14px;text-align:center;color:#1a2f38;gap:0}
+      .cert-content{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:20px 32px 14px;text-align:center;color:#1a2f38;gap:0}
       .cert-header{display:flex;align-items:center;justify-content:center;gap:20px;margin-bottom:4px}
       .cert-logo{width:52px;height:52px;object-fit:contain;flex-shrink:0}
       .cert-logo--right{border-radius:8px}
@@ -179,7 +179,7 @@ export default function Certificates() {
       .cert-name-underline{width:280px;max-width:80%;height:1px;background:#1a2f38;margin:2px auto 8px}
       .cert-body{max-width:520px;font-size:11px;line-height:1.65;color:#3a4f58;margin:0 auto 10px}
       .cert-issued-line{font-style:italic;font-size:10.5px;color:#3a4f58;margin:4px 0 6px}
-      .cert-footer{width:100%;display:flex;flex-direction:column;align-items:center;gap:0;margin-top:auto}
+      .cert-footer{width:100%;display:flex;flex-direction:column;align-items:center;gap:0}
       .cert-footer-org{display:flex;flex-direction:column;align-items:center;gap:0;margin-bottom:6px}
       .cert-footer-org-name{font-weight:700;font-size:13px;letter-spacing:0.12em;color:#1a5c3a}
       .cert-footer-org-sub{font-size:7.5px;letter-spacing:0.14em;text-transform:uppercase;color:#7c8c94}
