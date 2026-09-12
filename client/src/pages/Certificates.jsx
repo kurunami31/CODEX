@@ -359,43 +359,88 @@ export default function Certificates() {
             <div className="modal-body">
               <div className="cert-print" ref={printRef}>
                 <div className="cert-frame">
-                  <div className="cert-top">
-                    <img src="/assets/dorsu-logo.png" alt="DOrSU" className="cert-logo" />
-                    <div>
-                      <div className="cert-org">CODEBYTERS</div>
-                      <div className="cert-org-sub">BSIT Student Organization · Davao Oriental State University</div>
+                  <div className="cert-border-outer">
+                    <div className="cert-border-inner">
+                      {/* corner ornaments */}
+                      <div className="cert-corner cert-corner--tl" />
+                      <div className="cert-corner cert-corner--tr" />
+                      <div className="cert-corner cert-corner--bl" />
+                      <div className="cert-corner cert-corner--br" />
+
+                      <div className="cert-content">
+                        {/* header: logos + org name */}
+                        <div className="cert-header">
+                          <img src="/assets/dorsu-logo.png" alt="DOrSU" className="cert-logo" />
+                          <div className="cert-header-text">
+                            <div className="cert-org">CODEBYTERS</div>
+                            <div className="cert-org-sub">BSIT Student Organization &middot; Davao Oriental State University</div>
+                          </div>
+                          <img src="/assets/codebyterts-logo.gif" alt="CODEBYTERS" className="cert-logo cert-logo--right" />
+                        </div>
+
+                        {/* ornamental divider */}
+                        <div className="cert-divider">
+                          <span className="cert-divider-line" />
+                          <span className="cert-divider-diamond" />
+                          <span className="cert-divider-line" />
+                        </div>
+
+                        {/* certificate title */}
+                        <div className="cert-title">
+                          {open.type === 'membership' ? 'Certificate of Membership' : open.type === 'election' ? 'Certificate of Election' : 'Certificate of Participation'}
+                        </div>
+
+                        {/* "this is to certify that" */}
+                        <div className="cert-awarded">This is to certify that</div>
+
+                        {/* recipient name with underline */}
+                        <div className="cert-name">{profile.full_name}</div>
+                        <div className="cert-name-underline" />
+
+                        {/* body text */}
+                        <div className="cert-body">
+                          {open.type === 'membership' ? (
+                            <>is a <b>confirmed member</b> of CODEBYTERS, the BSIT Student Organization of Davao Oriental State University, in good standing for the academic year {new Date().getFullYear() - 1}–{new Date().getFullYear()}.</>
+                          ) : open.type === 'election' ? (
+                            <>has been <b>elected {open.position}</b> of <b>{open.title}</b> by the members of CODEBYTERS{open.date ? <> on <b>{new Date(open.date).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })}</b></> : null}.</>
+                          ) : (
+                            <>has actively participated in <b>{open.title}</b>{open.date ? <> held on <b>{new Date(open.date).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })}</b></> : null}.</>
+                          )}
+                        </div>
+
+                        {/* signature + seal row */}
+                        <div className="cert-sig-row">
+                          <div className="cert-sig-block">
+                            <div className="cert-sig-line" />
+                            <div className="cert-sig-name">John Anthony B. Ricamonte</div>
+                            <div className="cert-sig-role">President &middot; CODEBYTERS</div>
+                          </div>
+
+                          <div className="cert-seal">
+                            <div className="cert-seal-ring">
+                              <div className="cert-seal-inner">
+                                <div className="cert-seal-icon">&#9733;</div>
+                                <div className="cert-seal-text">CODEBYTERS</div>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="cert-sig-block">
+                            <div className="cert-sig-line" />
+                            <div className="cert-sig-name">{profile.full_name}</div>
+                            <div className="cert-sig-role">Recipient</div>
+                          </div>
+                        </div>
+
+                        {/* footer: student no + date + cert code */}
+                        <div className="cert-footer">
+                          <span>Student No. <b>{myStudentId || '—'}</b></span>
+                          <span>{certDate}</span>
+                          <span className="cert-code">cert-{open.type === 'membership' ? 'member' : open.type === 'election' ? 'elected' : 'event'}-{String(myStudentId || user?.id || '').toLowerCase().replace(/[^a-z0-9]/gi, '')}</span>
+                        </div>
+                      </div>
                     </div>
-                    <img src="/assets/codebyterts-logo.gif" alt="CODEBYTERS" className="cert-logo cert-logo--gif" />
                   </div>
-                  <div className="cert-title">
-                    {open.type === 'membership' ? 'CERTIFICATE OF MEMBERSHIP' : open.type === 'election' ? 'CERTIFICATE OF ELECTION' : 'CERTIFICATE OF PARTICIPATION'}
-                  </div>
-                  <div className="cert-awarded">this certifies that</div>
-                  <div className="cert-name">{profile.full_name}</div>
-                  <div className="cert-body">
-                    {open.type === 'membership' ? (
-                      <>is a <b>confirmed member</b> of CODEBYTERS, the BSIT Student Organization of Davao Oriental State University, in good standing for the academic year {new Date().getFullYear() - 1}–{new Date().getFullYear()}.</>
-                    ) : open.type === 'election' ? (
-                      <>has been <b>elected {open.position}</b> of <b>{open.title}</b> by the members of CODEBYTERS{open.date ? <> on <b>{new Date(open.date).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })}</b></> : null}.</>
-                    ) : (
-                      <>has actively participated in <b>{open.title}</b>{open.date ? <> held on <b>{new Date(open.date).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })}</b></> : null}.</>
-                    )}
-                  </div>
-                  <div className="cert-foot">
-                    <div className="cert-line">
-                      <div className="cert-line-cap">student no.</div>
-                      <b>{myStudentId || '—'}</b>
-                    </div>
-                    <div className="cert-line">
-                      <div className="cert-line-cap">issued</div>
-                      <b>{certDate}</b>
-                    </div>
-                    <div className="cert-line">
-                      <div className="cert-line-cap">org officer</div>
-                      <b className="cert-sign">CODEBYTERS</b>
-                    </div>
-                  </div>
-                  <div className="cert-code">cert-{open.type === 'membership' ? 'member' : open.type === 'election' ? 'elected' : 'event'}-{String(myStudentId || user?.id || '').toLowerCase().replace(/[^a-z0-9]/gi, '')}</div>
                 </div>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'center', marginTop: 16, flexWrap: 'wrap' }}>
