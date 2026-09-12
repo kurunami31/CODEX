@@ -371,22 +371,21 @@ export default function SuperAdmin() {
         </div>
       </div>
 
-      <div className="seg-tabs" role="tablist">
-        {TABS.map((t) => (
-          <button
-            key={t.id}
-            role="tab"
-            aria-selected={tab === t.id}
-            className={`seg-tab${tab === t.id ? ' seg-tab--on' : ''}`}
-            onClick={() => setTab(t.id)}
-          >
-            {t.icon} {t.label}
-          </button>
-        ))}
-      </div>
-
-      <div className="toolbar-row">
-        <div className="search-box" style={{ maxWidth: 340, flex: 1 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+        <div className="seg-tabs" role="tablist" style={{ marginRight: 'auto' }}>
+          {TABS.map((t) => (
+            <button
+              key={t.id}
+              role="tab"
+              aria-selected={tab === t.id}
+              className={`seg-tab${tab === t.id ? ' seg-tab--on' : ''}`}
+              onClick={() => setTab(t.id)}
+            >
+              {t.icon} {t.label}
+            </button>
+          ))}
+        </div>
+        <div className="search-box" style={{ maxWidth: 340, flex: 1, minWidth: 180 }}>
           <SearchIcon width={16} height={16} />
           <input
             placeholder={tab === 'students' ? 'Search name, ID, email, role…' : tab === 'posts' ? 'Search posts or authors…' : 'Search student, event…'}
@@ -396,8 +395,8 @@ export default function SuperAdmin() {
         </div>
         {tab === 'students' && (
           <select
-            className="input"
-            style={{ maxWidth: 160, padding: '5px 8px', fontSize: 12 }}
+            className="input select--pill"
+            style={{ maxWidth: 160, padding: '5px 12px', fontSize: 12 }}
             value={confirmFilter}
             onChange={(e) => setConfirmFilter(e.target.value)}
             aria-label="Filter by confirmation status"
@@ -413,7 +412,13 @@ export default function SuperAdmin() {
           </button>
         )}
         {tab === 'attendance' && (
-          <select className="input" style={{ maxWidth: 260 }} value={eventFilter} onChange={(e) => setEventFilter(e.target.value)} aria-label="Filter by event">
+          <select
+            className="input select--pill"
+            style={{ maxWidth: 260, padding: '5px 12px', fontSize: 12 }}
+            value={eventFilter}
+            onChange={(e) => setEventFilter(e.target.value)}
+            aria-label="Filter by event"
+          >
             <option value="">All events</option>
             {events.map((ev) => (
               <option key={ev.id} value={ev.id}>{ev.title}</option>
