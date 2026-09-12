@@ -2026,11 +2026,30 @@ html[data-theme='dark'] .portal-config code { background: rgba(255, 255, 255, 0.
 
 /* body text */
 .cert-body {
-  max-width: 480px;
-  font-size: 11.5px;
-  line-height: 1.6;
+  max-width: 520px;
+  font-size: 11px;
+  line-height: 1.65;
   color: #3a4f58;
   margin: 0 auto 10px;
+}
+
+/* issued this [day] of [month, year] */
+.cert-issued-line {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-style: italic;
+  font-size: 10.5px;
+  color: #3a4f58;
+  margin: 4px 0 6px;
+}
+
+/* CODEBYTERS sign-off */
+.cert-signoff {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-weight: 700;
+  font-size: 14px;
+  letter-spacing: 0.12em;
+  color: #1a5c3a;
+  margin: 4px 0 0;
 }
 
 /* ghost watermark logo */
@@ -2115,6 +2134,8 @@ html[data-theme='dark'] .cert-title { color: #0aa88f; }
 html[data-theme='dark'] .cert-name { color: #e8f0f2; }
 html[data-theme='dark'] .cert-name-underline { background: #e8f0f2; }
 html[data-theme='dark'] .cert-body { color: #a0b4ba; }
+html[data-theme='dark'] .cert-issued-line { color: #a0b4ba; }
+html[data-theme='dark'] .cert-signoff { color: #0aa88f; }
 html[data-theme='dark'] .cert-footer { border-top-color: #1a3a48; color: #6b8a94; }
 html[data-theme='dark'] .cert-watermark { opacity: 0.06; }
 html[data-theme='dark'] .tally-track { background: #0e2c3b; border-color: #14384a; }

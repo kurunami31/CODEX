@@ -407,9 +407,25 @@ export default function Certificates() {
                           ) : open.type === 'election' ? (
                             <>has been <b>elected {open.position}</b> of <b>{open.title}</b> by the members of CODEBYTERS{open.date ? <> on <b>{new Date(open.date).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })}</b></> : null}.</>
                           ) : (
-                            <>has actively participated in <b>{open.title}</b>{open.date ? <> held on <b>{new Date(open.date).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })}</b></> : null}.</>
+                            <>
+                              was present and attended <b>{open.title}</b> organized and conducted by CODEBYTERS{open.date ? <> on <b>{new Date(open.date).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })}</b></> : null}{open.venue ? <> at <b>{open.venue}</b></> : null}.
+                              <br /><br />
+                              The above-named individual has duly attended and participated in the aforementioned event. This certification is issued as formal recognition and confirmation of their attendance and participation in the said activity.
+                              <br /><br />
+                              This certificate is issued upon the request of the concerned individual for documentation, verification, and whatever legitimate purpose it may serve.
+                            </>
                           )}
                         </div>
+
+                        {/* issued this [day] of [month, year] */}
+                        {open.type === 'event' && (
+                          <div className="cert-issued-line">
+                            Issued this <b>{open.date ? new Date(open.date).toLocaleDateString(undefined, { day: 'numeric' }) : '___'}</b> day of <b>{open.date ? new Date(open.date).toLocaleDateString(undefined, { month: 'long', year: 'numeric' }) : '__________'}</b>.
+                          </div>
+                        )}
+
+                        {/* CODEBYTERS sign-off */}
+                        <div className="cert-signoff">CODEBYTERS</div>
 
                         {/* footer: student no + date */}
                         <div className="cert-footer">
