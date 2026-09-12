@@ -152,7 +152,9 @@ export default function Certificates() {
     doc.open();
     doc.write(`<!DOCTYPE html><html><head><style>${cssText}
       *{margin:0;padding:0;box-sizing:border-box}
-      body{display:grid;place-items:center;min-height:100vh;background:#fff}
+      @page{size:297mm 210mm;margin:0}
+      html,body{width:297mm;height:210mm;overflow:hidden;background:#fff}
+      .cert-frame{width:100%;height:100%;border-radius:0;aspect-ratio:auto;display:flex;flex-direction:column}
     </style></head><body>${frameHtml}</body></html>`);
     doc.close();
     iframe.contentWindow.onload = () => {
