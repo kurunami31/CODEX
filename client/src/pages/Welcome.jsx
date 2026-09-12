@@ -53,6 +53,9 @@ export default function Welcome() {
           <Link to={session ? '/app/events' : '/auth'} className="btn btn-dark btn-lg">
             View events
           </Link>
+          <Link to="/about" className="btn btn-outline btn-lg">
+            About CODEX
+          </Link>
         </div>
         <div className="welcome-stats">
           <div className="stat"><b>{memberCount ?? '—'}</b><span>registered members</span></div>
@@ -94,7 +97,6 @@ export default function Welcome() {
           <span>developed by</span>
           <a href="https://kurunami31.github.io/Portfolio/" target="_blank" rel="noopener noreferrer">Christopher Lyod B. Mercado</a>
         </div>
-        <Link to="/about" className="welcome-about-link">about codex</Link>
         <a className="welcome-fb" href="https://www.facebook.com/codebyters" target="_blank" rel="noopener noreferrer">follow us · facebook.com/codebyters</a>
       </footer>
     </div>

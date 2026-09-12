@@ -37,6 +37,8 @@ export default function SuperAdmin() {
   const [loadingAttendance, setLoadingAttendance] = useState(true);
 
   const [search, setSearch] = useState('');
+  const [confirmFilter, setConfirmFilter] = useState('all');
+  const [selectedIds, setSelectedIds] = useState(new Set());
   const [eventFilter, setEventFilter] = useState('');
 
   const [showCreate, setShowCreate] = useState(false);
@@ -156,6 +158,40 @@ export default function SuperAdmin() {
     loadStudents();
   };
 
+  const toggleSelect = (id) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    setSelectedIds((prev) => {
+      if (prev.size === filteredStudents.length) return new Set();
+      return new Set(filteredStudents.map((s) => s.id));
+    });
+  };
+
+  const batchDelete = async () => {
+    const ids = [...selectedIds];
+    if (ids.length === 0) return;
+    if (!window.confirm(`Delete ${ids.length} selected account${ids.length > 1 ? 's' : ''}?\n\nTheir posts, likes and attendance records are removed permanently.`)) return;
+    setBusy(true);
+    let ok = 0, fail = 0;
+    for (const id of ids) {
+      const { error } = await supabase.rpc('superadmin_delete_user', { p_user_id: id });
+      if (error) fail++;
+      else ok++;
+    }
+    setBusy(false);
+    setSelectedIds(new Set());
+    if (fail > 0) toast.error('Batch delete', `${ok} deleted, ${fail} failed.`);
+    else toast.ok('Batch delete', `${ok} account${ok > 1 ? 's' : ''} removed.`);
+    loadStudents();
+  };
+
   const setMembership = async (s, paid, amount = 100) => {
     if (!paid && !window.confirm(`Revoke ${s.full_name || s.email}'s confirmed membership?`)) return;
     setBusy(true);
@@ -229,12 +265,15 @@ export default function SuperAdmin() {
   };
 
   const filteredStudents = useMemo(() => {
+    let list = students;
+    if (confirmFilter === 'unconfirmed') list = list.filter((s) => !s.email_confirmed);
+    if (confirmFilter === 'confirmed') list = list.filter((s) => s.email_confirmed);
     const q = search.trim().toLowerCase();
-    if (!q) return students;
-    return students.filter((s) =>
+    if (!q) return list;
+    return list.filter((s) =>
       [s.full_name, s.student_id, s.email, s.section, s.role].some((v) => v && String(v).toLowerCase().includes(q))
     );
-  }, [students, search]);
+  }, [students, search, confirmFilter]);
 
   const filteredPosts = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -278,6 +317,7 @@ export default function SuperAdmin() {
           { icon: <WalletIcon width={15} height={15} />, k: 'dues paid', v: students.filter((s) => s.membership_paid).length },
           { icon: <RssIcon width={15} height={15} />, k: 'posts', v: posts.length },
           { icon: <QrIcon width={15} height={15} />, k: 'attendance records', v: attendance.length },
+          ...(students.some((s) => !s.email_confirmed) ? [{ icon: <AlertIcon width={15} height={15} />, k: 'unconfirmed', v: students.filter((s) => !s.email_confirmed).length }] : []),
           { icon: <CrownIcon width={15} height={15} />, k: 'your role', v: roleLabel(profile?.role, profile?.position) },
         ].map((s) => (
           <div key={s.k} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px', background: 'var(--bg)', borderRadius: 'var(--r-md)', border: '1px solid var(--line)' }}>
@@ -354,6 +394,24 @@ export default function SuperAdmin() {
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
+        {tab === 'students' && (
+          <select
+            className="input"
+            style={{ maxWidth: 160, padding: '5px 8px', fontSize: 12 }}
+            value={confirmFilter}
+            onChange={(e) => setConfirmFilter(e.target.value)}
+            aria-label="Filter by confirmation status"
+          >
+            <option value="all">All accounts</option>
+            <option value="confirmed">Confirmed</option>
+            <option value="unconfirmed">Unconfirmed</option>
+          </select>
+        )}
+        {tab === 'students' && selectedIds.size > 0 && (
+          <button className="btn btn-sm" style={{ color: 'var(--danger)', borderColor: 'var(--danger)' }} onClick={batchDelete} disabled={busy}>
+            <TrashIcon width={13} height={13} /> Delete {selectedIds.size}
+          </button>
+        )}
         {tab === 'attendance' && (
           <select className="input" style={{ maxWidth: 260 }} value={eventFilter} onChange={(e) => setEventFilter(e.target.value)} aria-label="Filter by event">
             <option value="">All events</option>
@@ -379,6 +437,15 @@ export default function SuperAdmin() {
             <table className="codex-table">
               <thead>
                 <tr>
+                  <th style={{ width: 36 }}>
+                    <input
+                      type="checkbox"
+                      checked={filteredStudents.length > 0 && selectedIds.size === filteredStudents.length}
+                      onChange={toggleSelectAll}
+                      style={{ accentColor: 'var(--accent)', width: 16, height: 16, cursor: 'pointer' }}
+                      aria-label="Select all"
+                    />
+                  </th>
                   <th>member</th>
                   <th>email</th>
                   <th>id no.</th>
@@ -391,7 +458,16 @@ export default function SuperAdmin() {
               </thead>
               <tbody>
                 {filteredStudents.map((s) => (
-                  <tr key={s.id}>
+                  <tr key={s.id} style={selectedIds.has(s.id) ? { background: 'rgba(14,208,182,0.06)' } : undefined}>
+                    <td>
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.has(s.id)}
+                        onChange={() => toggleSelect(s.id)}
+                        style={{ accentColor: 'var(--accent)', width: 16, height: 16, cursor: 'pointer' }}
+                        aria-label={`Select ${s.full_name || s.email}`}
+                      />
+                    </td>
                     <td>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10, whiteSpace: 'nowrap' }}>
                         <Avatar name={s.full_name} seed={s.student_id || s.id} size={30} url={s.avatar_url} />

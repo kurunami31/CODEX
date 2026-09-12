@@ -7,7 +7,7 @@ import { timeAgo } from '../lib/format';
 import { hasLocalSubscription } from '../lib/push';
 import Avatar from '../components/Avatar';
 import { isStaff as checkStaff, isAdmin as checkAdmin, isAdviser as checkAdviser, roleLabel } from '../lib/roles';
-import { RssIcon, CalendarIcon, IdIcon, ShieldIcon, LogOutIcon, SearchIcon, CameraIcon, GearIcon, SunIcon, MoonIcon, CrownIcon, MenuIcon, XIcon, TrophyIcon, CertificateIcon, GavelIcon, BellIcon, BoxIcon } from '../components/icons/Icons';
+import { HomeIcon, RssIcon, CalendarIcon, IdIcon, ShieldIcon, LogOutIcon, SearchIcon, CameraIcon, GearIcon, SunIcon, MoonIcon, CrownIcon, MenuIcon, XIcon, TrophyIcon, CertificateIcon, GavelIcon, BellIcon, BoxIcon, ChevronRightIcon } from '../components/icons/Icons';
 
 const TITLES = {
   '/app/feed': 'feed',
@@ -41,7 +41,8 @@ export default function AppShell() {
   const [notifItems, setNotifItems] = useState([]);
   const [unread, setUnread] = useState(0);
   const [pushOn, setPushOn] = useState(false);
-  const [terminalOpen, setTerminalOpen] = useState(true);
+  const [termOpen, setTermOpen] = useState(true);
+  const [termOpenM, setTermOpenM] = useState(true);
 
   const loadNotifs = useCallback(async () => {
     if (!user) return;
@@ -259,12 +260,6 @@ export default function AppShell() {
     navigate('/welcome');
   };
 
-  const ChevronDownIcon = (props) => (
-    <svg width={props.width || 16} height={props.height || 16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={props.style}>
-      <polyline points="6 9 12 15 18 9" />
-    </svg>
-  );
-
   return (
     <div className="app">
       <aside className="sidebar">
@@ -276,23 +271,12 @@ export default function AppShell() {
           </div>
         </div>
 
-        <div className="user-card">
-          <Avatar name={profile?.full_name} seed={user?.id} size={36} ring url={profile?.avatar_url} />
-          <div style={{ minWidth: 0 }}>
-            <div className="u-name" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{profile?.full_name || '…'}</div>
-            <div className="u-role">{roleLabel(profile?.role, profile?.position)}</div>
-          </div>
-          <button className="icon-btn" style={{ marginLeft: 'auto', width: 32, height: 32, borderRadius: 9 }} onClick={handleLogout} title="Log out" aria-label="Log out">
-            <LogOutIcon width={15} height={15} />
-          </button>
-        </div>
-
         <nav>
-          <button className="nav-group nav-group--toggle" onClick={() => setTerminalOpen((o) => !o)}>
+          <button className="nav-group nav-group--toggle" onClick={() => setTermOpen(o => !o)}>
+            <ChevronRightIcon width={14} height={14} style={{ transition: 'transform 0.2s ease', transform: termOpen ? 'rotate(90deg)' : 'none', flexShrink: 0 }} />
             terminal
-            <ChevronDownIcon width={14} height={14} style={{ transition: 'transform 0.2s', transform: terminalOpen ? 'rotate(0deg)' : 'rotate(-90deg)' }} />
           </button>
-          {terminalOpen && navItems.map((item) => (
+          {termOpen && navItems.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
@@ -324,6 +308,19 @@ export default function AppShell() {
             </>
           )}
         </nav>
+
+        <div className="side-foot">
+          <div className="user-card">
+            <Avatar name={profile?.full_name} seed={user?.id} size={36} ring url={profile?.avatar_url} />
+            <div style={{ minWidth: 0 }}>
+              <div className="u-name" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{profile?.full_name || '…'}</div>
+              <div className="u-role">{roleLabel(profile?.role, profile?.position)}</div>
+            </div>
+            <button className="icon-btn" style={{ marginLeft: 'auto', width: 32, height: 32, borderRadius: 9 }} onClick={handleLogout} title="Log out" aria-label="Log out">
+              <LogOutIcon width={15} height={15} />
+            </button>
+          </div>
+        </div>
       </aside>
 
       <div className="main-col">
@@ -486,22 +483,12 @@ export default function AppShell() {
             <div className="brand-sub">codebyters community</div>
           </div>
         </div>
-        <div className="user-card">
-          <Avatar name={profile?.full_name} seed={user?.id} size={36} ring url={profile?.avatar_url} />
-          <div style={{ minWidth: 0 }}>
-            <div className="u-name">{profile?.full_name || '…'}</div>
-            <div className="u-role">{roleLabel(profile?.role, profile?.position)}</div>
-          </div>
-          <button className="icon-btn" style={{ marginLeft: 'auto', width: 32, height: 32, borderRadius: 9 }} onClick={handleLogout} title="Log out" aria-label="Log out">
-            <LogOutIcon width={15} height={15} />
-          </button>
-        </div>
         <nav>
-          <button className="nav-group nav-group--toggle" onClick={() => setTerminalOpen((o) => !o)}>
+          <button className="nav-group nav-group--toggle" onClick={() => setTermOpenM(o => !o)}>
+            <ChevronRightIcon width={14} height={14} style={{ transition: 'transform 0.2s ease', transform: termOpenM ? 'rotate(90deg)' : 'none', flexShrink: 0 }} />
             terminal
-            <ChevronDownIcon width={14} height={14} style={{ transition: 'transform 0.2s', transform: terminalOpen ? 'rotate(0deg)' : 'rotate(-90deg)' }} />
           </button>
-          {terminalOpen && navItems.map((item) => (
+          {termOpenM && navItems.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
@@ -526,6 +513,18 @@ export default function AppShell() {
             </>
           )}
         </nav>
+        <div className="drawer-foot">
+          <div className="user-card">
+            <Avatar name={profile?.full_name} seed={user?.id} size={36} ring url={profile?.avatar_url} />
+            <div style={{ minWidth: 0 }}>
+              <div className="u-name">{profile?.full_name || '…'}</div>
+              <div className="u-role">{roleLabel(profile?.role, profile?.position)}</div>
+            </div>
+            <button className="icon-btn" style={{ marginLeft: 'auto', width: 32, height: 32, borderRadius: 9 }} onClick={handleLogout} title="Log out" aria-label="Log out">
+              <LogOutIcon width={15} height={15} />
+            </button>
+          </div>
+        </div>
       </aside>
     </div>
   );

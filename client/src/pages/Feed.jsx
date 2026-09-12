@@ -11,7 +11,7 @@ import { postsSelect, supportsImages } from '../lib/columns';
 import { fetchFeedHn, fetchFeedGitHub } from '../lib/api';
 import { timeAgo } from '../lib/format';
 import { isAdviser } from '../lib/roles';
-import { ExternalIcon, StarIcon, GithubIcon, RssIcon, BoxIcon, ArchiveIcon, ImageIcon, XIcon } from '../components/icons/Icons';
+import { ExternalIcon, StarIcon, RssIcon, BoxIcon, ArchiveIcon, ImageIcon, XIcon } from '../components/icons/Icons';
 
 const LIMIT = 2000;
 const POST_IMAGE_MAX = 5 * 1024 * 1024;
@@ -454,7 +454,7 @@ function GhCard({ item }) {
   return (
     <article className="learn-card learn-card--gh panel">
       <div className="learn-head">
-        <span className="src-icon src-icon--gh"><GithubIcon width={16} height={16} /></span>
+        <span className="src-icon src-icon--gh"><BoxIcon width={16} height={16} /></span>
         <div>
           <b>GitHub</b>
           <div className="meta">open source · rest api</div>

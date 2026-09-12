@@ -34,6 +34,27 @@ async function requireSuperAdmin(req, res) {
   return user;
 }
 
+// Like requireSuperAdmin but also allows admin role.
+async function requireAdmin(req, res) {
+  const token = bearer(req);
+  if (!token) {
+    res.status(401).json({ error: 'Missing session token.' });
+    return null;
+  }
+  const sb = supabaseFor(token);
+  const { data: { user }, error: authError } = await sb.auth.getUser();
+  if (authError || !user) {
+    res.status(401).json({ error: 'Invalid session.' });
+    return null;
+  }
+  const { data: profile } = await sb.from('profiles').select('role').eq('id', user.id).maybeSingle();
+  if (!profile || !['admin', 'superadmin'].includes(profile.role)) {
+    res.status(403).json({ error: 'Admin or super admin role required.' });
+    return null;
+  }
+  return user;
+}
+
 function adminClientOr500(res) {
   if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
     res.status(500).json({
@@ -51,7 +72,7 @@ const VALID_ROLES = ['student', 'moderator', 'admin', 'superadmin', 'adviser'];
 
 // GET /api/admin/users — list every member (email from auth.users + profile)
 router.get('/users', async (req, res) => {
-  const caller = await requireSuperAdmin(req, res);
+  const caller = await requireAdmin(req, res);
   if (!caller) return;
   const admin = adminClientOr500(res);
   if (!admin) return;
@@ -157,6 +178,23 @@ router.post('/users', async (req, res) => {
   }
 
   res.status(201).json({ ok: true, id: created.user.id, email });
+});
+
+// DELETE /api/admin/users/:id — delete a member account (admin or superadmin)
+router.delete('/users/:id', async (req, res) => {
+  const caller = await requireAdmin(req, res);
+  if (!caller) return;
+  const admin = adminClientOr500(res);
+  if (!admin) return;
+
+  const targetId = req.params.id;
+  if (targetId === caller.id) {
+    return res.status(400).json({ error: 'You cannot delete your own account.' });
+  }
+
+  const { error } = await admin.auth.admin.deleteUser(targetId);
+  if (error) return res.status(500).json({ error: error.message || 'Could not delete the account.' });
+  res.json({ ok: true });
 });
 
 // POST /api/admin/maintenance — superadmin toggles maintenance mode.

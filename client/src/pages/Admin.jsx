@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { supabase } from '../lib/supabase';
+import { supabase, apiFetch } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
-import { formatEventDate, isUpcoming, timeAgo, formatTime } from '../lib/format';
+import { formatEventDate, isUpcoming, timeAgo } from '../lib/format';
 import { roleLabel } from '../lib/roles';
 import { sendPush } from '../lib/notify';
 import Avatar from '../components/Avatar';
@@ -11,6 +11,7 @@ import IdCardModal from '../components/IdCardModal';
 import {
   ShieldIcon, CalendarIcon, UsersIcon, CameraIcon, PlusIcon, XIcon,
   AlertIcon, CheckIcon, QrIcon, DownloadIcon, WalletIcon, SearchIcon, IdIcon,
+  TrashIcon,
 } from '../components/icons/Icons';
 
 export default function Admin() {
@@ -24,6 +25,8 @@ export default function Admin() {
   const [unpaid, setUnpaid] = useState([]);
   const [members, setMembers] = useState([]);
   const [memberSearch, setMemberSearch] = useState('');
+  const [confirmFilter, setConfirmFilter] = useState('all');
+  const [selectedIds, setSelectedIds] = useState(new Set());
   const [viewingId, setViewingId] = useState(null);
   const [confirmingId, setConfirmingId] = useState(null);
   const [amounts, setAmounts] = useState({});
@@ -36,7 +39,7 @@ export default function Admin() {
   const loadEvents = useCallback(async () => {
     const { data, error } = await supabase
       .from('events')
-      .select('id, title, description, location, event_date, am_start, am_end, pm_start, pm_end, event_end')
+      .select('id, title, description, location, event_date')
       .order('event_date', { ascending: false });
     if (error) toast.error('Events error', error.message);
     else setEvents(data || []);
@@ -56,10 +59,17 @@ export default function Admin() {
   }, [toast, isSuper]);
 
   const loadMembers = useCallback(async () => {
-    const { data, error } = await supabase.rpc('get_members');
-    if (error) toast.error('Members error', error.message);
-    else setMembers(data || []);
-    setLoadingMembers(false);
+    setLoadingMembers(true);
+    try {
+      const res = await apiFetch('/api/admin/users', { method: 'GET' });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(body.error || 'Could not list members.');
+      setMembers(body.users || []);
+    } catch (err) {
+      toast.error('Members error', err.message);
+    } finally {
+      setLoadingMembers(false);
+    }
   }, [toast]);
 
   useEffect(() => {
@@ -79,13 +89,72 @@ export default function Admin() {
     loadMembers();
   };
 
+  const deleteMember = async (m) => {
+    if (!window.confirm(`Delete ${m.full_name || m.email}?\n\nTheir posts, likes and attendance records are removed permanently.`)) return;
+    setBusy(true);
+    try {
+      const res = await apiFetch(`/api/admin/users/${m.id}`, { method: 'DELETE' });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || 'Delete failed.');
+      }
+      toast.ok('Account deleted', `${m.full_name || m.email} was removed.`);
+      loadMembers();
+    } catch (err) {
+      toast.error('Delete failed', err.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const toggleSelect = (id) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    setSelectedIds((prev) => {
+      if (prev.size === filteredMembers.length) return new Set();
+      return new Set(filteredMembers.map((m) => m.id));
+    });
+  };
+
+  const batchDelete = async () => {
+    const ids = [...selectedIds];
+    if (ids.length === 0) return;
+    if (!window.confirm(`Delete ${ids.length} selected account${ids.length > 1 ? 's' : ''}?\n\nTheir posts, likes and attendance records are removed permanently.`)) return;
+    setBusy(true);
+    let ok = 0, fail = 0;
+    for (const id of ids) {
+      try {
+        const res = await apiFetch(`/api/admin/users/${id}`, { method: 'DELETE' });
+        if (res.ok) ok++;
+        else fail++;
+      } catch {
+        fail++;
+      }
+    }
+    setBusy(false);
+    setSelectedIds(new Set());
+    if (fail > 0) toast.error('Batch delete', `${ok} deleted, ${fail} failed.`);
+    else toast.ok('Batch delete', `${ok} account${ok > 1 ? 's' : ''} removed.`);
+    loadMembers();
+  };
+
   const filteredMembers = useMemo(() => {
+    let list = members;
+    if (confirmFilter === 'unconfirmed') list = list.filter((m) => !m.email_confirmed);
+    if (confirmFilter === 'confirmed') list = list.filter((m) => m.email_confirmed);
     const q = memberSearch.trim().toLowerCase();
-    if (!q) return members;
-    return members.filter((m) =>
+    if (!q) return list;
+    return list.filter((m) =>
       [m.full_name, m.student_id, m.section, m.year_level, m.role].some((v) => v && String(v).toLowerCase().includes(q))
     );
-  }, [members, memberSearch]);
+  }, [members, memberSearch, confirmFilter]);
 
   const viewingMember = members.find((m) => m.id === viewingId) || null;
 
@@ -278,6 +347,25 @@ export default function Admin() {
           <IdIcon width={18} height={18} style={{ color: 'var(--accent-2)' }} />
           <b style={{ fontSize: 15 }}>Registered members</b>
           <span className="chip chip--teal" style={{ marginLeft: 'auto' }}>{members.length} members</span>
+          {members.some((m) => !m.email_confirmed) > 0 && (
+            <span className="chip chip--warn">{members.filter((m) => !m.email_confirmed).length} unconfirmed</span>
+          )}
+          {selectedIds.size > 0 && isSuper && (
+            <button className="btn btn-sm" style={{ color: 'var(--danger)', borderColor: 'var(--danger)' }} onClick={batchDelete} disabled={busy}>
+              <TrashIcon width={13} height={13} /> Delete {selectedIds.size}
+            </button>
+          )}
+          <select
+            className="input"
+            style={{ maxWidth: 160, padding: '5px 8px', fontSize: 12 }}
+            value={confirmFilter}
+            onChange={(e) => setConfirmFilter(e.target.value)}
+            aria-label="Filter by confirmation status"
+          >
+            <option value="all">All accounts</option>
+            <option value="confirmed">Confirmed</option>
+            <option value="unconfirmed">Unconfirmed</option>
+          </select>
           <div className="search-box" style={{ maxWidth: 260, width: '100%' }}>
             <SearchIcon width={15} height={15} />
             <input placeholder="Search name, ID, section…" value={memberSearch} onChange={(e) => setMemberSearch(e.target.value)} />
@@ -296,22 +384,50 @@ export default function Admin() {
             <table className="codex-table">
               <thead>
                 <tr>
+                  {isSuper && (
+                    <th style={{ width: 36 }}>
+                      <input
+                        type="checkbox"
+                        checked={filteredMembers.length > 0 && selectedIds.size === filteredMembers.length}
+                        onChange={toggleSelectAll}
+                        style={{ accentColor: 'var(--accent)', width: 16, height: 16, cursor: 'pointer' }}
+                        aria-label="Select all"
+                      />
+                    </th>
+                  )}
                   <th>member</th>
+                  <th>email</th>
                   <th>id no.</th>
                   <th>year / section</th>
                   <th>role</th>
                   {isSuper && <th>membership</th>}
                   <th>digital id</th>
+                  {isSuper && <th>actions</th>}
                 </tr>
               </thead>
               <tbody>
                 {filteredMembers.map((m) => (
-                  <tr key={m.id}>
+                  <tr key={m.id} style={selectedIds.has(m.id) ? { background: 'rgba(14,208,182,0.06)' } : undefined}>
+                    {isSuper && (
+                      <td>
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.has(m.id)}
+                          onChange={() => toggleSelect(m.id)}
+                          style={{ accentColor: 'var(--accent)', width: 16, height: 16, cursor: 'pointer' }}
+                          aria-label={`Select ${m.full_name || m.email}`}
+                        />
+                      </td>
+                    )}
                     <td>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10, whiteSpace: 'nowrap' }}>
                         <Avatar name={m.full_name} seed={m.student_id || m.id} size={30} url={m.avatar_url} />
                         <b>{m.full_name || '—'}</b>
                       </div>
+                    </td>
+                    <td>
+                      <span style={{ fontSize: 13 }}>{m.email || '—'}</span>
+                      {!m.email_confirmed && <span className="chip chip--warn" style={{ marginLeft: 6 }}>unconfirmed</span>}
                     </td>
                     <td style={{ fontFamily: 'var(--f-ocr)', fontSize: 12 }}>{m.student_id || '—'}</td>
                     <td>{m.year_level} · {m.section}</td>
@@ -334,6 +450,20 @@ export default function Admin() {
                         </button>
                       )}
                     </td>
+                    {isSuper && (
+                      <td>
+                        <button
+                          className="icon-btn"
+                          style={{ color: 'var(--danger)' }}
+                          title="Delete account"
+                          aria-label={`Delete ${m.full_name || m.email}`}
+                          onClick={() => deleteMember(m)}
+                          disabled={busy}
+                        >
+                          <TrashIcon width={14} height={14} />
+                        </button>
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>
@@ -481,11 +611,7 @@ export default function Admin() {
                       <th>student</th>
                       <th>id no.</th>
                       <th>year / section</th>
-                      {selected?.am_start && <th>am time in</th>}
-                      {selected?.am_start && <th>am time out</th>}
-                      {selected?.pm_start && <th>pm time in</th>}
-                      {selected?.pm_start && <th>pm time out</th>}
-                      {!selected?.am_start && !selected?.pm_start && <th>scanned at</th>}
+                      <th>scanned at</th>
                       <th>scanned by</th>
                       <th>verify</th>
                     </tr>
@@ -502,11 +628,7 @@ export default function Admin() {
                       </td>
                       <td style={{ fontFamily: 'var(--f-ocr)', fontSize: 12 }}>{a.student_id}</td>
                       <td>{a.profiles?.year_level || '—'} · {a.profiles?.section || '—'}</td>
-                      {selected?.am_start && <td>{a.time_in_am ? formatTime(a.time_in_am) : '—'}</td>}
-                      {selected?.am_start && <td>{a.time_out_am ? formatTime(a.time_out_am) : <span style={{ color: 'var(--warn)' }}>—</span>}</td>}
-                      {selected?.pm_start && <td>{a.time_in_pm ? formatTime(a.time_in_pm) : '—'}</td>}
-                      {selected?.pm_start && <td>{a.time_out_pm ? formatTime(a.time_out_pm) : <span style={{ color: 'var(--warn)' }}>—</span>}</td>}
-                      {!selected?.am_start && !selected?.pm_start && <td>{a.scanned_at ? formatTime(a.scanned_at) : '—'}</td>}
+                      <td>{a.time_in_am ? formatTime(a.time_in_am) : '—'}</td>
                       <td>{a.scanned_by_profile?.full_name || '—'}</td>
                       <td>
                         <span className="chip chip--ok"><CheckIcon width={11} height={11} /> BSIT</span>
@@ -535,41 +657,24 @@ function CreateEventModal({ onClose, onCreated }) {
   const toast = useToast();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  const [form, setForm] = useState({
-    title: '', description: '', location: '', date: '', time: '09:00',
-    endDate: '', endTime: '17:00',
-    amEnabled: true, pmEnabled: true,
-    amStart: '08:00', amEnd: '12:00',
-    pmStart: '13:00', pmEnd: '17:00',
-  });
+  const [form, setForm] = useState({ title: '', description: '', location: '', date: '', time: '09:00' });
 
   const submit = async (e) => {
     e.preventDefault();
     setError('');
     if (!form.title.trim() || !form.date) return setError('Title and date are required.');
-    if (!form.endDate) return setError('End date/time is required for attendance cutoff.');
-    if (!form.amEnabled && !form.pmEnabled) return setError('Enable at least one attendance session (AM or PM).');
-    if (form.amEnabled && (!form.amStart || !form.amEnd)) return setError('AM time in and time out are required when AM is enabled.');
-    if (form.pmEnabled && (!form.pmStart || !form.pmEnd)) return setError('PM time in and time out are required when PM is enabled.');
-    const event_date = new Date(`${form.date}T${form.time}:00`).toISOString();
-    const event_end = new Date(`${form.endDate}T${form.endTime}:00`).toISOString();
-    if (event_end <= event_date) return setError('End date/time must be after start date/time.');
     setBusy(true);
     const { error: err } = await supabase.from('events').insert({
       title: form.title.trim().slice(0, 120),
       description: form.description.trim().slice(0, 1000) || null,
       location: form.location.trim().slice(0, 160) || null,
-      event_date,
-      event_end,
+      event_date: new Date(`${form.date}T${form.time}:00`).toISOString(),
       created_by: user.id,
-      am_start: form.amEnabled ? `${form.date}T${form.amStart}:00` : null,
-      am_end: form.amEnabled ? `${form.date}T${form.amEnd}:00` : null,
-      pm_start: form.pmEnabled ? `${form.date}T${form.pmStart}:00` : null,
-      pm_end: form.pmEnabled ? `${form.date}T${form.pmEnd}:00` : null,
     });
     setBusy(false);
     if (err) return setError(err.message);
     toast.ok('Event created', 'It is now scannable at the venue.');
+    // Ping every subscribed member about the new event (no-op if push isn't configured).
     sendPush({ to: 'all', title: 'New event', body: form.title.trim(), url: '/app/events' });
     onCreated();
   };
@@ -604,55 +709,8 @@ function CreateEventModal({ onClose, onCreated }) {
               <input id="adm-time" className="input" type="time" value={form.time} onChange={(e) => setForm({ ...form, time: e.target.value })} required />
             </div>
           </div>
-          <div className="auth-grid2">
-            <div className="field">
-              <label htmlFor="adm-end-date">End date</label>
-              <input id="adm-end-date" className="input" type="date" value={form.endDate} onChange={(e) => setForm({ ...form, endDate: e.target.value })} required />
-            </div>
-            <div className="field">
-              <label htmlFor="adm-end-time">End time</label>
-              <input id="adm-end-time" className="input" type="time" value={form.endTime} onChange={(e) => setForm({ ...form, endTime: e.target.value })} required />
-            </div>
-          </div>
-          <div className="panel" style={{ marginTop: 16, padding: 16, border: '1px solid var(--line)', borderRadius: 'var(--r-md)' }}>
-            <h4 style={{ margin: '0 0 12px', fontSize: 14, color: 'var(--accent-2)' }}>Attendance Sessions</h4>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, cursor: 'pointer', fontSize: 13.5 }}>
-              <input type="checkbox" checked={form.amEnabled} onChange={(e) => setForm({ ...form, amEnabled: e.target.checked })} />
-              <b>Morning session (AM)</b>
-            </label>
-            {form.amEnabled && (
-              <div className="auth-grid2" style={{ marginBottom: 12 }}>
-                <div className="field">
-                  <label htmlFor="adm-am-start">AM time in</label>
-                  <input id="adm-am-start" className="input" type="time" value={form.amStart} onChange={(e) => setForm({ ...form, amStart: e.target.value })} required />
-                </div>
-                <div className="field">
-                  <label htmlFor="adm-am-end">AM time out</label>
-                  <input id="adm-am-end" className="input" type="time" value={form.amEnd} onChange={(e) => setForm({ ...form, amEnd: e.target.value })} required />
-                </div>
-              </div>
-            )}
-            <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, cursor: 'pointer', fontSize: 13.5 }}>
-              <input type="checkbox" checked={form.pmEnabled} onChange={(e) => setForm({ ...form, pmEnabled: e.target.checked })} />
-              <b>Afternoon session (PM)</b>
-            </label>
-            {form.pmEnabled && (
-              <div className="auth-grid2">
-                <div className="field">
-                  <label htmlFor="adm-pm-start">PM time in</label>
-                  <input id="adm-pm-start" className="input" type="time" value={form.pmStart} onChange={(e) => setForm({ ...form, pmStart: e.target.value })} required />
-                </div>
-                <div className="field">
-                  <label htmlFor="adm-pm-end">PM time out</label>
-                  <input id="adm-pm-end" className="input" type="time" value={form.pmEnd} onChange={(e) => setForm({ ...form, pmEnd: e.target.value })} required />
-                </div>
-              </div>
-            )}
-          </div>
           {error && <div className="err-box"><span>!</span><span>{error}</span></div>}
-          <button className="btn btn-accent btn-lg" disabled={busy}>
-            {busy ? 'Creating…' : 'Publish event'}
-          </button>
+          <button className="btn btn-accent btn-lg" disabled={busy}>{busy ? 'Creating…' : 'Publish event'}</button>
         </form>
       </div>
     </div>
