@@ -425,16 +425,16 @@ export default function Certificates() {
                           </div>
                         )}
 
-                        {/* CODEBYTERS org name above footer line */}
-                        <div className="cert-footer-org">
-                          <div className="cert-footer-org-name">CODEBYTERS</div>
-                          <div className="cert-footer-org-sub">BSIT Organization</div>
-                        </div>
-
-                        {/* footer: student no + date */}
+                        {/* footer: org name + line + student no + date */}
                         <div className="cert-footer">
-                          <span>Student No. <b>{myStudentId || '—'}</b></span>
-                          <span>{certDate}</span>
+                          <div className="cert-footer-org">
+                            <div className="cert-footer-org-name">CODEBYTERS</div>
+                            <div className="cert-footer-org-sub">BSIT Organization</div>
+                          </div>
+                          <div className="cert-footer-bottom">
+                            <span>Student No. <b>{myStudentId || '—'}</b></span>
+                            <span>{certDate}</span>
+                          </div>
                         </div>
                       </div>
                     </div>

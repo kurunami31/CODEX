@@ -2066,21 +2066,17 @@ html[data-theme='dark'] .portal-config code { background: rgba(255, 255, 255, 0.
 .cert-footer {
   width: 100%;
   display: flex;
-  justify-content: center;
+  flex-direction: column;
   align-items: center;
-  gap: 24px;
+  gap: 0;
   margin-top: auto;
-  padding-top: 6px;
-  border-top: 1px solid #d6ddd8;
-  font-size: 8.5px;
-  letter-spacing: 0.08em;
-  color: #7c8c94;
 }
 .cert-footer-org {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 0;
+  margin-bottom: 6px;
 }
 .cert-footer-org-name {
   font-family: Georgia, 'Times New Roman', serif;
@@ -2093,6 +2089,18 @@ html[data-theme='dark'] .portal-config code { background: rgba(255, 255, 255, 0.
   font-size: 7.5px;
   letter-spacing: 0.14em;
   text-transform: uppercase;
+  color: #7c8c94;
+}
+.cert-footer-bottom {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 24px;
+  padding-top: 6px;
+  border-top: 1px solid #d6ddd8;
+  font-size: 8.5px;
+  letter-spacing: 0.08em;
   color: #7c8c94;
 }
 
@@ -2151,7 +2159,7 @@ html[data-theme='dark'] .cert-name { color: #e8f0f2; }
 html[data-theme='dark'] .cert-name-underline { background: #e8f0f2; }
 html[data-theme='dark'] .cert-body { color: #a0b4ba; }
 html[data-theme='dark'] .cert-issued-line { color: #a0b4ba; }
-html[data-theme='dark'] .cert-footer { border-top-color: #1a3a48; color: #6b8a94; }
+html[data-theme='dark'] .cert-footer-bottom { border-top-color: #1a3a48; color: #6b8a94; }
 html[data-theme='dark'] .cert-footer-org-name { color: #0aa88f; }
 html[data-theme='dark'] .cert-footer-org-sub { color: #6b8a94; }
 html[data-theme='dark'] .cert-watermark { opacity: 0.06; }
