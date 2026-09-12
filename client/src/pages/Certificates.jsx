@@ -378,7 +378,7 @@ export default function Certificates() {
                             <div className="cert-org">CODEBYTERS</div>
                             <div className="cert-org-sub">BSIT Student Organization &middot; Davao Oriental State University</div>
                           </div>
-                          <img src="/assets/codebyterts-logo.gif" alt="CODEBYTERS" className="cert-logo cert-logo--right" />
+                          <img src="/assets/it-logo.png" alt="CODEBYTERS" className="cert-logo cert-logo--right" />
                         </div>
 
                         {/* ornamental divider */}
