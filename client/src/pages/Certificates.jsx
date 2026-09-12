@@ -151,10 +151,8 @@ export default function Certificates() {
     const doc = iframe.contentDocument;
     doc.open();
     doc.write(`<!DOCTYPE html><html><head><style>${cssText}
-      @page{size:A4 landscape;margin:0}
       *{margin:0;padding:0;box-sizing:border-box}
-      body{display:grid;place-items:center;width:297mm;height:210mm;overflow:hidden;background:#fff}
-      .cert-frame{width:270mm;aspect-ratio:auto;border-radius:0;break-inside:avoid}
+      body{display:grid;place-items:center;min-height:100vh;background:#fff}
     </style></head><body>${frameHtml}</body></html>`);
     doc.close();
     iframe.contentWindow.onload = () => {
