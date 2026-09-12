@@ -420,12 +420,14 @@ export default function Certificates() {
                           </div>
                         )}
 
-                        {/* footer: org name + student no + date */}
+                        {/* CODEBYTERS org name above footer line */}
+                        <div className="cert-footer-org">
+                          <div className="cert-footer-org-name">CODEBYTERS</div>
+                          <div className="cert-footer-org-sub">BSIT Organization</div>
+                        </div>
+
+                        {/* footer: student no + date */}
                         <div className="cert-footer">
-                          <div className="cert-footer-org">
-                            <div className="cert-footer-org-name">CODEBYTERS</div>
-                            <div className="cert-footer-org-sub">BSIT Organization</div>
-                          </div>
                           <span>Student No. <b>{myStudentId || '—'}</b></span>
                           <span>{certDate}</span>
                         </div>
