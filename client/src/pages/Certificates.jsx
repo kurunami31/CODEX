@@ -307,7 +307,7 @@ export default function Certificates() {
                 </button>
                 <button
                   className="btn btn-outline btn-sm"
-                  onClick={() => setOpen({ type: 'event', title: a.events?.title || 'CODEBYTERS Event', date: a.events?.event_date })}
+                  onClick={() => setOpen({ type: 'event', title: a.events?.title || 'CODEBYTERS Event', date: a.events?.event_date, venue: a.events?.location })}
                 >
                   <CertificateIcon width={14} height={14} /> Certificate
                 </button>
