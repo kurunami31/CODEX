@@ -2172,16 +2172,29 @@ html[data-theme='dark'] .tally-track { background: #0e2c3b; border-color: #14384
   .cert-print {
     position: fixed; inset: 0; margin: 0; padding: 0;
     display: grid; place-items: center; background: #fff; z-index: 9999;
+    overflow: hidden;
   }
   .cert-frame {
     width: 960px; height: 600px; aspect-ratio: auto;
     break-inside: avoid; page-break-inside: avoid;
-    overflow: hidden;
+    overflow: hidden; transform: scale(0.92); transform-origin: center center;
   }
-  .cert-content { padding: 16px 40px 10px; }
-  .cert-body { font-size: 10.5px; line-height: 1.55; }
-  .cert-body br + br { display: block; content: ''; margin-top: 4px; }
-  @page { size: 1024px 640px landscape; margin: 0; }
+  .cert-content { padding: 14px 36px 8px; gap: 0; }
+  .cert-header { margin-bottom: 2px; }
+  .cert-logo { width: 44px; height: 44px; }
+  .cert-divider { margin: 3px 0; width: 50%; }
+  .cert-title { font-size: 19px; margin: 2px 0 4px; }
+  .cert-awarded { font-size: 10px; margin-bottom: 1px; }
+  .cert-name { font-size: 24px; }
+  .cert-name-underline { margin: 1px auto 5px; }
+  .cert-body { font-size: 9.5px; line-height: 1.5; max-width: 440px; margin: 0 auto 6px; }
+  .cert-body br + br { display: block; content: ''; margin-top: 2px; }
+  .cert-issued-line { font-size: 9.5px; margin: 2px 0 3px; }
+  .cert-footer-org { margin-bottom: 3px; }
+  .cert-footer-org-name { font-size: 10px; }
+  .cert-footer-org-sub { font-size: 7px; }
+  .cert-footer-bottom { padding-top: 4px; font-size: 8px; }
+  @page { size: 1024px 640px; margin: 0; }
 }
 
 /* ── crop modal ─────────────────────────────────────────── */
