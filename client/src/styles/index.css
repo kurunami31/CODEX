@@ -2051,8 +2051,9 @@ html[data-theme='dark'] .portal-config code { background: rgba(255, 255, 255, 0.
 .cert-footer {
   width: 100%;
   display: flex;
-  justify-content: space-between;
+  justify-content: center;
   align-items: center;
+  gap: 24px;
   margin-top: auto;
   padding-top: 6px;
   border-top: 1px solid #d6ddd8;
