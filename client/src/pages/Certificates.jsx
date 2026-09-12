@@ -367,6 +367,9 @@ export default function Certificates() {
                       <div className="cert-corner cert-corner--bl" />
                       <div className="cert-corner cert-corner--br" />
 
+                      {/* ghost watermark */}
+                      <img src="/assets/cb-logo.png" alt="" className="cert-watermark" />
+
                       <div className="cert-content">
                         {/* header: logos + org name */}
                         <div className="cert-header">
@@ -408,35 +411,10 @@ export default function Certificates() {
                           )}
                         </div>
 
-                        {/* signature + seal row */}
-                        <div className="cert-sig-row">
-                          <div className="cert-sig-block">
-                            <div className="cert-sig-line" />
-                            <div className="cert-sig-name">John Anthony B. Ricamonte</div>
-                            <div className="cert-sig-role">President &middot; CODEBYTERS</div>
-                          </div>
-
-                          <div className="cert-seal">
-                            <div className="cert-seal-ring">
-                              <div className="cert-seal-inner">
-                                <div className="cert-seal-icon">&#9733;</div>
-                                <div className="cert-seal-text">CODEBYTERS</div>
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="cert-sig-block">
-                            <div className="cert-sig-line" />
-                            <div className="cert-sig-name">{profile.full_name}</div>
-                            <div className="cert-sig-role">Recipient</div>
-                          </div>
-                        </div>
-
-                        {/* footer: student no + date + cert code */}
+                        {/* footer: student no + date */}
                         <div className="cert-footer">
                           <span>Student No. <b>{myStudentId || '—'}</b></span>
                           <span>{certDate}</span>
-                          <span className="cert-code">cert-{open.type === 'membership' ? 'member' : open.type === 'election' ? 'elected' : 'event'}-{String(myStudentId || user?.id || '').toLowerCase().replace(/[^a-z0-9]/gi, '')}</span>
                         </div>
                       </div>
                     </div>

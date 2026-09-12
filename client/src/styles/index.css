@@ -2033,85 +2033,18 @@ html[data-theme='dark'] .portal-config code { background: rgba(255, 255, 255, 0.
   margin: 0 auto 10px;
 }
 
-/* signature + seal row */
-.cert-sig-row {
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  gap: 32px;
-  margin-top: auto;
-  width: 100%;
-  max-width: 560px;
-}
-.cert-sig-block {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 3px;
-  min-width: 140px;
-}
-.cert-sig-line {
-  width: 100%;
-  height: 1px;
-  background: #1a2f38;
-  margin-bottom: 4px;
-}
-.cert-sig-name {
-  font-family: Georgia, 'Times New Roman', serif;
-  font-size: 10.5px;
-  font-weight: 600;
-  color: #1a2f38;
-  letter-spacing: 0.04em;
-}
-.cert-sig-role {
-  font-size: 8.5px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: #7c8c94;
-}
-
-/* seal / medallion */
-.cert-seal {
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.cert-seal-ring {
-  width: 62px;
-  height: 62px;
-  border-radius: 50%;
-  border: 2px solid #c9a84c;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-}
-.cert-seal-ring::before {
-  content: '';
+/* ghost watermark logo */
+.cert-watermark {
   position: absolute;
-  inset: 3px;
-  border-radius: 50%;
-  border: 1px solid #c9a84c;
-}
-.cert-seal-inner {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0;
-}
-.cert-seal-icon {
-  font-size: 16px;
-  color: #c9a84c;
-  line-height: 1;
-}
-.cert-seal-text {
-  font-family: Georgia, 'Times New Roman', serif;
-  font-size: 6px;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: #c9a84c;
-  font-weight: 700;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 260px;
+  height: auto;
+  opacity: 0.08;
+  pointer-events: none;
+  z-index: 0;
+  user-select: none;
 }
 
 /* footer bar */
@@ -2120,18 +2053,12 @@ html[data-theme='dark'] .portal-config code { background: rgba(255, 255, 255, 0.
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-top: 8px;
+  margin-top: auto;
   padding-top: 6px;
   border-top: 1px solid #d6ddd8;
   font-size: 8.5px;
   letter-spacing: 0.08em;
   color: #7c8c94;
-}
-.cert-code {
-  font-size: 7.5px;
-  letter-spacing: 0.16em;
-  color: #b0bcc2;
-  text-transform: uppercase;
 }
 
 /* ── elections ───────────────────────────────────────────── */
@@ -2187,11 +2114,8 @@ html[data-theme='dark'] .cert-title { color: #0aa88f; }
 html[data-theme='dark'] .cert-name { color: #e8f0f2; }
 html[data-theme='dark'] .cert-name-underline { background: #e8f0f2; }
 html[data-theme='dark'] .cert-body { color: #a0b4ba; }
-html[data-theme='dark'] .cert-sig-line { background: #e8f0f2; }
-html[data-theme='dark'] .cert-sig-name { color: #e8f0f2; }
 html[data-theme='dark'] .cert-footer { border-top-color: #1a3a48; color: #6b8a94; }
-html[data-theme='dark'] .cert-seal-ring { border-color: #c9a84c; }
-html[data-theme='dark'] .cert-seal-ring::before { border-color: #c9a84c; }
+html[data-theme='dark'] .cert-watermark { opacity: 0.06; }
 html[data-theme='dark'] .tally-track { background: #0e2c3b; border-color: #14384a; }
 
 /* ── print: only the certificate is visible ──────────────── */
