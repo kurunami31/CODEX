@@ -154,10 +154,11 @@ export default function Certificates() {
       *{margin:0;padding:0;box-sizing:border-box}
       @page{size:297mm 210mm;margin:0}
       html,body{width:297mm;height:210mm;overflow:hidden;background:#fff}
-      .cert-frame{width:100%;height:100%;border-radius:0;aspect-ratio:auto;display:flex;flex-direction:column}
-      .cert-border-outer{flex-direction:column}
-      .cert-border-inner{flex-direction:column}
-      .cert-content{justify-content:flex-start}
+      .cert-frame{width:100%;height:100%!important;border-radius:0;aspect-ratio:auto!important;display:flex;flex-direction:column}
+      .cert-border-outer{flex-direction:column!important}
+      .cert-border-inner{flex-direction:column!important}
+      .cert-content{justify-content:flex-start!important}
+      .cert-footer{margin-top:auto!important}
     </style></head><body>${frameHtml}</body></html>`);
     doc.close();
     iframe.contentWindow.onload = () => {
