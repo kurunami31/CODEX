@@ -1867,7 +1867,6 @@ html[data-theme='dark'] .portal-config code { background: rgba(255, 255, 255, 0.
 .cert-frame {
   background: #fdfbf5;
   border-radius: 6px;
-  aspect-ratio: 16 / 10;
   display: flex;
   align-items: stretch;
   justify-content: stretch;
