@@ -164,26 +164,26 @@ export default function Certificates() {
       .cert-watermark{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:260px;opacity:0.08;pointer-events:none;z-index:0;user-select:none}
       .cert-content{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:20px 32px 14px;text-align:center;color:#1a2f38;gap:0}
       .cert-header{display:flex;align-items:center;justify-content:center;gap:20px;margin-bottom:4px}
-      .cert-logo{width:52px;height:52px;object-fit:contain;flex-shrink:0}
+      .cert-logo{width:64px;height:64px;object-fit:contain;flex-shrink:0}
       .cert-logo--right{border-radius:8px}
       .cert-header-text{text-align:center}
-      .cert-header-uni{font-weight:700;font-size:14px;letter-spacing:0.06em;color:#1a5c3a}
-      .cert-header-addr{font-size:9px;letter-spacing:0.1em;color:#6b7c84;margin-top:1px}
-      .cert-header-prog{font-size:9px;letter-spacing:0.12em;text-transform:uppercase;color:#6b7c84;margin-top:1px}
+      .cert-header-uni{font-weight:700;font-size:18px;letter-spacing:0.06em;color:#1a5c3a}
+      .cert-header-addr{font-size:11px;letter-spacing:0.1em;color:#6b7c84;margin-top:1px}
+      .cert-header-prog{font-size:11px;letter-spacing:0.12em;text-transform:uppercase;color:#6b7c84;margin-top:1px}
       .cert-divider{display:flex;align-items:center;gap:8px;width:60%;margin:6px 0}
       .cert-divider-line{flex:1;height:1px;background:linear-gradient(90deg,transparent,#c9a84c,transparent)}
       .cert-divider-diamond{width:6px;height:6px;background:#c9a84c;transform:rotate(45deg);flex-shrink:0}
-      .cert-title{font-size:22px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:#1a5c3a;margin:2px 0 6px}
-      .cert-awarded{font-style:italic;font-size:11.5px;color:#6b7c84;letter-spacing:0.12em;text-transform:lowercase;margin-bottom:2px}
-      .cert-name{font-size:28px;font-weight:700;color:#0b2b3a;letter-spacing:0.03em;margin:0;padding:0 20px;line-height:1.2}
-      .cert-name-underline{width:280px;max-width:80%;height:1px;background:#1a2f38;margin:2px auto 8px}
-      .cert-body{max-width:520px;font-size:11px;line-height:1.65;color:#3a4f58;margin:0 auto 10px}
-      .cert-issued-line{font-style:italic;font-size:10.5px;color:#3a4f58;margin:4px 0 6px}
+      .cert-title{font-size:28px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:#1a5c3a;margin:2px 0 6px}
+      .cert-awarded{font-style:italic;font-size:14px;color:#6b7c84;letter-spacing:0.12em;text-transform:lowercase;margin-bottom:2px}
+      .cert-name{font-size:36px;font-weight:700;color:#0b2b3a;letter-spacing:0.03em;margin:0;padding:0 20px;line-height:1.2}
+      .cert-name-underline{width:360px;max-width:80%;height:1px;background:#1a2f38;margin:2px auto 8px}
+      .cert-body{max-width:600px;font-size:14px;line-height:1.65;color:#3a4f58;margin:0 auto 10px}
+      .cert-issued-line{font-style:italic;font-size:13px;color:#3a4f58;margin:4px 0 6px}
       .cert-footer{width:100%;display:flex;flex-direction:column;align-items:center;gap:0}
       .cert-footer-org{display:flex;flex-direction:column;align-items:center;gap:0;margin-bottom:6px}
-      .cert-footer-org-name{font-weight:700;font-size:13px;letter-spacing:0.12em;color:#1a5c3a}
-      .cert-footer-org-sub{font-size:7.5px;letter-spacing:0.14em;text-transform:uppercase;color:#7c8c94}
-      .cert-footer-bottom{width:100%;display:flex;justify-content:center;align-items:center;gap:24px;padding-top:6px;border-top:1px solid #d6ddd8;font-size:8.5px;color:#7c8c94;letter-spacing:0.08em}
+      .cert-footer-org-name{font-weight:700;font-size:16px;letter-spacing:0.12em;color:#1a5c3a}
+      .cert-footer-org-sub{font-size:9px;letter-spacing:0.14em;text-transform:uppercase;color:#7c8c94}
+      .cert-footer-bottom{width:100%;display:flex;justify-content:center;align-items:center;gap:24px;padding-top:6px;border-top:1px solid #d6ddd8;font-size:11px;color:#7c8c94;letter-spacing:0.08em}
     </style></head><body>${frameHtml}</body></html>`);
     doc.close();
     iframe.contentWindow.onload = () => {
