@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
-import { CertificateIcon, DownloadIcon, CalendarIcon, CheckIcon, XIcon, GavelIcon, TrophyIcon } from '../components/icons/Icons';
+import { CertificateIcon, DownloadIcon, CalendarIcon, CheckIcon, XIcon, GavelIcon, TrophyIcon, TrashIcon, PencilIcon } from '../components/icons/Icons';
 
 export default function Certificates() {
   const { profile, user } = useAuth();
@@ -10,9 +10,28 @@ export default function Certificates() {
   const [attendance, setAttendance] = useState([]);
   const [wins, setWins] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [open, setOpen] = useState(null); // { type: 'membership' } | { type: 'event', title, date } | { type: 'election', title, position, date }
+  const [open, setOpen] = useState(null);
   const [myStudentId, setMyStudentId] = useState(null);
   const printRef = useRef(null);
+  const [selected, setSelected] = useState(new Set());
+  const [busy, setBusy] = useState(false);
+  const [editing, setEditing] = useState(null); // { type: 'event'|'election', id, title }
+
+  const loadCertificates = async () => {
+    const [att, win] = await Promise.all([
+      supabase.from('attendance').select('event_id, scanned_at, events(title, event_date)').order('scanned_at', { ascending: false }),
+      user
+        ? supabase
+            .from('election_candidates')
+            .select('id, position, created_at, elections!election_candidates_election_id_fkey(id, title, ends_at)')
+            .eq('user_id', user.id)
+            .eq('winner', true)
+            .order('created_at', { ascending: false })
+        : Promise.resolve({ data: [] }),
+    ]);
+    if (!att.error) setAttendance(att.data || []);
+    if (!win.error) setWins(win.data || []);
+  };
 
   useEffect(() => {
     (async () => {
@@ -23,35 +42,103 @@ export default function Certificates() {
 
   useEffect(() => {
     (async () => {
-      const [att, win] = await Promise.all([
-        supabase.from('attendance').select('event_id, scanned_at, events(title, event_date)').order('scanned_at', { ascending: false }),
-        user
-          ? supabase
-              .from('election_candidates')
-              .select('id, position, created_at, elections!election_candidates_election_id_fkey(id, title, ends_at)')
-              .eq('user_id', user.id)
-              .eq('winner', true)
-              .order('created_at', { ascending: false })
-          : Promise.resolve({ data: [] }),
-      ]);
-      if (att.error) toast.error('Certificates error', att.error.message);
-      else setAttendance(att.data || []);
-      if (!win.error) setWins(win.data || []);
+      await loadCertificates();
       setLoading(false);
     })();
   }, [user, toast]);
 
   useEffect(() => {
     if (!open) return;
-    const onKey = (e) => {
-      if (e.key === 'Escape') setOpen(null);
-    };
+    const onKey = (e) => { if (e.key === 'Escape') setOpen(null); };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
   }, [open]);
 
-  const print = () => {
-    // Give the browser a tick so the certificate is fully laid out.
+  const toggleSelect = (key) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    const allKeys = [
+      ...attendance.map((a) => `att-${a.event_id}`),
+      ...wins.map((w) => `win-${w.id}`),
+    ];
+    setSelected((prev) => {
+      if (prev.size === allKeys.length) return new Set();
+      return new Set(allKeys);
+    });
+  };
+
+  const allItems = [
+    ...attendance.map((a) => ({ key: `att-${a.event_id}`, type: 'att', id: a.event_id, title: a.events?.title || 'Event' })),
+    ...wins.map((w) => ({ key: `win-${w.id}`, type: 'win', id: w.id, title: w.position })),
+  ];
+  const allSelected = allItems.length > 0 && selected.size === allItems.length;
+
+  const deleteOne = async (key) => {
+    const item = allItems.find((i) => i.key === key);
+    if (!item) return;
+    if (!window.confirm(`Delete "${item.title}" certificate?`)) return;
+    setBusy(true);
+    if (item.type === 'att') {
+      const { error } = await supabase.from('attendance').delete().eq('event_id', item.id);
+      if (error) { toast.error('Delete failed', error.message); setBusy(false); return; }
+    } else {
+      const { error } = await supabase.from('election_candidates').delete().eq('id', item.id);
+      if (error) { toast.error('Delete failed', error.message); setBusy(false); return; }
+    }
+    toast.ok('Certificate deleted', `"${item.title}" was removed.`);
+    setSelected((prev) => { const n = new Set(prev); n.delete(key); return n; });
+    await loadCertificates();
+    setBusy(false);
+  };
+
+  const batchDelete = async () => {
+    const ids = [...selected];
+    if (ids.length === 0) return;
+    if (!window.confirm(`Delete ${ids.length} selected certificate${ids.length > 1 ? 's' : ''}?`)) return;
+    setBusy(true);
+    let ok = 0, fail = 0;
+    for (const key of ids) {
+      const item = allItems.find((i) => i.key === key);
+      if (!item) continue;
+      if (item.type === 'att') {
+        const { error } = await supabase.from('attendance').delete().eq('event_id', item.id);
+        error ? fail++ : ok++;
+      } else {
+        const { error } = await supabase.from('election_candidates').delete().eq('id', item.id);
+        error ? fail++ : ok++;
+      }
+    }
+    setBusy(false);
+    setSelected(new Set());
+    if (fail > 0) toast.error('Batch delete', `${ok} deleted, ${fail} failed.`);
+    else toast.ok('Batch delete', `${ok} certificate${ok > 1 ? 's' : ''} removed.`);
+    await loadCertificates();
+  };
+
+  const saveEdit = async () => {
+    if (!editing) return;
+    setBusy(true);
+    if (editing.type === 'event') {
+      const { error } = await supabase.from('events').update({ title: editing.title }).eq('id', editing.id);
+      if (error) { toast.error('Edit failed', error.message); setBusy(false); return; }
+    } else {
+      const { error } = await supabase.from('elections').update({ title: editing.title }).eq('id', editing.id);
+      if (error) { toast.error('Edit failed', error.message); setBusy(false); return; }
+    }
+    toast.ok('Updated', 'Certificate title updated.');
+    setEditing(null);
+    setBusy(false);
+    await loadCertificates();
+  };
+
+  const printCert = () => {
     requestAnimationFrame(() => window.print());
   };
 
@@ -68,6 +155,24 @@ export default function Certificates() {
         </h2>
         <span className="ocr-label">proof of membership &amp; event participation</span>
       </div>
+
+      {(attendance.length > 0 || wins.length > 0) && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          <input
+            type="checkbox"
+            checked={allSelected}
+            onChange={toggleSelectAll}
+            style={{ accentColor: 'var(--accent)', width: 16, height: 16, cursor: 'pointer' }}
+            aria-label="Select all certificates"
+          />
+          <span style={{ fontSize: 12, color: 'var(--muted)' }}>{selected.size > 0 ? `${selected.size} selected` : `${allItems.length} certificates`}</span>
+          {selected.size > 0 && (
+            <button className="btn btn-sm" style={{ color: 'var(--danger)', borderColor: 'var(--danger)' }} onClick={batchDelete} disabled={busy}>
+              <TrashIcon width={13} height={13} /> Delete {selected.size}
+            </button>
+          )}
+        </div>
+      )}
 
       <div className="section-title">official documents</div>
 
@@ -108,6 +213,13 @@ export default function Certificates() {
         <div className="event-list">
           {wins.map((w) => (
             <div className="event-card panel" key={w.id} style={{ alignItems: 'center' }}>
+              <input
+                type="checkbox"
+                checked={selected.has(`win-${w.id}`)}
+                onChange={() => toggleSelect(`win-${w.id}`)}
+                style={{ accentColor: 'var(--accent)', width: 16, height: 16, cursor: 'pointer', flexShrink: 0 }}
+                aria-label={`Select ${w.position} certificate`}
+              />
               <span className="chip chip--ok"><TrophyIcon width={13} height={13} /> elected</span>
               <div className="event-body">
                 <b>{w.position}</b>
@@ -115,12 +227,32 @@ export default function Certificates() {
                   <span><CalendarIcon width={14} height={14} />{w.elections?.title || 'Officer election'}{w.elections?.ends_at ? ` · ${new Date(w.elections.ends_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}` : ''}</span>
                 </div>
               </div>
-              <button
-                className="btn btn-outline btn-sm"
-                onClick={() => setOpen({ type: 'election', title: w.elections?.title || 'Officer election', position: w.position, date: w.elections?.ends_at })}
-              >
-                <CertificateIcon width={14} height={14} /> Certificate
-              </button>
+              <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                <button
+                  className="icon-btn"
+                  title="Edit title"
+                  aria-label={`Edit ${w.position} certificate`}
+                  onClick={() => setEditing({ type: 'election', id: w.elections?.id, title: w.elections?.title || '' })}
+                >
+                  <PencilIcon width={14} height={14} />
+                </button>
+                <button
+                  className="icon-btn"
+                  style={{ color: 'var(--danger)' }}
+                  title="Delete certificate"
+                  aria-label={`Delete ${w.position} certificate`}
+                  onClick={() => deleteOne(`win-${w.id}`)}
+                  disabled={busy}
+                >
+                  <TrashIcon width={14} height={14} />
+                </button>
+                <button
+                  className="btn btn-outline btn-sm"
+                  onClick={() => setOpen({ type: 'election', title: w.elections?.title || 'Officer election', position: w.position, date: w.elections?.ends_at })}
+                >
+                  <CertificateIcon width={14} height={14} /> Certificate
+                </button>
+              </div>
             </div>
           ))}
         </div>
@@ -140,6 +272,13 @@ export default function Certificates() {
         <div className="event-list">
           {attendance.map((a) => (
             <div className="event-card panel" key={a.event_id} style={{ alignItems: 'center' }}>
+              <input
+                type="checkbox"
+                checked={selected.has(`att-${a.event_id}`)}
+                onChange={() => toggleSelect(`att-${a.event_id}`)}
+                style={{ accentColor: 'var(--accent)', width: 16, height: 16, cursor: 'pointer', flexShrink: 0 }}
+                aria-label={`Select ${a.events?.title} certificate`}
+              />
               <span className="chip chip--ok"><CheckIcon width={13} height={13} /> present</span>
               <div className="event-body">
                 <b>{a.events?.title || 'Event'}</b>
@@ -147,17 +286,67 @@ export default function Certificates() {
                   <span><CalendarIcon width={14} height={14} />{a.events?.event_date ? new Date(a.events.event_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}</span>
                 </div>
               </div>
-              <button
-                className="btn btn-outline btn-sm"
-                onClick={() => setOpen({ type: 'event', title: a.events?.title || 'CODEBYTERS Event', date: a.events?.event_date })}
-              >
-                <CertificateIcon width={14} height={14} /> Certificate
-              </button>
+              <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                <button
+                  className="icon-btn"
+                  title="Edit title"
+                  aria-label={`Edit ${a.events?.title} certificate`}
+                  onClick={() => setEditing({ type: 'event', id: a.event_id, title: a.events?.title || '' })}
+                >
+                  <PencilIcon width={14} height={14} />
+                </button>
+                <button
+                  className="icon-btn"
+                  style={{ color: 'var(--danger)' }}
+                  title="Delete certificate"
+                  aria-label={`Delete ${a.events?.title} certificate`}
+                  onClick={() => deleteOne(`att-${a.event_id}`)}
+                  disabled={busy}
+                >
+                  <TrashIcon width={14} height={14} />
+                </button>
+                <button
+                  className="btn btn-outline btn-sm"
+                  onClick={() => setOpen({ type: 'event', title: a.events?.title || 'CODEBYTERS Event', date: a.events?.event_date })}
+                >
+                  <CertificateIcon width={14} height={14} /> Certificate
+                </button>
+              </div>
             </div>
           ))}
         </div>
       )}
 
+      {/* ── EDIT TITLE MODAL ─────────────────────────────────── */}
+      {editing && (
+        <div className="modal-back" onMouseDown={(e) => e.target === e.currentTarget && setEditing(null)}>
+          <div className="modal" style={{ maxWidth: 400 }}>
+            <div className="modal-head">
+              <h3><PencilIcon width={17} height={17} style={{ verticalAlign: -3, marginRight: 6, color: 'var(--accent)' }} />Edit certificate title</h3>
+              <button className="icon-btn" onClick={() => setEditing(null)} aria-label="Close"><XIcon width={16} height={16} /></button>
+            </div>
+            <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div className="field">
+                <label>Title</label>
+                <input
+                  className="input"
+                  value={editing.title}
+                  onChange={(e) => setEditing({ ...editing, title: e.target.value })}
+                  maxLength={120}
+                />
+              </div>
+              <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                <button className="btn btn-outline btn-sm" onClick={() => setEditing(null)}>Cancel</button>
+                <button className="btn btn-accent btn-sm" onClick={saveEdit} disabled={busy || !editing.title.trim()}>
+                  {busy ? 'Saving…' : 'Save'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── VIEW CERTIFICATE MODAL ───────────────────────────── */}
       {open && (
         <div className="modal-back" onMouseDown={(e) => e.target === e.currentTarget && setOpen(null)}>
           <div className="modal modal--wide">
@@ -210,7 +399,7 @@ export default function Certificates() {
                 </div>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'center', marginTop: 16, flexWrap: 'wrap' }}>
-                <button className="btn btn-accent" onClick={print}>
+                <button className="btn btn-accent" onClick={printCert}>
                   <DownloadIcon width={15} height={15} /> Print / Save as PDF
                 </button>
                 <span className="ocr-label">tip: choose “Save as PDF” as the printer destination</span>
