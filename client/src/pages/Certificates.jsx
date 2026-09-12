@@ -141,19 +141,27 @@ export default function Certificates() {
   const printCert = () => {
     const el = printRef.current;
     if (!el) return;
-    const styles = Array.from(document.querySelectorAll('link[rel="stylesheet"], style'))
-      .map(s => s.outerHTML).join('');
     const frameHtml = el.querySelector('.cert-frame').outerHTML;
-    const html = `<!DOCTYPE html><html><head>${styles}<style>
-      * { margin:0; padding:0; box-sizing:border-box; }
-      body { display:grid; place-items:center; width:297mm; height:210mm; overflow:hidden; background:#fff; }
-      .cert-frame { width:270mm; aspect-ratio:auto; border-radius:0; }
-    </style></head><body>${frameHtml}</body></html>`;
-    const w = window.open('', '_blank', 'width=1122,height=793');
-    if (!w) return;
-    w.document.write(html);
-    w.document.close();
-    w.onload = () => { w.print(); };
+    const cssText = Array.from(document.styleSheets).flatMap(s => {
+      try { return Array.from(s.cssRules).map(r => r.cssText); } catch { return []; }
+    }).join('\n');
+    const iframe = document.createElement('iframe');
+    iframe.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;border:none;z-index:99999;';
+    document.body.appendChild(iframe);
+    const doc = iframe.contentDocument;
+    doc.open();
+    doc.write(`<!DOCTYPE html><html><head><style>${cssText}
+      @page{size:A4 landscape;margin:0}
+      *{margin:0;padding:0;box-sizing:border-box}
+      body{display:grid;place-items:center;width:297mm;height:210mm;overflow:hidden;background:#fff}
+      .cert-frame{width:270mm;aspect-ratio:auto;border-radius:0;break-inside:avoid}
+    </style></head><body>${frameHtml}</body></html>`);
+    doc.close();
+    iframe.contentWindow.onload = () => {
+      iframe.contentWindow.focus();
+      iframe.contentWindow.print();
+      setTimeout(() => iframe.remove(), 1000);
+    };
   };
 
   if (!profile) return null;
