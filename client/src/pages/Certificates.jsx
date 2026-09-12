@@ -371,13 +371,9 @@ export default function Certificates() {
                       <img src="/assets/cb-logo.png" alt="" className="cert-watermark" />
 
                       <div className="cert-content">
-                        {/* header: logos + org name */}
+                        {/* header: logos only */}
                         <div className="cert-header">
                           <img src="/assets/dorsu-logo.png" alt="DOrSU" className="cert-logo" />
-                          <div className="cert-header-text">
-                            <div className="cert-org">CODEBYTERS</div>
-                            <div className="cert-org-sub">BSIT Student Organization &middot; Davao Oriental State University</div>
-                          </div>
                           <img src="/assets/it-logo.png" alt="CODEBYTERS" className="cert-logo cert-logo--right" />
                         </div>
 
@@ -424,11 +420,12 @@ export default function Certificates() {
                           </div>
                         )}
 
-                        {/* CODEBYTERS sign-off */}
-                        <div className="cert-signoff">CODEBYTERS</div>
-
-                        {/* footer: student no + date */}
+                        {/* footer: org name + student no + date */}
                         <div className="cert-footer">
+                          <div className="cert-footer-org">
+                            <div className="cert-footer-org-name">CODEBYTERS</div>
+                            <div className="cert-footer-org-sub">BSIT Organization</div>
+                          </div>
                           <span>Student No. <b>{myStudentId || '—'}</b></span>
                           <span>{certDate}</span>
                         </div>

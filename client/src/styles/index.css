@@ -1931,12 +1931,12 @@ html[data-theme='dark'] .portal-config code { background: rgba(255, 255, 255, 0.
   gap: 0;
 }
 
-/* header row: logo – org name – logo */
+/* header row: logos */
 .cert-header {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 14px;
+  gap: 20px;
   margin-bottom: 4px;
 }
 .cert-logo {
@@ -1946,21 +1946,6 @@ html[data-theme='dark'] .portal-config code { background: rgba(255, 255, 255, 0.
   flex-shrink: 0;
 }
 .cert-logo--right { border-radius: 8px; }
-.cert-header-text { text-align: center; }
-.cert-org {
-  font-family: Georgia, 'Times New Roman', serif;
-  font-weight: 700;
-  font-size: 20px;
-  letter-spacing: 0.12em;
-  color: #1a5c3a;
-}
-.cert-org-sub {
-  font-size: 9.5px;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: #6b7c84;
-  margin-top: 2px;
-}
 
 /* ornamental divider */
 .cert-divider {
@@ -2042,16 +2027,6 @@ html[data-theme='dark'] .portal-config code { background: rgba(255, 255, 255, 0.
   margin: 4px 0 6px;
 }
 
-/* CODEBYTERS sign-off */
-.cert-signoff {
-  font-family: Georgia, 'Times New Roman', serif;
-  font-weight: 700;
-  font-size: 14px;
-  letter-spacing: 0.12em;
-  color: #1a5c3a;
-  margin: 4px 0 0;
-}
-
 /* ghost watermark logo */
 .cert-watermark {
   position: absolute;
@@ -2078,6 +2053,25 @@ html[data-theme='dark'] .portal-config code { background: rgba(255, 255, 255, 0.
   border-top: 1px solid #d6ddd8;
   font-size: 8.5px;
   letter-spacing: 0.08em;
+  color: #7c8c94;
+}
+.cert-footer-org {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+}
+.cert-footer-org-name {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  color: #1a5c3a;
+}
+.cert-footer-org-sub {
+  font-size: 7.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
   color: #7c8c94;
 }
 
@@ -2135,8 +2129,9 @@ html[data-theme='dark'] .cert-name { color: #e8f0f2; }
 html[data-theme='dark'] .cert-name-underline { background: #e8f0f2; }
 html[data-theme='dark'] .cert-body { color: #a0b4ba; }
 html[data-theme='dark'] .cert-issued-line { color: #a0b4ba; }
-html[data-theme='dark'] .cert-signoff { color: #0aa88f; }
 html[data-theme='dark'] .cert-footer { border-top-color: #1a3a48; color: #6b8a94; }
+html[data-theme='dark'] .cert-footer-org-name { color: #0aa88f; }
+html[data-theme='dark'] .cert-footer-org-sub { color: #6b8a94; }
 html[data-theme='dark'] .cert-watermark { opacity: 0.06; }
 html[data-theme='dark'] .tally-track { background: #0e2c3b; border-color: #14384a; }
 
