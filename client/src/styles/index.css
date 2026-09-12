@@ -1201,8 +1201,7 @@ html[data-theme='dark'] .bottomnav a:hover { color: var(--accent); }
 .pill-select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 2px rgba(14,208,182,0.15); }
 
 .pill-select__menu {
-  position: absolute; top: calc(100% + 6px); left: 0; z-index: 50;
-  min-width: 100%; max-width: 260px;
+  position: absolute; top: calc(100% + 6px); left: 0; right: 0; z-index: 50;
   background: var(--paper); border: 1px solid var(--line);
   border-radius: 12px; padding: 4px;
   box-shadow: 0 8px 24px rgba(0,0,0,0.18);

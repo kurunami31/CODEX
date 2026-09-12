@@ -404,7 +404,6 @@ export default function SuperAdmin() {
               { value: 'unconfirmed', label: 'Unconfirmed' },
             ]}
             ariaLabel="Filter by confirmation status"
-            style={{ minWidth: 130 }}
           />
         )}
         {tab === 'students' && selectedIds.size > 0 && (
@@ -421,7 +420,6 @@ export default function SuperAdmin() {
               ...events.map((ev) => ({ value: ev.id, label: ev.title })),
             ]}
             ariaLabel="Filter by event"
-            style={{ minWidth: 180, maxWidth: 280 }}
           />
         )}
       </div>
