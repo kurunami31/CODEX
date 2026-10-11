@@ -29,6 +29,8 @@ export default function ScannerPage() {
 
   const scannerRef = useRef(null);
   const busyRef = useRef(false);
+  const cooldownRef = useRef(false);
+  const lastDecodedRef = useRef({ text: '', time: 0 });
 
   const isStaff = checkStaff(profile?.role);
 
@@ -63,12 +65,22 @@ export default function ScannerPage() {
     setError('');
     setScanError('');
     setResult(null);
+    // Brief cooldown so the same QR that was just in frame isn't
+    // re-scanned the instant the camera resumes.
+    cooldownRef.current = true;
+    setTimeout(() => { cooldownRef.current = false; }, 1500);
     const scanner = new Html5Qrcode('qr-reader');
     scannerRef.current = scanner;
     try {
       await scanner.start(
         { facingMode: 'environment' },
-        { fps: 10, qrbox: { width: 260, height: 260 } },
+        {
+          fps: 15,
+          qrbox: (vw, vh) => {
+            const size = Math.floor(Math.min(vw, vh) * 0.75);
+            return { width: Math.max(size, 160), height: Math.max(size, 160) };
+          },
+        },
         (decoded) => handleScan(decoded),
         () => { /* decode misses are expected while aiming */ }
       );
@@ -100,7 +112,14 @@ export default function ScannerPage() {
   };
 
   const handleScan = async (decoded) => {
-    if (busyRef.current) return;
+    if (busyRef.current || cooldownRef.current) return;
+
+    // Dedup: ignore the exact same QR payload within 5 seconds
+    const now = Date.now();
+    if (decoded === lastDecodedRef.current.text && now - lastDecodedRef.current.time < 5000) {
+      return;
+    }
+    lastDecodedRef.current = { text: decoded, time: now };
     busyRef.current = true;
 
     let parsed;
@@ -139,8 +158,20 @@ export default function ScannerPage() {
       if (navigator.vibrate) navigator.vibrate(180);
     } finally {
       setBusy(false);
-      busyRef.current = false;
+      // busyRef stays TRUE — blocks further scans until "Scan next" is clicked.
+      // This prevents the same QR from being re-decoded at 15 fps while the
+      // result panel is visible, which previously flooded the API and made
+      // the scanner appear broken.
     }
+  };
+
+  const handleScanNext = () => {
+    setResult(null);
+    setScanError('');
+    busyRef.current = false;
+    // Cooldown: prevents re-scanning the same QR that's still in frame
+    cooldownRef.current = true;
+    setTimeout(() => { cooldownRef.current = false; }, 2000);
   };
 
   const toggleTorch = async () => {
@@ -169,12 +200,14 @@ export default function ScannerPage() {
     }
     // Manual entry cannot carry a signature, so it goes straight to the
     // RLS-protected RPC — moderator role is enforced server-side.
+    busyRef.current = true;
     setBusy(true);
     const { data, error: err } = await supabase.rpc('mark_attendance', {
       p_event_id: activeEvent.id,
       p_student_id: sid,
     });
     setBusy(false);
+    busyRef.current = false;
     if (err) {
       setScanError(err.message);
       setResult(null);
@@ -287,6 +320,11 @@ export default function ScannerPage() {
           {scanError && (
             <div className="err-box" style={{ marginBottom: 12 }}><AlertIcon width={15} height={15} /><span>{scanError}</span></div>
           )}
+          {!result && (
+            <button className="btn btn-accent" style={{ width: '100%' }} onClick={handleScanNext}>
+              <QrIcon width={16} height={16} /> Scan next
+            </button>
+          )}
           {result && (
             <>
               <div className="res-head">
@@ -317,10 +355,9 @@ export default function ScannerPage() {
                 <div><div className="k">qr type</div><div className="v">{result.qrType === 'presence' ? 'live presence ✓' : 'year ID'}</div></div>
               </div>
               <div style={{ display: 'flex', gap: 10 }}>
-                <button className="btn btn-accent" style={{ flex: 1 }} onClick={() => { setResult(null); setScanError(''); }} disabled={busy}>
+                <button className="btn btn-accent" style={{ flex: 1 }} onClick={handleScanNext} disabled={busy}>
                   <QrIcon width={16} height={16} /> Scan next
                 </button>
-                <button className="btn btn-outline" onClick={stopScanner}>Pause camera</button>
               </div>
             </>
           )}
