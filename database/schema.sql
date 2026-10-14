@@ -15,7 +15,7 @@ create table if not exists public.profiles (
   student_id  text unique not null,
   full_name   text not null,
   year_level  text not null check (year_level in ('1st Year','2nd Year','3rd Year','4th Year')),
-  section     text not null,
+  section     text,
   course      text not null default 'BSIT' check (course in ('BSIT','BSEM','BSAB','other')),
   role        text not null default 'student' check (role in ('student','moderator','admin','superadmin','adviser')),
   avatar_url  text,
@@ -24,6 +24,15 @@ create table if not exists public.profiles (
 
 -- idempotent upgrade for databases created before avatars existed
 alter table public.profiles add column if not exists avatar_url text;
+
+-- idempotent upgrade: the optional office/position label (e.g. "President")
+-- shown in place of the plain role in the UI, plus the section guard the live
+-- database already carries (section is optional but never an empty string).
+alter table public.profiles add column if not exists position text;
+alter table public.profiles alter column section drop not null;
+alter table public.profiles drop constraint if exists profiles_section_check;
+alter table public.profiles add constraint profiles_section_check
+  check (section is null or section <> '');
 
 -- idempotent upgrade: allow the superadmin role on databases created earlier
 -- (drops + re-adds the default-named check constraint with the new role)
@@ -311,66 +320,11 @@ $$;
 grant execute on function public.get_my_role() to authenticated;
 
 -- ────────────────────────────────────────────────
---  RPC: mark attendance (moderators / admins only)
---  Returns { status: 'present'|'duplicate', student: {...} }
+--  RPC: mark attendance — defined ONCE, phase-aware, further down this file
+--  (see "mark_attendance (phase-aware)"). The old 2-arg signature was removed
+--  because it stamped time_in AND time_out on the same scan, so in/out were
+--  never distinct actions.
 -- ────────────────────────────────────────────────
-create or replace function public.mark_attendance(
-  p_event_id uuid,
-  p_student_id text
-)
-returns jsonb
-language plpgsql
-security definer
-set search_path = public
-as $$
-declare
-  v_role    text := public.get_my_role();
-  v_profile record;
-  v_result  jsonb;
-begin
-  if coalesce(v_role, '') not in ('admin','moderator','superadmin','adviser') then
-    raise exception 'Insufficient permissions: only moderators and admins can mark attendance';
-  end if;
-
-  if not exists (select 1 from public.events where id = p_event_id) then
-    raise exception 'Event not found';
-  end if;
-
-  select p.* into v_profile
-  from public.profiles p
-  where p.student_id = p_student_id;
-
-  if v_profile is null then
-    raise exception 'No student found with ID %', p_student_id;
-  end if;
-
-  if v_profile.course <> 'BSIT' then
-    raise exception 'Attendance is reserved for BSIT students';
-  end if;
-
-  insert into public.attendance (event_id, student_id, scanned_by)
-  values (p_event_id, p_student_id, auth.uid())
-  on conflict (event_id, student_id) do nothing;
-
-  select jsonb_build_object(
-    'status', case when exists (
-      select 1 from public.attendance a
-      where a.event_id = p_event_id and a.student_id = p_student_id
-    ) then 'present' else 'duplicate' end,
-    'student', jsonb_build_object(
-      'student_id', v_profile.student_id,
-      'full_name', v_profile.full_name,
-      'year_level', v_profile.year_level,
-      'section',   v_profile.section,
-      'course',    v_profile.course
-    )
-  ) into v_result;
-
-  return v_result;
-end;
-$$;
-
-grant execute on function public.mark_attendance(uuid, text) to authenticated;
 
 -- ────────────────────────────────────────────────
 --  RPC: attendance list for an event (admins / moderators)
@@ -566,9 +520,9 @@ $$;
 grant execute on function public.get_membership_report() to authenticated;
 
 -- Defense in depth: lock the RPCs down to authenticated users only.
-revoke all on function public.get_my_role, public.mark_attendance,
+revoke all on function public.get_my_role, public.mark_attendance(uuid, text, text),
         public.event_attendance, public.delete_event, public.superadmin_delete_user,
-        public.confirm_membership, public.get_membership_report
+        public.confirm_membership, public.get_membership_report, public.set_event_scan_lock(uuid, text, text)
         from anon, public;
 
 -- PostgREST connects as `authenticator`; revoking from PUBLIC above also
@@ -576,11 +530,12 @@ revoke all on function public.get_my_role, public.mark_attendance,
 -- API (404 "function does not exist"). Re-grant explicitly so the RPCs
 -- stay callable through PostgREST while anon/public stay locked out.
 grant execute on function
-  public.get_my_role(), public.mark_attendance(uuid, text),
+  public.get_my_role(), public.mark_attendance(uuid, text, text),
   public.event_attendance(uuid), public.delete_event(uuid),
   public.superadmin_delete_user(uuid), public.confirm_membership(uuid, boolean, numeric),
   public.get_my_profile(), public.get_members(), public.attendance_counts(),
-  public.get_attendance(), public.get_membership_report()
+  public.get_attendance(), public.get_membership_report(),
+  public.set_event_scan_lock(uuid, text, text)
   to authenticator;
 
 -- ────────────────────────────────────────────────
@@ -931,68 +886,8 @@ create trigger trg_posts_award_points
   after insert on public.posts
   for each row execute function public.award_post_points();
 
--- Attendance awards +10 only on a NEW scan (duplicates earn nothing).
--- Re-declares mark_attendance so existing deployments get the new logic.
-create or replace function public.mark_attendance(
-  p_event_id uuid,
-  p_student_id text
-)
-returns jsonb
-language plpgsql
-security definer
-set search_path = public
-as $$
-declare
-  v_role    text := public.get_my_role();
-  v_profile record;
-  v_result  jsonb;
-begin
-  if coalesce(v_role, '') not in ('admin','moderator','superadmin','adviser') then
-    raise exception 'Insufficient permissions: only moderators and admins can mark attendance';
-  end if;
-
-  if not exists (select 1 from public.events where id = p_event_id) then
-    raise exception 'Event not found';
-  end if;
-
-  select p.* into v_profile
-  from public.profiles p
-  where p.student_id = p_student_id;
-
-  if v_profile is null then
-    raise exception 'No student found with ID %', p_student_id;
-  end if;
-
-  if v_profile.course <> 'BSIT' then
-    raise exception 'Attendance is reserved for BSIT students';
-  end if;
-
-  if not exists (select 1 from public.attendance a
-                 where a.event_id = p_event_id and a.student_id = p_student_id) then
-    insert into public.attendance (event_id, student_id, scanned_by)
-    values (p_event_id, p_student_id, auth.uid());
-    update public.profiles set points = points + 10 where student_id = p_student_id;
-  end if;
-
-  select jsonb_build_object(
-    'status', case when exists (
-      select 1 from public.attendance a
-      where a.event_id = p_event_id and a.student_id = p_student_id
-    ) then 'present' else 'duplicate' end,
-    'student', jsonb_build_object(
-      'student_id', v_profile.student_id,
-      'full_name', v_profile.full_name,
-      'year_level', v_profile.year_level,
-      'section',   v_profile.section,
-      'course',    v_profile.course
-    )
-  ) into v_result;
-
-  return v_result;
-end;
-$$;
-
-grant execute on function public.mark_attendance(uuid, text) to authenticated;
+-- (legacy 2-arg mark_attendance removed — the phase-aware version below is
+--  the single implementation; it also awards +10 on the first scan only.)
 
 -- ── mark_attendance (phase-aware): separate AM/PM time-in / time-out ──
 -- Connects the scanner's explicit action to one attendance column, honours the
