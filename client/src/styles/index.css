@@ -1468,6 +1468,27 @@ html[data-theme='dark'] .bottomnav a:hover { color: var(--accent); }
 .scanner-actions { display: flex; gap: 12px; }
 .scan-manual { display: flex; gap: 8px; width: min(340px, 86vw); }
 .scan-manual input { flex: 1; }
+
+/* scan action picker (AM/PM × in/out) + per-session locks */
+.scan-phase { display: flex; flex-direction: column; align-items: center; gap: 8px; width: min(380px, 92vw); }
+.scan-phase-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; width: 100%; }
+.scan-phase-grid .btn { justify-content: center; padding: 9px 6px; font-size: 11px; gap: 4px; }
+.scan-phase-status {
+  display: flex; gap: 14px; flex-wrap: wrap; justify-content: center;
+  font-family: var(--f-ocr); font-size: calc(0.625rem * var(--text-scale));
+  letter-spacing: 0.1em; text-transform: uppercase;
+}
+.scan-phase-status span { display: inline-flex; align-items: center; gap: 5px; }
+.scan-phase-status .is-open { color: #6ee7c7; }
+.scan-phase-status .is-locked { color: #ff9d9d; }
+.scan-locks { display: flex; flex-direction: column; gap: 6px; width: min(380px, 92vw); }
+.scan-lock-row { display: grid; grid-template-columns: 34px repeat(3, 1fr); gap: 6px; align-items: center; }
+.scan-lock-label { font-family: var(--f-ocr); font-size: 11px; letter-spacing: 0.14em; color: rgba(234, 255, 250, 0.75); }
+.scan-lock-row .btn { justify-content: center; padding: 7px 4px; font-size: 10.5px; gap: 4px; text-transform: capitalize; }
+.scan-phase-grid .btn:disabled, .scan-lock-row .btn:disabled, .scan-manual .btn:disabled, .scanner-actions .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+@media (max-width: 420px) {
+  .scan-phase-grid { grid-template-columns: repeat(2, 1fr); }
+}
 .scan-result {
   position: absolute; bottom: 0; left: 0; right: 0;
   background: var(--paper); color: var(--ink);
