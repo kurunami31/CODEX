@@ -549,7 +549,7 @@ grant execute on function
 --  the table owner). INSERT/UPDATE privileges are untouched.
 -- ────────────────────────────────────────────────
 revoke select on public.profiles from authenticated;
-grant select (id, full_name, year_level, section, course, role,
+grant select (id, full_name, year_level, section, course, role, position,
               avatar_url, created_at, membership_paid, membership_paid_at,
               membership_paid_amount, points, receipt_url)
   on public.profiles to authenticated;

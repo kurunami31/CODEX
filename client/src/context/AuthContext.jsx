@@ -75,7 +75,7 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
-  const profileSelect = 'id, full_name, year_level, section, course, role, avatar_url, created_at, membership_paid, membership_paid_at';
+  const profileSelect = 'id, full_name, year_level, section, course, role, position, avatar_url, created_at, membership_paid, membership_paid_at';
 
   const fetchProfile = useCallback(async (userId) => {
     if (!userId) return setProfile(null);
