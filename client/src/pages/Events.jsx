@@ -216,18 +216,22 @@ function CreateEventModal({ onClose, onCreated }) {
     e.preventDefault();
     setError('');
     if (!form.title.trim() || !form.date) return setError('Title and date are required.');
+    if (!form.endDate) return setError('End date is required.');
     if (!form.amStart || !form.amEnd || !form.pmStart || !form.pmEnd) return setError('All attendance windows (AM/PM) are required.');
     const event_date = new Date(`${form.date}T${form.time}:00`).toISOString();
+    const event_end = new Date(`${form.endDate}T${form.endTime}:00`).toISOString();
+    if (event_end <= event_date) return setError('End date/time must be after start date/time.');
     setBusy(true);
     const { error: err } = await supabase.from('events').insert({
       title: form.title.trim().slice(0, 120),
       description: form.description.trim().slice(0, 1000) || null,
       location: form.location.trim().slice(0, 160) || null,
       event_date,
-      am_start: `${form.date}T${form.amStart}:00`,
-      am_end: `${form.date}T${form.amEnd}:00`,
-      pm_start: `${form.date}T${form.pmStart}:00`,
-      pm_end: `${form.date}T${form.pmEnd}:00`,
+      event_end,
+      am_start: new Date(`${form.date}T${form.amStart}:00`).toISOString(),
+      am_end: new Date(`${form.date}T${form.amEnd}:00`).toISOString(),
+      pm_start: new Date(`${form.date}T${form.pmStart}:00`).toISOString(),
+      pm_end: new Date(`${form.date}T${form.pmEnd}:00`).toISOString(),
       created_by: user.id,
     });
     setBusy(false);
@@ -264,6 +268,16 @@ function CreateEventModal({ onClose, onCreated }) {
             <div className="field">
               <label htmlFor="ev-time">Event start time</label>
               <input id="ev-time" className="input" type="time" value={form.time} onChange={(e) => setForm({ ...form, time: e.target.value })} required />
+            </div>
+          </div>
+          <div className="auth-grid2">
+            <div className="field">
+              <label htmlFor="ev-end-date">End date</label>
+              <input id="ev-end-date" className="input" type="date" value={form.endDate} onChange={(e) => setForm({ ...form, endDate: e.target.value })} required />
+            </div>
+            <div className="field">
+              <label htmlFor="ev-end-time">End time</label>
+              <input id="ev-end-time" className="input" type="time" value={form.endTime} onChange={(e) => setForm({ ...form, endTime: e.target.value })} required />
             </div>
           </div>
           <div className="panel" style={{ marginTop: 16, padding: 16, border: '1px solid var(--line)', borderRadius: 'var(--r-md)' }}>
@@ -334,10 +348,10 @@ function EditEventModal({ event, onClose, onSaved }) {
       location: form.location.trim().slice(0, 160) || null,
       event_date,
       event_end,
-      am_start: `${form.date}T${form.amStart}:00`,
-      am_end: `${form.date}T${form.amEnd}:00`,
-      pm_start: `${form.date}T${form.pmStart}:00`,
-      pm_end: `${form.date}T${form.pmEnd}:00`,
+      am_start: new Date(`${form.date}T${form.amStart}:00`).toISOString(),
+      am_end: new Date(`${form.date}T${form.amEnd}:00`).toISOString(),
+      pm_start: new Date(`${form.date}T${form.pmStart}:00`).toISOString(),
+      pm_end: new Date(`${form.date}T${form.pmEnd}:00`).toISOString(),
     }).eq('id', event.id);
     setBusy(false);
     if (err) return setError(err.message);

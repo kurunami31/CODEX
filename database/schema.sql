@@ -70,6 +70,26 @@ create table if not exists public.attendance (
   unique (event_id, student_id)
 );
 
+-- AM/PM attendance windows + the overall event end. `event_end` is REQUIRED by
+-- the scanner (attendance closes once the event has ended) — events created
+-- without it fail to record attendance. The AM/PM columns define the morning /
+-- afternoon check-in windows used to label each scan.
+alter table public.events
+  add column if not exists am_start  timestamptz,
+  add column if not exists am_end    timestamptz,
+  add column if not exists pm_start  timestamptz,
+  add column if not exists pm_end    timestamptz,
+  add column if not exists event_end timestamptz;
+
+-- Per-session check-in / check-out stamps recorded by the scanner.
+alter table public.attendance
+  add column if not exists time_in     timestamptz,
+  add column if not exists time_out    timestamptz,
+  add column if not exists time_in_am  timestamptz,
+  add column if not exists time_out_am timestamptz,
+  add column if not exists time_in_pm  timestamptz,
+  add column if not exists time_out_pm timestamptz;
+
 -- ────────────────────────────────────────────────
 --  POSTS (community feed) + LIKES
 -- ────────────────────────────────────────────────
