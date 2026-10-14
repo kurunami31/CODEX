@@ -280,7 +280,7 @@ function CreateEventModal({ onClose, onCreated }) {
               <input id="ev-end-time" className="input" type="time" value={form.endTime} onChange={(e) => setForm({ ...form, endTime: e.target.value })} required />
             </div>
           </div>
-          <div className="panel" style={{ marginTop: 16, padding: 16, border: '1px solid var(--line)', borderRadius: 'var(--r-md)' }}>
+          <div className="event-windows">
             <h4 style={{ margin: '0 0 12px', fontSize: 14, color: 'var(--accent-2)' }}>Attendance Windows (Morning & Afternoon)</h4>
             <div className="auth-grid2">
               <div className="field">
@@ -399,7 +399,7 @@ function EditEventModal({ event, onClose, onSaved }) {
               <input id="ev-end-time" className="input" type="time" value={form.endTime} onChange={(e) => setForm({ ...form, endTime: e.target.value })} required />
             </div>
           </div>
-          <div className="panel" style={{ marginTop: 16, padding: 16, border: '1px solid var(--line)', borderRadius: 'var(--r-md)' }}>
+          <div className="event-windows">
             <h4 style={{ margin: '0 0 12px', fontSize: 14, color: 'var(--accent-2)' }}>Attendance Windows (Morning & Afternoon)</h4>
             <div className="auth-grid2">
               <div className="field">
