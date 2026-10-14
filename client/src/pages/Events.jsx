@@ -98,7 +98,7 @@ export default function Events() {
           <p>{isAdmin ? 'Create the first CODEBYTERS event to get things rolling.' : 'Check back soon — the officers are cooking something up.'}</p>
         </div>
       ) : (
-        <div className="event-list">
+        <div className={`event-list${events.length > 3 ? ' event-list--scroll' : ''}`}>
           {events.map((ev) => {
             const d = formatEventDate(ev.event_date);
             const upcoming = isUpcoming(ev.event_date);
