@@ -11,6 +11,21 @@ import {
   PencilIcon, TrashIcon,
 } from '../components/icons/Icons';
 
+// Convert a stored UTC ISO timestamp into the viewer's local YYYY-MM-DD or
+// HH:MM so <input type="date"> / <input type="time"> show the right value.
+function isoToLocalDate(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  const local = new Date(d.getTime() - d.getTimezoneOffset() * 60000);
+  return local.toISOString().slice(0, 10);
+}
+function isoToLocalTime(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  const local = new Date(d.getTime() - d.getTimezoneOffset() * 60000);
+  return local.toISOString().slice(11, 16);
+}
+
 export default function Events() {
   const { profile, user } = useAuth();
   const toast = useToast();
@@ -29,7 +44,7 @@ export default function Events() {
   const loadEvents = async () => {
     const { data, error } = await supabase
       .from('events')
-      .select('id, title, description, location, event_date, created_at, created_by, event_end')
+      .select('id, title, description, location, event_date, created_at, created_by, event_end, am_start, am_end, pm_start, pm_end')
       .order('event_date', { ascending: true });
     if (error) toast.error('Events error', error.message);
     else setEvents(data || []);
@@ -348,14 +363,14 @@ function EditEventModal({ event, onClose, onSaved }) {
     title: event.title,
     description: event.description || '',
     location: event.location || '',
-    date: event.event_date ? event.event_date.split('T')[0] : '',
-    time: event.event_date ? event.event_date.split('T')[1].slice(0, 5) : '09:00',
-    endDate: event.event_end ? event.event_end.split('T')[0] : '',
-    endTime: event.event_end ? event.event_end.split('T')[1].slice(0, 5) : '',
-    amStart: event.am_start ? event.am_start.split('T')[1].slice(0, 5) : '08:00',
-    amEnd: event.am_end ? event.am_end.split('T')[1].slice(0, 5) : '12:00',
-    pmStart: event.pm_start ? event.pm_start.split('T')[1].slice(0, 5) : '13:00',
-    pmEnd: event.pm_end ? event.pm_end.split('T')[1].slice(0, 5) : '17:00',
+    date: isoToLocalDate(event.event_date),
+    time: event.event_date ? isoToLocalTime(event.event_date) : '09:00',
+    endDate: isoToLocalDate(event.event_end),
+    endTime: event.event_end ? isoToLocalTime(event.event_end) : '17:00',
+    amStart: event.am_start ? isoToLocalTime(event.am_start) : '08:00',
+    amEnd: event.am_end ? isoToLocalTime(event.am_end) : '12:00',
+    pmStart: event.pm_start ? isoToLocalTime(event.pm_start) : '13:00',
+    pmEnd: event.pm_end ? isoToLocalTime(event.pm_end) : '17:00',
   });
 
   const submit = async (e) => {

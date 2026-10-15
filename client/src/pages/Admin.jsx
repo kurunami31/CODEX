@@ -684,18 +684,40 @@ function CreateEventModal({ onClose, onCreated }) {
   const toast = useToast();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  const [form, setForm] = useState({ title: '', description: '', location: '', date: '', time: '09:00' });
+  const [form, setForm] = useState({
+    title: '',
+    description: '',
+    location: '',
+    date: '',
+    time: '09:00',
+    endDate: '',
+    endTime: '17:00',
+    amStart: '08:00',
+    amEnd: '12:00',
+    pmStart: '13:00',
+    pmEnd: '17:00',
+  });
 
   const submit = async (e) => {
     e.preventDefault();
     setError('');
     if (!form.title.trim() || !form.date) return setError('Title and date are required.');
+    if (!form.endDate) return setError('End date is required.');
+    if (!form.amStart || !form.amEnd || !form.pmStart || !form.pmEnd) return setError('All attendance windows (AM/PM) are required.');
+    const event_date = new Date(`${form.date}T${form.time}:00`).toISOString();
+    const event_end = new Date(`${form.endDate}T${form.endTime}:00`).toISOString();
+    if (event_end <= event_date) return setError('End date/time must be after start date/time.');
     setBusy(true);
     const { error: err } = await supabase.from('events').insert({
       title: form.title.trim().slice(0, 120),
       description: form.description.trim().slice(0, 1000) || null,
       location: form.location.trim().slice(0, 160) || null,
-      event_date: new Date(`${form.date}T${form.time}:00`).toISOString(),
+      event_date,
+      event_end,
+      am_start: new Date(`${form.date}T${form.amStart}:00`).toISOString(),
+      am_end: new Date(`${form.date}T${form.amEnd}:00`).toISOString(),
+      pm_start: new Date(`${form.date}T${form.pmStart}:00`).toISOString(),
+      pm_end: new Date(`${form.date}T${form.pmEnd}:00`).toISOString(),
       created_by: user.id,
     });
     setBusy(false);
@@ -734,6 +756,39 @@ function CreateEventModal({ onClose, onCreated }) {
             <div className="field">
               <label htmlFor="adm-time">Time</label>
               <input id="adm-time" className="input" type="time" value={form.time} onChange={(e) => setForm({ ...form, time: e.target.value })} required />
+            </div>
+          </div>
+          <div className="auth-grid2">
+            <div className="field">
+              <label htmlFor="adm-end-date">End date</label>
+              <input id="adm-end-date" className="input" type="date" value={form.endDate} onChange={(e) => setForm({ ...form, endDate: e.target.value })} required />
+            </div>
+            <div className="field">
+              <label htmlFor="adm-end-time">End time</label>
+              <input id="adm-end-time" className="input" type="time" value={form.endTime} onChange={(e) => setForm({ ...form, endTime: e.target.value })} required />
+            </div>
+          </div>
+          <div className="panel" style={{ marginTop: 16, padding: 16, border: '1px solid var(--line)', borderRadius: 'var(--r-md)' }}>
+            <h4 style={{ margin: '0 0 12px', fontSize: 14, color: 'var(--accent-2)' }}>Attendance Windows (Morning & Afternoon)</h4>
+            <div className="auth-grid2">
+              <div className="field">
+                <label htmlFor="adm-am-start">Morning time in</label>
+                <input id="adm-am-start" className="input" type="time" value={form.amStart} onChange={(e) => setForm({ ...form, amStart: e.target.value })} required />
+              </div>
+              <div className="field">
+                <label htmlFor="adm-am-end">Morning time out</label>
+                <input id="adm-am-end" className="input" type="time" value={form.amEnd} onChange={(e) => setForm({ ...form, amEnd: e.target.value })} required />
+              </div>
+            </div>
+            <div className="auth-grid2">
+              <div className="field">
+                <label htmlFor="adm-pm-start">Afternoon time in</label>
+                <input id="adm-pm-start" className="input" type="time" value={form.pmStart} onChange={(e) => setForm({ ...form, pmStart: e.target.value })} required />
+              </div>
+              <div className="field">
+                <label htmlFor="adm-pm-end">Afternoon time out</label>
+                <input id="adm-pm-end" className="input" type="time" value={form.pmEnd} onChange={(e) => setForm({ ...form, pmEnd: e.target.value })} required />
+              </div>
             </div>
           </div>
           {error && <div className="err-box"><span>!</span><span>{error}</span></div>}
