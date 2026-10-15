@@ -55,6 +55,28 @@ async function requireAdmin(req, res) {
   return user;
 }
 
+// Confirming a pending registration is an onboarding chore, so moderators are
+// allowed too (admin / superadmin / moderator).
+async function requireConfirmStaff(req, res) {
+  const token = bearer(req);
+  if (!token) {
+    res.status(401).json({ error: 'Missing session token.' });
+    return null;
+  }
+  const sb = supabaseFor(token);
+  const { data: { user }, error: authError } = await sb.auth.getUser();
+  if (authError || !user) {
+    res.status(401).json({ error: 'Invalid session.' });
+    return null;
+  }
+  const { data: profile } = await sb.from('profiles').select('role').eq('id', user.id).maybeSingle();
+  if (!profile || !['moderator', 'admin', 'superadmin'].includes(profile.role)) {
+    res.status(403).json({ error: 'Moderator, admin or super admin role required.' });
+    return null;
+  }
+  return user;
+}
+
 function adminClientOr500(res) {
   if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
     res.status(500).json({
@@ -195,6 +217,69 @@ router.delete('/users/:id', async (req, res) => {
   const { error } = await admin.auth.admin.deleteUser(targetId);
   if (error) return res.status(500).json({ error: error.message || 'Could not delete the account.' });
   res.json({ ok: true });
+});
+
+// GET /api/admin/users/pending — accounts that signed up but never confirmed
+// their email (staff: moderator / admin / superadmin). Supabase rate-limits
+// confirmation emails, so staff can confirm these by hand and let the member
+// log in immediately.
+router.get('/users/pending', async (req, res) => {
+  const caller = await requireConfirmStaff(req, res);
+  if (!caller) return;
+  const admin = adminClientOr500(res);
+  if (!admin) return;
+
+  const { data: list, error: usersError } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
+  if (usersError) return res.status(500).json({ error: usersError.message || 'Could not list users.' });
+
+  const unconfirmed = (list.users || []).filter((u) => !u.email_confirmed_at);
+  const ids = unconfirmed.map((u) => u.id);
+  let byId = new Map();
+  if (ids.length) {
+    const { data: profiles } = await admin
+      .from('profiles')
+      .select('id, full_name, student_id, year_level, section, course, role, avatar_url')
+      .in('id', ids);
+    byId = new Map((profiles || []).map((p) => [p.id, p]));
+  }
+
+  const users = unconfirmed
+    .map((u) => {
+      const prof = byId.get(u.id) || null;
+      if (prof?.role === 'adviser') return null;
+      return {
+        id: u.id,
+        email: u.email,
+        created_at: u.created_at,
+        email_confirmed: false,
+        ...prof,
+      };
+    })
+    .filter(Boolean)
+    .sort((a, b) => String(b.created_at || '').localeCompare(String(a.created_at || '')));
+
+  res.set('Cache-Control', 'no-store');
+  res.json({ users, count: users.length });
+});
+
+// POST /api/admin/users/:id/confirm — mark an account's email as confirmed so
+// the member can log in without the confirmation email (staff: moderator /
+// admin / superadmin).
+router.post('/users/:id/confirm', async (req, res) => {
+  const caller = await requireConfirmStaff(req, res);
+  if (!caller) return;
+  const admin = adminClientOr500(res);
+  if (!admin) return;
+
+  const { data, error } = await admin.auth.admin.updateUserById(req.params.id, { email_confirm: true });
+  if (error) {
+    const msg = error.message || 'Could not confirm the account.';
+    const status = /not found|does not exist/i.test(msg) ? 404 : 400;
+    return res.status(status).json({ error: msg });
+  }
+
+  res.set('Cache-Control', 'no-store');
+  res.json({ ok: true, id: data?.user?.id || req.params.id, email: data?.user?.email || null });
 });
 
 // POST /api/admin/maintenance — superadmin toggles maintenance mode.

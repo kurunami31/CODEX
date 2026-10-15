@@ -149,6 +149,23 @@ export default function SuperAdmin() {
     if (tab === 'attendance') loadAttendance();
   }, [tab, loadPosts, loadAttendance]);
 
+  // Confirm a pending registration so the member can log in without needing
+  // the confirmation email (Supabase rate-limits those).
+  const confirmStudent = async (s) => {
+    setBusy(true);
+    try {
+      const res = await apiFetch(`/api/admin/users/${s.id}/confirm`, { method: 'POST' });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(body.error || 'Confirm failed.');
+      toast.ok('Registration confirmed', `${s.full_name || s.email} can log in now.`);
+      loadStudents();
+    } catch (err) {
+      toast.error('Confirm failed', err.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const deleteStudent = async (s) => {
     if (!window.confirm(`Delete ${s.full_name || s.email}?\n\nTheir posts, likes and attendance records are removed permanently.`)) return;
     setBusy(true);
@@ -478,7 +495,20 @@ export default function SuperAdmin() {
                     </td>
                     <td>
                       <span style={{ fontSize: 13 }}>{s.email}</span>
-                      {!s.email_confirmed && <span className="chip chip--warn" style={{ marginLeft: 6 }}>unconfirmed</span>}
+                      {!s.email_confirmed && (
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginLeft: 6 }}>
+                          <span className="chip chip--warn">unconfirmed</span>
+                          <button
+                            className="btn btn-outline btn-sm"
+                            onClick={() => confirmStudent(s)}
+                            disabled={busy}
+                            title="Confirm this registration so they can log in"
+                            aria-label={`Confirm ${s.full_name || s.email}`}
+                          >
+                            <CheckIcon width={12} height={12} /> Confirm
+                          </button>
+                        </span>
+                      )}
                     </td>
                     <td style={{ fontFamily: 'var(--f-ocr)', fontSize: 12 }}>{s.student_id || '—'}</td>
                     <td>{s.year_level} · {s.section}</td>

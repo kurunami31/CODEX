@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { supabase } from '../lib/supabase';
+import { supabase, apiFetch } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import Avatar from '../components/Avatar';
@@ -22,6 +22,12 @@ export default function Directory() {
   const [search, setSearch] = useState('');
   const [viewing, setViewing] = useState(null);
   const [loading, setLoading] = useState(true);
+  // Onboarding chores: anyone who signed up but hasn't confirmed their email.
+  // Moderators help clear this list so Supabase's confirmation-email limits
+  // never leave a member unable to log in.
+  const canConfirm = ['moderator', 'admin', 'superadmin'].includes(profile?.role);
+  const [pending, setPending] = useState([]);
+  const [pendingBusy, setPendingBusy] = useState(null);
 
   const load = useCallback(async () => {
     const { data, error } = await supabase.rpc('get_members');
@@ -30,9 +36,35 @@ export default function Directory() {
     setLoading(false);
   }, [toast]);
 
+  const loadPending = useCallback(async () => {
+    if (!canConfirm) return;
+    try {
+      const res = await apiFetch('/api/admin/users/pending', { method: 'GET' });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(body.error || 'Could not load pending sign-ups.');
+      setPending(body.users || []);
+    } catch { /* non-fatal — the directory still works */ }
+  }, [canConfirm]);
+
   useEffect(() => {
     load();
-  }, [load]);
+    loadPending();
+  }, [load, loadPending]);
+
+  const confirmPending = async (u) => {
+    setPendingBusy(u.id);
+    try {
+      const res = await apiFetch(`/api/admin/users/${u.id}/confirm`, { method: 'POST' });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(body.error || 'Confirm failed.');
+      toast.ok('Registration confirmed', `${u.full_name || u.email} can log in now.`);
+      setPending((list) => list.filter((x) => x.id !== u.id));
+    } catch (err) {
+      toast.error('Confirm failed', err.message);
+    } finally {
+      setPendingBusy(null);
+    }
+  };
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -54,6 +86,42 @@ export default function Directory() {
           staff tool · view digital ids — officers&apos; own ids are private
         </span>
       </div>
+
+      {canConfirm && pending.length > 0 && (
+        <div className="panel" style={{ padding: '18px 20px', borderColor: 'var(--warn)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8, flexWrap: 'wrap' }}>
+            <CheckIcon width={17} height={17} style={{ color: 'var(--warn)' }} />
+            <b style={{ fontSize: 15 }}>Pending sign-ups</b>
+            <span className="chip chip--warn" style={{ marginLeft: 'auto' }}>{pending.length} to confirm</span>
+          </div>
+          <p className="ocr-label" style={{ margin: '0 0 12px' }}>
+            signed up but never confirmed their email — confirm one to let them log in right away
+          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {pending.map((u) => (
+              <div key={u.id} style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                <Avatar name={u.full_name} seed={u.student_id || u.id} size={28} url={u.avatar_url} />
+                <div style={{ minWidth: 0 }}>
+                  <b style={{ fontSize: 13.5 }}>{u.full_name || '—'}</b>
+                  <div className="ocr-label" style={{ fontSize: 9.5 }}>
+                    {u.email}{u.student_id ? ` · ${u.student_id}` : ''}{u.year_level ? ` · ${u.year_level}` : ''}
+                  </div>
+                </div>
+                <button
+                  className="btn btn-accent btn-sm"
+                  style={{ marginLeft: 'auto' }}
+                  onClick={() => confirmPending(u)}
+                  disabled={pendingBusy === u.id}
+                  title="Confirm this registration so they can log in"
+                  aria-label={`Confirm ${u.full_name || u.email}`}
+                >
+                  <CheckIcon width={13} height={13} /> {pendingBusy === u.id ? 'Confirming…' : 'Confirm'}
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="panel" style={{ padding: '20px 22px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12, flexWrap: 'wrap' }}>

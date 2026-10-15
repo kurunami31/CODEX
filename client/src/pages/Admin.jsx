@@ -90,6 +90,21 @@ export default function Admin() {
     loadMembers();
   };
 
+  const confirmMember = async (m) => {
+    setBusy(true);
+    try {
+      const res = await apiFetch(`/api/admin/users/${m.id}/confirm`, { method: 'POST' });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(body.error || 'Confirm failed.');
+      toast.ok('Registration confirmed', `${m.full_name || m.email} can log in now.`);
+      loadMembers();
+    } catch (err) {
+      toast.error('Confirm failed', err.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const deleteMember = async (m) => {
     if (!window.confirm(`Delete ${m.full_name || m.email}?\n\nTheir posts, likes and attendance records are removed permanently.`)) return;
     setBusy(true);
@@ -426,7 +441,20 @@ export default function Admin() {
                     </td>
                     <td>
                       <span style={{ fontSize: 13 }}>{m.email || '—'}</span>
-                      {!m.email_confirmed && <span className="chip chip--warn" style={{ marginLeft: 6 }}>unconfirmed</span>}
+                      {!m.email_confirmed && (
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginLeft: 6 }}>
+                          <span className="chip chip--warn">unconfirmed</span>
+                          <button
+                            className="btn btn-outline btn-sm"
+                            onClick={() => confirmMember(m)}
+                            disabled={busy}
+                            title="Confirm this registration so they can log in"
+                            aria-label={`Confirm ${m.full_name || m.email}`}
+                          >
+                            <CheckIcon width={12} height={12} /> Confirm
+                          </button>
+                        </span>
+                      )}
                     </td>
                     <td style={{ fontFamily: 'var(--f-ocr)', fontSize: 12 }}>{m.student_id || '—'}</td>
                     <td>{m.year_level} · {m.section}</td>
