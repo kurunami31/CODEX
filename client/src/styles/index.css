@@ -2404,7 +2404,7 @@ html[data-theme='dark'] .idcard--mini .idcard-photo { border-color: #0ed0b6; }
   .auth-overlay-body .auth-points { display: none; }
   .event-card { flex-direction: column; }
   .date-block { width: auto; display: flex; align-items: center; gap: 10px; padding: 8px 14px; }
-  .event-actions { flex-direction: row; }
+  .event-actions { flex-direction: row; flex-wrap: wrap; }
   .chat-panel { right: 12px; left: auto; width: min(330px, calc(100vw - 36px)); height: min(460px, calc(100vh - 240px)); bottom: calc(88px + var(--safe-b)); }
   @supports (height: 100dvh) { .chat-panel { height: min(460px, calc(100dvh - 240px)); } }
   .chat-fab { right: 14px; bottom: calc(88px + var(--safe-b)); }

@@ -8,7 +8,7 @@ import { isStaff as checkStaff, isAdmin as checkAdmin } from '../lib/roles';
 import {
   CalendarIcon, MapPinIcon, ClockIcon, PlusIcon, XIcon, ChevronRightIcon,
   CameraIcon, QrIcon, CheckIcon, TerminalIcon, AlertIcon, UsersIcon,
-  PencilIcon,
+  PencilIcon, TrashIcon,
 } from '../components/icons/Icons';
 
 export default function Events() {
@@ -21,6 +21,7 @@ export default function Events() {
   const [myAttendance, setMyAttendance] = useState(new Map());
   const [rsvps, setRsvps] = useState([]); // [{ event_id, user_id }]
   const [rsvpBusy, setRsvpBusy] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
 
   const isAdmin = checkAdmin(profile?.role);
   const isStaff = checkStaff(profile?.role);
@@ -59,6 +60,19 @@ export default function Events() {
     if (error) return toast.error('RSVP failed', error.message);
     await loadRsvps();
     toast.ok(mine ? 'RSVP cancelled' : 'You\'re going!', mine ? 'See you next time.' : 'We\'ll see you at the event.');
+  };
+
+  // Deleting an event also removes its attendance records (FK cascade), so the
+  // RPC is role-checked server-side and we confirm first.
+  const removeEvent = async (ev) => {
+    if (!window.confirm(`Delete "${ev.title}" and all its attendance records?\n\nThis cannot be undone.`)) return;
+    setDeletingId(ev.id);
+    const { error } = await supabase.rpc('delete_event', { p_event_id: ev.id });
+    setDeletingId(null);
+    if (error) return toast.error('Delete failed', error.message);
+    toast.ok('Event deleted', 'Its attendance records were removed too.');
+    if (editEvent?.id === ev.id) setEditEvent(null);
+    loadEvents();
   };
 
   useEffect(() => {
@@ -154,6 +168,18 @@ export default function Events() {
                       title="Edit event"
                     >
                       <PencilIcon width={14} height={14} /> Edit
+                    </button>
+                  )}
+                  {(isAdmin || ev.created_by === user?.id) && (
+                    <button
+                      className="btn btn-outline btn-sm"
+                      style={{ color: 'var(--danger)', borderColor: 'var(--danger)' }}
+                      onClick={() => removeEvent(ev)}
+                      disabled={deletingId === ev.id}
+                      title="Delete event"
+                      aria-label={`Delete ${ev.title}`}
+                    >
+                      <TrashIcon width={14} height={14} /> {deletingId === ev.id ? 'Deleting…' : 'Delete'}
                     </button>
                   )}
                 </div>
